@@ -13,6 +13,21 @@
 #include "model/participant.h"
 #include "app/environment.h"
 
+
+#include "protocol/waveclient-rpc.pb.h"
+#include <fstream>
+
+void testprotobuf()
+{
+    std::ofstream str("buf.out");
+    waveserver::ProtocolOpenRequest req;
+    req.set_participant_id("depp@localhost");
+    req.set_wave_id("!indexwave");
+    req.add_wavelet_id_prefix("");
+    req.SerializeToOstream(&str);
+}
+
+
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
@@ -198,6 +213,9 @@ int main(int argc, char *argv[])
 
     //WaveletView* v = new WaveletView(view, wavelet);
 
+    testprotobuf();
+
     //    return 0;
     return a.exec();
 }
+

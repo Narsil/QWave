@@ -24,19 +24,11 @@
 syntax = "proto2";
 
 import "common.proto";
-import "rpc.proto";
 
 package waveserver;
 
 option java_package = "org.waveprotocol.wave.examples.fedone.waveserver";
 option java_outer_classname = "WaveClientRpc";
-
-service ProtocolWaveClientRpc {
-  rpc Open (ProtocolOpenRequest) returns (ProtocolWaveletUpdate) {
-    option (rpc.is_streaming_rpc) = true;
-  };
-  rpc Submit (ProtocolSubmitRequest) returns (ProtocolSubmitResponse);
-}
 
 /**
  * A client requests updates for wavelets in the given waveId and accessible to the

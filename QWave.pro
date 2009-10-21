@@ -23,7 +23,9 @@ SOURCES += app/main.cpp \
     view/graphicstextitem.cpp \
     view/otadapter.cpp \
     network/networkadapter.cpp \
-    model/synchronizeddocument.cpp
+    model/synchronizeddocument.cpp \
+    protocol/waveclient-rpc.pb.cc \
+    protocol/common.pb.cc
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -43,5 +45,8 @@ HEADERS += app/mainwindow.h \
     view/graphicstextitem.h \
     view/otadapter.h \
     network/networkadapter.h \
-    model/synchronizeddocument.h
+    model/synchronizeddocument.h \
+    protocol/waveclient-rpc.pb.h \
+    protocol/common.pb.h
 FORMS += app/mainwindow.ui
+unix:LIBS += -lprotobuf
