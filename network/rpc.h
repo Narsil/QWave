@@ -2,35 +2,48 @@
 #define RPC_H
 
 #include <QObject>
+#include <QByteArray>
+#include <QAbstractSocket>
 
 class QTcpSocket;
-class QByteArray;
 
 class RPC : public QObject
 {
     Q_OBJECT
 public:
-    RPC(const QString& host, quint16 port );
+    RPC(QObject* parent = 0);
     ~RPC();
 
-    void send(const QString& methodName, const char* data, quint64 size);
+    void open(const QString& host, quint16 port);
+
+    void send(const QString& methodName, const char* data, quint32 size);
 
 signals:
     void messageReceived(const QString& methodName, const QByteArray& data);
+    void online();
+    void offline();
 
 private slots:
     void start();
     void stop();
+    void stopOnError(QAbstractSocket::SocketError);
     void readBytes();
 
 private:
-    int m_counter;
-    union
+    bool readBytesIntern();
+    quint32 decodeVarint(const char* ptr, quint32 maxSize, int& consumed);
+
+    union IntUnion
     {
         quint32 i;
-        char[4] str;
-    } m_length;
+        char str[4];
+    };
 
+    int m_counter;
+    IntUnion m_length;
+    int m_lengthCompleted;
+    QByteArray m_buffer;
+    quint32 m_bufferLen;
     QTcpSocket* m_socket;
 };
 

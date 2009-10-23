@@ -2,6 +2,7 @@
 # Project created by QtCreator 2009-10-11T22:32:00
 # -------------------------------------------------
 TARGET = QWave
+QT += network
 TEMPLATE = app
 SOURCES += app/main.cpp \
     app/mainwindow.cpp \
@@ -25,7 +26,8 @@ SOURCES += app/main.cpp \
     network/networkadapter.cpp \
     model/synchronizeddocument.cpp \
     protocol/waveclient-rpc.pb.cc \
-    protocol/common.pb.cc
+    protocol/common.pb.cc \
+    network/rpc.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -47,6 +49,7 @@ HEADERS += app/mainwindow.h \
     network/networkadapter.h \
     model/synchronizeddocument.h \
     protocol/waveclient-rpc.pb.h \
-    protocol/common.pb.h
+    protocol/common.pb.h \
+    network/rpc.h
 FORMS += app/mainwindow.ui
 unix:LIBS += -lprotobuf
