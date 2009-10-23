@@ -3,6 +3,7 @@
 
 #include <QObject>
 
+class QByteArray;
 class DocumentMutation;
 class Environment;
 class RPC;
@@ -23,6 +24,7 @@ public:
 private slots:
     void getOnline();
     void getOffline();
+    void messageReceived(const QString& methodName, const QByteArray& data);
 
 private:
     RPC* m_rpc;
