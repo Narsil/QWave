@@ -34,7 +34,7 @@ int main(int argc, char *argv[])
     MainWindow w1;
     MainWindow w2;
 
-    for( int i = 0; i < 2; ++i )
+    for( int i = 0; i < 1; ++i )
     {
         MainWindow* w = &w1;
         if ( i == 1 )

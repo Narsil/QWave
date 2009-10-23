@@ -19,17 +19,19 @@ NetworkAdapter::NetworkAdapter(QObject* parent)
     m_rpc = new RPC(this);
     connect( m_rpc, SIGNAL(online()), SLOT(getOnline()));
     connect( m_rpc, SIGNAL(offline()), SLOT(getOffline()));
+    connect( m_rpc, SIGNAL(messageReceived(QString,QByteArray)), SLOT(messageReceived(QString,QByteArray)));
     m_rpc->open("localhost", 9876);
 }
 
 #include "protocol/waveclient-rpc.pb.h"
 #include <sstream>
+#include <string>
 
 void NetworkAdapter::sendOpenWave()
 {
     std::ostringstream str;
     waveserver::ProtocolOpenRequest req;
-    req.set_participant_id("deps@localhost");
+    req.set_participant_id("dept@localhost");
     req.set_wave_id("!indexwave");
     req.add_wavelet_id_prefix("");
     req.SerializeToOstream(&str);
@@ -37,6 +39,15 @@ void NetworkAdapter::sendOpenWave()
     m_rpc->send("waveserver.ProtocolOpenRequest", str.str().data(), str.str().length());
 }
 
+void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray& data)
+{
+    if ( methodName == "waveserver.ProtocolWaveletUpdate" )
+    {
+        waveserver::ProtocolWaveletUpdate update;
+        update.ParseFromArray(data.constData(), data.length());
+        qDebug("msg>> %s", update.DebugString().data());
+    }
+}
 
 void NetworkAdapter::send( const DocumentMutation& mutation, const QString& waveletId, const QString& docId )
 {
