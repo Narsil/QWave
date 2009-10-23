@@ -5,9 +5,11 @@
 
 class DocumentMutation;
 class Environment;
+class RPC;
 
 class NetworkAdapter : public QObject
 {
+    Q_OBJECT
 public:
     NetworkAdapter(QObject* parent = 0);
 
@@ -16,7 +18,15 @@ public:
 
     Environment* environment() const;
 
+    void sendOpenWave();
+
+private slots:
+    void getOnline();
+    void getOffline();
+
 private:
+    RPC* m_rpc;
+
     static NetworkAdapter* s1;
     static NetworkAdapter* s2;
 };
