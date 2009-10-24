@@ -6,6 +6,8 @@
 
 class Wavelet;
 class Environment;
+class SynchronizedDocument;
+class DocumentMutation;
 
 class Wave : public QObject
 {
@@ -21,6 +23,8 @@ public:
     Wavelet* wavelet() const;
     Environment* environment() const;
 
+    void mutateDigest(const DocumentMutation& mutation);
+
 signals:
     void digestChanged();
 
@@ -28,6 +32,7 @@ private:
     QString m_id;
     QString m_domain;
     QString m_digest;
+    SynchronizedDocument* m_digestDoc;
 };
 
 #endif // WAVE_H

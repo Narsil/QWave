@@ -3,6 +3,7 @@
 #include "blip.h"
 #include "blipthread.h"
 #include "structureddocument.h"
+#include "participant.h"
 #include "app/environment.h"
 
 #include <QStack>
@@ -152,4 +153,14 @@ void Wavelet::removeParticipant( Participant* participant)
 Environment* Wavelet::environment() const
 {
     return wave()->environment();
+}
+
+Participant* Wavelet::participant( const QString& address )
+{
+    foreach( Participant* p, m_participants)
+    {
+        if ( p->address() == address )
+            return p;
+    }
+    return 0;
 }
