@@ -75,6 +75,8 @@ public:
     const Annotation& annotation(int pos) const;
     int annotationIndex(int pos) const;
 
+    QString toPlainText() const;
+
     void print_();
 
 private:

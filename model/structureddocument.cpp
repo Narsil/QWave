@@ -249,6 +249,25 @@ const StructuredDocument::Item& StructuredDocument::operator[] ( int index ) con
     return (*m_items)[index];
 }
 
+QString StructuredDocument::toPlainText() const
+{
+    QString result = "";
+    foreach( Item item, *m_items )
+    {
+        switch( item.type )
+        {
+            case Start:
+                break;
+            case End:
+                break;
+            case Char:
+                result += item.ch;
+                break;
+        }
+    }
+    return result;
+}
+
 void StructuredDocument::print_()
 {
     QString result = "";

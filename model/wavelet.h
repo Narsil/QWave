@@ -30,6 +30,7 @@ public:
     void addParticipant( Participant* participant);
     void removeParticipant( Participant* participant);
     QList<Participant*> participants() const { return m_participants; }
+    Participant* participant( const QString& address );
 
     void updateConversation();
 

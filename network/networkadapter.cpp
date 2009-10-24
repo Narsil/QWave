@@ -1,9 +1,11 @@
 #include "networkadapter.h"
 #include "model/documentmutation.h"
 #include "model/wavelist.h"
+#include "model/wave.h"
 #include "app/environment.h"
 #include "model/wavelet.h"
 #include "model/blip.h"
+#include "model/participant.h"
 #include "rpc.h"
 
 #include <QUrl>
@@ -60,6 +62,55 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
             {
                 wave = environment()->createWave(waveid);
                 environment()->inbox()->addWave(wave);
+            }
+
+            for( int i = 0; i < update.applied_delta_size(); ++i )
+            {
+                const protocol::ProtocolWaveletDelta& delta = update.applied_delta(i);
+                for( int o = 0; o < delta.operation_size(); ++o )
+                {
+                    const protocol::ProtocolWaveletOperation op = delta.operation(o);
+                    if ( op.has_add_participant() )
+                    {
+                        // TODO: Do not create the same guy twice
+                        Participant* p = new Participant(QString::fromStdString(op.add_participant()));
+                        wave->wavelet()->addParticipant(p);
+                    }
+                    if ( op.has_remove_participant() )
+                    {
+                        Participant* p = wave->wavelet()->participant(QString::fromStdString(op.remove_participant()));
+                        if ( p )
+                            wave->wavelet()->removeParticipant(p);
+                    }
+                    if ( op.has_mutate_document() )
+                    {
+                        DocumentMutation m;
+                        const protocol::ProtocolWaveletOperation_MutateDocument& mut = op.mutate_document();
+                        if ( mut.has_document_id() && mut.document_id() == "digest" )
+                        {
+                            const protocol::ProtocolDocumentOperation& dop = mut.document_operation();
+                            for( int c = 0; c < dop.component_size(); ++c )
+                            {
+                                const protocol::ProtocolDocumentOperation_Component& comp = dop.component(c);
+                                if ( comp.has_characters() )
+                                {
+                                    QString chars = QString::fromStdString(comp.characters());
+                                    m.insertChars(chars);
+                                }
+                                else if ( comp.has_retain_item_count() )
+                                {
+                                    int retain = comp.retain_item_count();
+                                    m.retain(retain);
+                                }
+                                else
+                                {
+                                    // TODO
+                                }
+                            }
+                        }
+                        wave->mutateDigest(m);
+                    }
+                }
             }
         }
     }
