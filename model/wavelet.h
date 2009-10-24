@@ -35,6 +35,10 @@ public:
 
     void print_();
 
+signals:
+    void participantAdded(Participant* participant);
+    void participantRemoved(Participant* participant);
+
 private:
     QString m_id;
     QString m_domain;

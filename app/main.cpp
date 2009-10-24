@@ -9,8 +9,10 @@
 #include "model/synchronizeddocument.h"
 #include "view/waveview.h"
 #include "view/waveletview.h"
+#include "view/wavelistview.h"
 #include "model/documentmutation.h"
 #include "model/participant.h"
+#include "model/wavelist.h"
 #include "app/environment.h"
 
 
@@ -43,14 +45,19 @@ int main(int argc, char *argv[])
         // Test
         Environment* en = new Environment("torben.weis@googlewave.com", "torben");
 
+        WaveListView* wlview = new WaveListView(en->inbox());
+        wlview->show();
+
         Participant* p2 = new Participant("joe@acme.com");
         p2->setName("Joe");
         Participant* p3 = new Participant("pam@foobar.com");
         p3->setName("Pam");
         p3->setPixmap( QPixmap("images/user3.jpg") );
 
-        Wave* wave = new Wave(en, "localhost", "conv+12345");
-        Wavelet* wavelet = new Wavelet(wave, "localhost", "w+abcdef");
+        Wave* wave = new Wave(en, "localhost", "w+12345");
+        wave->setDigest("This is some wave which as a digest which can be longer than the space available in here.");
+        // Wavelet* wavelet = new Wavelet(wave, "localhost", "conv+root");
+        Wavelet* wavelet = wave->wavelet();
         wavelet->addParticipant(en->localUser());
         wavelet->addParticipant(p2);
         wavelet->addParticipant(p3);
@@ -208,6 +215,8 @@ int main(int argc, char *argv[])
         WaveView* view = new WaveView(wave);
         w->setCentralWidget(view);
         w->show();
+
+        en->inbox()->addWave(wave);
     }
     // End Test
 

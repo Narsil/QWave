@@ -5,6 +5,7 @@
 Wave::Wave(Environment* environment, const QString& domain, const QString &id)
         : QObject(environment), m_id(id), m_domain(domain)
 {
+    new Wavelet(this, domain, "conv+root");
 }
 
 Wavelet* Wave::wavelet() const
@@ -16,6 +17,12 @@ Wavelet* Wave::wavelet() const
             return w;
     }
     return 0;
+}
+
+void Wave::setDigest(const QString& digest)
+{
+    m_digest = digest;
+    emit digestChanged();
 }
 
 Environment* Wave::environment() const

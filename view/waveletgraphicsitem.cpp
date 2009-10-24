@@ -20,7 +20,7 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
     qreal dy = 2 *3 + m_titleItem->boundingRect().height();
     foreach( Participant* p, view->wavelet()->participants() )
     {
-        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, this);
+        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 42, this);
         item->setPos(dx + 5, dy + 5);
         dx += item->boundingRect().width() + 5;
         m_participantItems.append( item );

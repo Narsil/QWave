@@ -140,11 +140,13 @@ void Wavelet::addParticipant( Participant* participant)
 {
     if ( !m_participants.contains(participant) )
         m_participants.append(participant);
+    emit participantAdded(participant);
 }
 
 void Wavelet::removeParticipant( Participant* participant)
 {
     m_participants.removeAll(participant);
+    emit participantRemoved(participant);
 }
 
 Environment* Wavelet::environment() const
