@@ -27,7 +27,10 @@ SOURCES += app/main.cpp \
     model/synchronizeddocument.cpp \
     protocol/waveclient-rpc.pb.cc \
     protocol/common.pb.cc \
-    network/rpc.cpp
+    network/rpc.cpp \
+    view/wavelistview.cpp \
+    model/wavelist.cpp \
+    view/wavedigestgraphicsitem.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -50,6 +53,9 @@ HEADERS += app/mainwindow.h \
     model/synchronizeddocument.h \
     protocol/waveclient-rpc.pb.h \
     protocol/common.pb.h \
-    network/rpc.h
+    network/rpc.h \
+    view/wavelistview.h \
+    model/wavelist.h \
+    view/wavedigestgraphicsitem.h
 FORMS += app/mainwindow.ui
 unix:LIBS += -lprotobuf

@@ -1,9 +1,12 @@
 #include "networkadapter.h"
 #include "model/documentmutation.h"
+#include "model/wavelist.h"
 #include "app/environment.h"
 #include "model/wavelet.h"
 #include "model/blip.h"
 #include "rpc.h"
+
+#include <QUrl>
 
 NetworkAdapter* NetworkAdapter::s1 = 0;
 NetworkAdapter* NetworkAdapter::s2 = 0;
@@ -20,6 +23,7 @@ NetworkAdapter::NetworkAdapter(QObject* parent)
     connect( m_rpc, SIGNAL(online()), SLOT(getOnline()));
     connect( m_rpc, SIGNAL(offline()), SLOT(getOffline()));
     connect( m_rpc, SIGNAL(messageReceived(QString,QByteArray)), SLOT(messageReceived(QString,QByteArray)));
+
     m_rpc->open("localhost", 9876);
 }
 
@@ -31,7 +35,7 @@ void NetworkAdapter::sendOpenWave()
 {
     std::ostringstream str;
     waveserver::ProtocolOpenRequest req;
-    req.set_participant_id("dept@localhost");
+    req.set_participant_id("torben@localhost");
     req.set_wave_id("!indexwave");
     req.add_wavelet_id_prefix("");
     req.SerializeToOstream(&str);
@@ -46,6 +50,18 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
         waveserver::ProtocolWaveletUpdate update;
         update.ParseFromArray(data.constData(), data.length());
         qDebug("msg>> %s", update.DebugString().data());
+
+        QUrl url( QString::fromStdString( update.wavelet_name() ) );
+        if ( url.path().left(12) == "/!indexwave/" )
+        {
+            QString waveid = url.path().mid(12);
+            Wave* wave = environment()->wave(waveid);
+            if ( !wave )
+            {
+                wave = environment()->createWave(waveid);
+                environment()->inbox()->addWave(wave);
+            }
+        }
     }
 }
 
