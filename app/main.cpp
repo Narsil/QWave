@@ -14,7 +14,7 @@
 #include "model/participant.h"
 #include "model/wavelist.h"
 #include "app/environment.h"
-
+#include "network/networkadapter.h"
 
 #include "protocol/waveclient-rpc.pb.h"
 #include <fstream>
@@ -43,7 +43,8 @@ int main(int argc, char *argv[])
             w = &w2;
 
         // Test
-        Environment* en = new Environment("torben.weis@googlewave.com", "torben");
+        Environment* en = new Environment("torben@localhost", "torben");
+        en->networkAdapter()->setServer( "localhost", 9876 );
 
         WaveListView* wlview = new WaveListView(en->inbox());
         wlview->show();

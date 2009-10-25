@@ -2,6 +2,8 @@
 #include "model/wavelist.h"
 #include "model/wave.h"
 #include "wavedigestgraphicsitem.h"
+#include "app/environment.h"
+#include "network/networkadapter.h"
 
 #include <QGraphicsScene>
 
@@ -79,4 +81,6 @@ void WaveListView::itemClicked(WaveDigestGraphicsItem* item)
         m_selectedItem->setSelected(false);
     m_selectedItem = item;
     m_selectedItem->setSelected(true);
+
+    item->wave()->environment()->networkAdapter()->openWavelet( item->wave()->wavelet() );
 }

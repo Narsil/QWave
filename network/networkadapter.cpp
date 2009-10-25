@@ -10,37 +10,65 @@
 
 #include <QUrl>
 
+// Includes for protobuf
+#include "protocol/waveclient-rpc.pb.h"
+#include <sstream>
+#include <string>
+
 NetworkAdapter* NetworkAdapter::s1 = 0;
 NetworkAdapter* NetworkAdapter::s2 = 0;
 
 NetworkAdapter::NetworkAdapter(QObject* parent)
-        : QObject( parent )
+        : QObject( parent ), m_isOnline(false)
 {
     if ( !s1 )
         s1 = this;
     else
         s2 = this;
 
+    m_rpc = 0;
+}
+
+void NetworkAdapter::setServer( const QString& serverName, quint32 serverPort )
+{
+    if ( m_rpc )
+        delete m_rpc;
+
     m_rpc = new RPC(this);
     connect( m_rpc, SIGNAL(online()), SLOT(getOnline()));
     connect( m_rpc, SIGNAL(offline()), SLOT(getOffline()));
     connect( m_rpc, SIGNAL(messageReceived(QString,QByteArray)), SLOT(messageReceived(QString,QByteArray)));
 
-    m_rpc->open("localhost", 9876);
+    m_rpc->open(serverName, serverPort);
 }
 
-#include "protocol/waveclient-rpc.pb.h"
-#include <sstream>
-#include <string>
+bool NetworkAdapter::openWavelet(Wavelet* wavelet)
+{
+    QString waveId = wavelet->wave()->domain() + "!" + wavelet->wave()->id();
+    QString waveletId = wavelet->domain() + "!" + wavelet->id();
+    QString id = waveId + "/" + waveletId;
+    if ( m_openWaves.contains(id) )
+        return true;
 
-void NetworkAdapter::sendOpenWave()
+    if ( m_rpc && m_isOnline )
+    {
+        sendOpenWave(waveId, waveletId);
+        m_openWaves.append(id);
+        return true;
+    }
+    return false;
+}
+
+void NetworkAdapter::sendOpenWave(const QString& waveId, const QString& waveletId)
 {
     std::ostringstream str;
     waveserver::ProtocolOpenRequest req;
-    req.set_participant_id("torben@localhost");
-    req.set_wave_id("!indexwave");
-    req.add_wavelet_id_prefix("");
+    req.set_participant_id( environment()->localUser()->address().toStdString());
+    req.set_wave_id(waveId.toStdString());
+    req.add_wavelet_id_prefix(waveletId.toStdString());
     req.SerializeToOstream(&str);
+
+    qDebug("msg>> %s", req.DebugString().data());
 
     m_rpc->send("waveserver.ProtocolOpenRequest", str.str().data(), str.str().length());
 }
@@ -51,7 +79,7 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
     {
         waveserver::ProtocolWaveletUpdate update;
         update.ParseFromArray(data.constData(), data.length());
-        qDebug("msg>> %s", update.DebugString().data());
+        qDebug("msg<< %s", update.DebugString().data());
 
         QUrl url( QString::fromStdString( update.wavelet_name() ) );
         if ( url.path().left(12) == "/!indexwave/" )
@@ -144,9 +172,11 @@ Environment* NetworkAdapter::environment() const
 
 void NetworkAdapter::getOnline()
 {
-    sendOpenWave();
+    m_isOnline = true;
+    sendOpenWave("!indexwave", "");
 }
 
 void NetworkAdapter::getOffline()
 {
+    m_isOnline = false;
 }
