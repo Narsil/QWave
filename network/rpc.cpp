@@ -36,16 +36,22 @@ void RPC::send(const QString& methodName, const char* data, quint32 size)
     // Size of the message
     u.i = 1 + 1 + methodName.length() + 1 + size;
     dev->write(u.str, 4);
-    u.i = ++m_counter;
-    // TODO: Varint
-    dev->write(u.str, 1);
-    u.i = methodName.length();
-    // TODO: Varint
-    dev->write(u.str, 1);
+
+    char buf[10];
+    int offset = 0;
+    encodeVarint(buf, ++m_counter, offset);
+    dev->write(buf, offset);
+
+    offset = 0;
+    encodeVarint(buf, methodName.length(), offset);
+    dev->write(buf, offset);
+
     dev->write(methodName.toAscii().constData(), methodName.length());
-    u.i = methodName.length();
-    // TODO: Varint
-    dev->write(u.str, 1);
+
+    offset = 0;
+    encodeVarint(buf, size, offset);
+    dev->write(buf, offset);
+
     dev->write(data, size);
     dev->flush();
 }
@@ -181,4 +187,13 @@ quint32 RPC::decodeVarint(const char* charptr, quint32 maxSize, int &consumed)
     }
     consumed = -1;
     return 0;
+}
+
+void RPC::encodeVarint(char* ptr, quint32 value, int &offset )
+{
+    do
+    {
+        ptr[offset++] = value & 0x7f;
+        value >>= 7;
+    } while( value > 0 );
 }

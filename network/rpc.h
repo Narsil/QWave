@@ -32,6 +32,7 @@ private slots:
 private:
     bool readBytesIntern();
     quint32 decodeVarint(const char* ptr, quint32 maxSize, int& consumed);
+    void encodeVarint(char* ptr, quint32 value, int &offset );
 
     union IntUnion
     {
