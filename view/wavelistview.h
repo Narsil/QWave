@@ -16,6 +16,8 @@ class WaveListView : public QGraphicsView
 public:
     WaveListView(WaveList* lst, QWidget* parent = 0);
 
+    void select( Wave* wave );
+
 protected:
     virtual void resizeEvent( QResizeEvent* event );
 

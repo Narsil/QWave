@@ -85,3 +85,11 @@ void WaveListView::itemClicked(WaveDigestGraphicsItem* item)
 
     item->wave()->environment()->networkAdapter()->openWavelet( item->wave()->wavelet() );
 }
+
+void WaveListView::select( Wave* wave )
+{
+    WaveDigestGraphicsItem* item = m_items[wave->id()];
+    if ( !item )
+        return;
+    itemClicked(item);
+}

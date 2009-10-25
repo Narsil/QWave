@@ -29,6 +29,8 @@
     <property name="title">
      <string>&amp;File</string>
     </property>
+    <addaction name="actionNewWave"/>
+    <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
@@ -49,6 +51,11 @@
   <action name="actionServerSettings">
    <property name="text">
     <string>Server settings ...</string>
+   </property>
+  </action>
+  <action name="actionNewWave">
+   <property name="text">
+    <string>New Wave</string>
    </property>
   </action>
  </widget>
