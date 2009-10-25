@@ -10,6 +10,7 @@
 WaveListView::WaveListView(WaveList* list, QWidget* parent)
         : QGraphicsView(parent), m_list(list), m_selectedItem(0)
 {
+    setMinimumWidth(300);
     setFrameShape(QFrame::NoFrame);
     setFrameShadow(QFrame::Plain);
     setLineWidth(0);
@@ -21,7 +22,7 @@ WaveListView::WaveListView(WaveList* list, QWidget* parent)
 
     m_scene = new QGraphicsScene(this);
     setScene( m_scene );
-    setSceneRect(0,0,400,2000);
+    // setSceneRect(0,0,400,400);
 
     connect( list, SIGNAL(waveAdded(Wave*)), SLOT(addWave(Wave*)));
     connect( list, SIGNAL(waveRemoved(Wave*)), SLOT(removeWave(Wave*)));

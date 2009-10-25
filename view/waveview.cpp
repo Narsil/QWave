@@ -9,12 +9,14 @@
 WaveView::WaveView(Wave* wave )
         : m_wave(wave)
 {
+    setMinimumWidth(500);
+
     m_scene = new QGraphicsScene();
     m_headScene = new QGraphicsScene();
 
     m_verticalLayout = new QVBoxLayout(this);
     m_verticalLayout->setSpacing(0);
-    m_verticalLayout->setMargin(11);
+    m_verticalLayout->setMargin(0);
     m_verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
     m_graphicsViewHead = new QGraphicsView(this);
     m_graphicsViewHead->setObjectName(QString::fromUtf8("graphicsViewHead"));
