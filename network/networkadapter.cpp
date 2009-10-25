@@ -146,9 +146,9 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
 
 void NetworkAdapter::send( const DocumentMutation& mutation, const QString& waveletId, const QString& docId )
 {
-    if ( this == s1 )
+    if ( this == s1 && s2 )
         s2->receive(mutation, waveletId, docId);
-    else
+    else if ( s1 )
         s1->receive(mutation, waveletId, docId);
 }
 

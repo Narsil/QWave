@@ -243,6 +243,9 @@ int OTAdapter::mapToBlip(int position)
     int charIndex = 0;
     int blockCount = 0;
     QTextDocument* qdoc = textItem()->document();
+
+    // Skip the non-editable characters which are in the QTextDocument but not in the blip.
+    // Now count the number of characters and line breaks up to 'position'
     for( int i = textItem()->forbiddenTextRange(); i < position; ++i )
     {
         QChar ch = qdoc->characterAt(i);
@@ -253,11 +256,13 @@ int OTAdapter::mapToBlip(int position)
     }
 
     int charsSeen = 0;
+    int linesSeen = 0;
     int pos = 0;
 
     QStack<int> stack;
     stack.push(0);
 
+    // Skip the required number of characters and newlines.
     StructuredDocument* doc = blip()->document();
     for( QList<StructuredDocument::Item>::const_iterator it = doc->begin(); it != doc->end(); ++it, pos++ )
     {
@@ -267,7 +272,7 @@ int OTAdapter::mapToBlip(int position)
                 // Text in the body element?
                 if ( stack.top() == 1 )
                 {
-                    if ( charsSeen == charIndex )
+                    if ( charsSeen == charIndex && linesSeen - 1 == blockCount )
                         return pos;
                     charsSeen++;
                 }
@@ -281,7 +286,11 @@ int OTAdapter::mapToBlip(int position)
                     else if ( key == "contributor" )
                         stack.push(2);
                     else if ( key == "line" )
+                    {
+                        if ( linesSeen - 1 == blockCount && charsSeen == charIndex )
+                            return pos;
                         stack.push(3);
+                    }
                     else if ( key == "image" )
                         stack.push(4);
                     else
@@ -295,6 +304,15 @@ int OTAdapter::mapToBlip(int position)
                 {
                     qDebug("Ooooops, malformed doc");
                     continue;
+                }
+                // End of the last line? -> return this position since there are no additional characters
+                if ( t == 1 )
+                    return pos;
+                else if ( t == 3 )
+                {
+                    linesSeen++;
+                    if ( charsSeen == charIndex && linesSeen - 1 == blockCount )
+                        return pos + 1;
                 }
                 break;
         }

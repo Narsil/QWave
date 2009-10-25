@@ -171,6 +171,22 @@ int main(int argc, char *argv[])
         m3.insertStart("line", map);
         m3.insertEnd();
         m3.insertEnd();
+        m3.apply(bdoc);
+        bdoc->print_();
+
+        b = wavelet->blip("b+b4");
+        DocumentMutation m4;
+        bdoc = b->document();
+        map.clear();
+        map["author"] = "torben.weis@googlewave.com";
+        m4.insertStart("contributor", map);
+        m4.insertEnd();
+        map.clear();
+        m4.insertStart("body", map);
+        m4.insertStart("line", map);
+        m4.insertEnd();
+        m4.insertEnd();
+        m4.apply(bdoc);
         bdoc->print_();
 
         /*
