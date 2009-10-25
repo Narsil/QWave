@@ -23,9 +23,6 @@ public:
     MainWindow(QWidget *parent = 0);
     ~MainWindow();
 
-    QGraphicsView* graphicsView();
-    QGraphicsView* graphicsViewHead();
-
 private:
     Ui::MainWindowClass *ui;
 };

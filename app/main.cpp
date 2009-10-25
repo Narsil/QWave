@@ -1,5 +1,6 @@
 #include <QtGui/QApplication>
 #include <QGraphicsView>
+#include <QSplitter>
 #include "mainwindow.h"
 
 #include "model/wave.h"
@@ -45,9 +46,6 @@ int main(int argc, char *argv[])
         // Test
         Environment* en = new Environment("torben@localhost", "torben");
         en->networkAdapter()->setServer( "localhost", 9876 );
-
-        WaveListView* wlview = new WaveListView(en->inbox());
-        wlview->show();
 
         Participant* p2 = new Participant("joe@acme.com");
         p2->setName("Joe");
@@ -213,8 +211,15 @@ int main(int argc, char *argv[])
     cmut3.apply(mdoc);
     mdoc->print_(); */
 
+        QSplitter* splitter = new QSplitter();
+
         WaveView* view = new WaveView(wave);
-        w->setCentralWidget(view);
+
+        WaveListView* wlview = new WaveListView(en->inbox());
+
+        splitter->addWidget(wlview);
+        splitter->addWidget(view);
+        w->setCentralWidget(splitter);
         w->show();
 
         en->inbox()->addWave(wave);
