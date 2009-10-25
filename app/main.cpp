@@ -34,18 +34,14 @@ void testprotobuf()
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-    MainWindow w1;
-    MainWindow w2;
 
     for( int i = 0; i < 1; ++i )
     {
-        MainWindow* w = &w1;
-        if ( i == 1 )
-            w = &w2;
-
         // Test
         Environment* en = new Environment("torben@localhost", "torben");
         en->networkAdapter()->setServer( "localhost", 9876 );
+
+        MainWindow* w = new MainWindow(en);
 
         Participant* p2 = new Participant("joe@acme.com");
         p2->setName("Joe");
