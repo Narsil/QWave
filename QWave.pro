@@ -30,7 +30,8 @@ SOURCES += app/main.cpp \
     network/rpc.cpp \
     view/wavelistview.cpp \
     model/wavelist.cpp \
-    view/wavedigestgraphicsitem.cpp
+    view/wavedigestgraphicsitem.cpp \
+    app/serversettingsdialog.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -56,6 +57,8 @@ HEADERS += app/mainwindow.h \
     network/rpc.h \
     view/wavelistview.h \
     model/wavelist.h \
-    view/wavedigestgraphicsitem.h
-FORMS += app/mainwindow.ui
+    view/wavedigestgraphicsitem.h \
+    app/serversettingsdialog.h
+FORMS += app/mainwindow.ui \
+    app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf
