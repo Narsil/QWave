@@ -34,6 +34,8 @@ void NetworkAdapter::setServer( const QString& serverName, quint32 serverPort )
     if ( m_rpc )
         delete m_rpc;
 
+    m_serverName = serverName;
+    m_serverPort = serverPort;
     m_rpc = new RPC(this);
     connect( m_rpc, SIGNAL(online()), SLOT(getOnline()));
     connect( m_rpc, SIGNAL(offline()), SLOT(getOffline()));
@@ -148,7 +150,7 @@ void NetworkAdapter::send( const DocumentMutation& mutation, const QString& wave
 {
     if ( this == s1 && s2 )
         s2->receive(mutation, waveletId, docId);
-    else if ( s1 )
+    else if ( this == s2 && s1 )
         s1->receive(mutation, waveletId, docId);
 }
 

@@ -18,6 +18,9 @@ public:
 
     void select( Wave* wave );
 
+signals:
+    void selected(Wave* wave);
+
 protected:
     virtual void resizeEvent( QResizeEvent* event );
 

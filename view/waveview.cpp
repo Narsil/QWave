@@ -1,6 +1,8 @@
 #include "waveview.h"
 #include "waveletview.h"
 #include "model/wave.h"
+#include "network/networkadapter.h"
+#include "app/environment.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -62,4 +64,12 @@ WaveView::~WaveView()
 void WaveView::resizeEvent( QResizeEvent* )
 {
     m_waveletView->fitToWidth( m_graphicsViewHead->frameRect().width(), m_graphicsView->frameRect().width() );
+}
+
+void WaveView::setWave( Wave* wave )
+{
+    m_wave = wave;
+    wave->environment()->networkAdapter()->openWavelet( wave->wavelet() );
+
+    m_waveletView->setWavelet(wave->wavelet());    
 }

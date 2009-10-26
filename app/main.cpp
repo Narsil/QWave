@@ -38,7 +38,7 @@ int main(int argc, char *argv[])
     for( int i = 0; i < 1; ++i )
     {
         // Test
-        Environment* en = new Environment("torben@localhost", "torben");
+        Environment* en = new Environment("torben@localhost", "Torben");
         en->localUser()->setPixmap( QPixmap("images/user1.jpg") );
         en->networkAdapter()->setServer( "localhost", 9876 );
 
@@ -48,7 +48,7 @@ int main(int argc, char *argv[])
         p2->setName("Tux");
         p2->setPixmap( QPixmap("images/user2.jpg") );
         Participant* p3 = new Participant("pam@foobar.com");
-        p3->setName("Pam");
+        p3->setName("Kenny");
         p3->setPixmap( QPixmap("images/user3.jpg") );
 
         Wave* wave = new Wave(en, "localhost", "w+12345");
@@ -236,8 +236,8 @@ int main(int argc, char *argv[])
         w->setCentralWidget(splitter);
         w->setInboxView(wlview);
         w->setWaveView(view);
-        w->show();
-
+        view->connect( wlview, SIGNAL(selected(Wave*)), SLOT(setWave(Wave*)));
+        w->show();    
         en->inbox()->addWave(wave);
     }
     // End Test

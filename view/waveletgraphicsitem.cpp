@@ -16,20 +16,29 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
     m_titleItem->setPos(6, 3);
     m_titleItem->setBrush(QBrush(Qt::white));
 
+    int dy = 2 *3 + m_titleItem->boundingRect().height() + 42 + 2 * 5 + 1 + 22 + 1;
+    m_rect = QRectF( 0, 0, 100, dy);
+
+    setWavelet(view->wavelet());
+}
+
+void WaveletGraphicsItem::setWavelet( Wavelet* wavelet )
+{
+    foreach( ParticipantGraphicsItem* item, m_participantItems)
+    {
+        delete item;
+    }
+    m_participantItems.clear();
+
     qreal dx = 0;
     qreal dy = 2 *3 + m_titleItem->boundingRect().height();
-    foreach( Participant* p, view->wavelet()->participants() )
+    foreach( Participant* p, wavelet->participants() )
     {
         ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 42, this);
         item->setPos(dx + 5, dy + 5);
         dx += item->boundingRect().width() + 5;
         m_participantItems.append( item );
     }
-
-    dy += 42 + 2 * 5;
-    dy += 1 + 22 + 1;
-
-    m_rect = QRectF( 0, 0, 100, dy);
 }
 
 void WaveletGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)

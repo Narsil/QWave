@@ -27,6 +27,8 @@ public:
     void fitToWidth( qreal headWidth, qreal width );
     void layoutBlips();
 
+    void setWavelet( Wavelet* wavelet );
+
 private:
     void layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal width);
     void layoutBlips(qreal width);

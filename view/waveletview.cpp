@@ -24,6 +24,18 @@ WaveletView::~WaveletView()
     delete m_gfx;
 }
 
+void WaveletView::setWavelet( Wavelet* wavelet )
+{
+    m_wavelet = wavelet;
+    m_gfx->setWavelet(wavelet);
+    foreach( BlipGraphicsItem* item, m_blipItems.values() )
+    {
+        delete item;
+    }
+    m_blipItems.clear();
+    layoutBlips(m_lastWidth);
+}
+
 void WaveletView::layoutBlips()
 {
     layoutBlips(m_lastWidth);

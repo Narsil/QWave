@@ -20,6 +20,9 @@ public:
     QGraphicsScene* scene() { return m_scene; }
     QGraphicsScene* headScene() { return m_headScene; }
 
+public slots:
+    void setWave( Wave* wave );
+
 protected:
     virtual void resizeEvent( QResizeEvent* event );
 
