@@ -20,6 +20,8 @@ public:
 
     void setWavelet( Wavelet* wavelet );
 
+    void setTitle( const QString& title );
+
 private:
     WaveletView* m_view;
     QList<ParticipantGraphicsItem*> m_participantItems;

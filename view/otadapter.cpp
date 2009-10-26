@@ -13,6 +13,7 @@
 #include <QTextDocument>
 #include <QTextCursor>
 #include <QTextCharFormat>
+#include <QTextBlock>
 
 OTAdapter::OTAdapter(BlipGraphicsItem* parent )
         : QObject( parent ), m_suspendContentsChange(false)
@@ -42,6 +43,13 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
 
     QTextDocument* doc = textItem()->document();
     SynchronizedDocument* bdoc = blip()->document();
+
+    // Did the user modify the first block in the first blib? -> change the title
+    if ( blip()->isRootBlip() && doc->findBlock(position).blockNumber() == doc->begin().blockNumber() )
+    {
+        QString title = doc->begin().text().mid( textItem()->forbiddenTextRange() );
+        emit titleChanged(title);
+    }
 
     // Construct a document mutation which reflects the change made to the QTextDocument.
     DocumentMutation m;

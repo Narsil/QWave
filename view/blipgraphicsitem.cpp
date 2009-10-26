@@ -59,6 +59,10 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
 
     m_lastTextRect = m_text->boundingRect();
     QObject::connect(m_text->document(), SIGNAL(contentsChanged()), SLOT(onContentsChanged()));
+    QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SLOT(titleChanged(const QString&)));
+
+    if ( blip->isRootBlip() )
+        titleChanged( m_text->document()->begin().text().mid( m_text->forbiddenTextRange() ) );
 }
 
 QTextDocument* BlipGraphicsItem::document()
@@ -174,6 +178,11 @@ void BlipGraphicsItem::hoverMoveEvent ( QGraphicsSceneHoverEvent* )
         delete m_replyItem;
         m_replyItem = 0;
     }
+}
+
+void BlipGraphicsItem::titleChanged(const QString& title)
+{
+    m_view->setTitle(title);
 }
 
 /****************************************************************************

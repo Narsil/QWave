@@ -24,7 +24,7 @@ public:
     QTextDocument* document();
     Blip* blip() const { return m_blip; }
     GraphicsTextItem* textItem() const { return m_text; }
-
+    WaveletView* view() const { return m_view; }
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     virtual QRectF boundingRect() const;
     void setWidth(qreal width);
@@ -36,6 +36,7 @@ protected:
 
 private slots:
     void onContentsChanged();
+    void titleChanged(const QString& title);
 
 private:
     Blip* m_blip;
