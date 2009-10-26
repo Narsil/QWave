@@ -27,6 +27,8 @@ public:
     void fitToWidth( qreal headWidth, qreal width );
     void layoutBlips();
 
+    void setTitle( const QString& title );
+
     void setWavelet( Wavelet* wavelet );
 
 private:

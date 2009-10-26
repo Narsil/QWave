@@ -96,3 +96,11 @@ void WaveletView::fitToWidth( qreal headWidth, qreal width )
     m_gfx->setWidth(headWidth);
     layoutBlips(width);
 }
+
+void WaveletView::setTitle( const QString& title )
+{
+    if ( title.isEmpty() )
+        m_gfx->setTitle("(no title)");
+    else
+        m_gfx->setTitle(title);
+}

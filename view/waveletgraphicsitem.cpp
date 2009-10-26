@@ -74,3 +74,8 @@ void WaveletGraphicsItem::setWidth(qreal width)
     m_rect.setWidth(width);
     this->prepareGeometryChange();
 }
+
+void WaveletGraphicsItem::setTitle( const QString& title )
+{
+    m_titleItem->setText(title);
+}

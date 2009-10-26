@@ -38,6 +38,9 @@ public:
 
     Environment* environment() const;
 
+signals:
+    void titleChanged(const QString& title);
+
 private slots:
     void update( const DocumentMutation& mutation );
 
