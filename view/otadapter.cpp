@@ -8,6 +8,7 @@
 #include "model/documentmutation.h"
 #include "app/environment.h"
 #include "network/networkadapter.h"
+#include "model/waveletdelta.h"
 
 #include <QStack>
 #include <QTextDocument>
@@ -137,7 +138,9 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     m.retain( bdoc->count() - index );
 
     // Apply the mutation to the document
-    bdoc->handleSend(m);
+    WaveletDelta delta;
+    delta.setMutation(m);
+    bdoc->handleSend(delta);
     bdoc->print_();
 
     // Send the mutation

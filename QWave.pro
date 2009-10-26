@@ -31,7 +31,8 @@ SOURCES += app/main.cpp \
     view/wavelistview.cpp \
     model/wavelist.cpp \
     view/wavedigestgraphicsitem.cpp \
-    app/serversettingsdialog.cpp
+    app/serversettingsdialog.cpp \
+    model/waveletdelta.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -58,7 +59,9 @@ HEADERS += app/mainwindow.h \
     view/wavelistview.h \
     model/wavelist.h \
     view/wavedigestgraphicsitem.h \
-    app/serversettingsdialog.h
+    app/serversettingsdialog.h \
+    model/waveletdelta.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
-unix:LIBS += -lprotobuf
+unix:LIBS += -lprotobuf \
+    -lqca

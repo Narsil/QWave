@@ -21,7 +21,7 @@ Blip::Blip(BlipThread* thread, const QString& id)
 void Blip::setup()
 {
      setObjectName(m_id);
-     m_doc = new SynchronizedDocument(this);
+     m_doc = new SynchronizedDocument(environment(), this);
 }
 
 BlipThread* Blip::parentThread() const
@@ -35,6 +35,11 @@ Wavelet* Blip::wavelet() const
     if ( w )
         return w;
     return parentThread()->wavelet();
+}
+
+Environment* Blip::environment() const
+{
+    return wavelet()->environment();
 }
 
 QList<BlipThread*> Blip::threads() const

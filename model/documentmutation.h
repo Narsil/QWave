@@ -57,11 +57,6 @@ public:
     QList<Item>::const_iterator end() const { return m_items.constEnd(); }
     int count() const;
 
-    void setLocalVersion( int version ) { m_localVersion = version; }
-    int localVersion() const { return m_localVersion; }
-    void setRemoteVersion( int version ) { m_remoteVersion = version; }
-    int remoteVersion() const { return m_remoteVersion; }
-
     /**
       * @return the position of the item behind the last modified character in the document.
       * This position can be used as a cursor marker to show where the author if this mutation is typing currently.
@@ -92,8 +87,6 @@ private:
     QString mapToString(const QHash<QString,QString>* map);
 
     QList<Item> m_items;
-    int m_localVersion;
-    int m_remoteVersion;
 };
 
 #endif // DOCUMENTMUTATION_H

@@ -59,6 +59,8 @@ public:
     void deleteChars(const QString& chars);
     void annotationBoundary(const QList<QString>& endKeys, const QHash<QString,QString>& changes);
     /**
+      * @internal
+      *
       * This function is only meaningful while a delta is being applied.
       */
     int countDelta() const;

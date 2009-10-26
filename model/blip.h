@@ -9,6 +9,7 @@ class Wavelet;
 class SynchronizedDocument;
 class Participant;
 class DocumentMutation;
+class Environment;
 
 class Blip : public QObject
 {
@@ -22,6 +23,7 @@ public:
     SynchronizedDocument* document() { return m_doc; }
     BlipThread* parentThread() const;
     Wavelet* wavelet() const;
+    Environment* environment() const;
     bool isRootBlip() const;
     bool isFirstRootBlip() const;
     bool isLastBlipInThread() const;

@@ -3,22 +3,25 @@
 
 #include <QList>
 
-#include "documentmutation.h"
+#include "waveletdelta.h"
 #include "structureddocument.h"
+
+class Environment;
 
 class SynchronizedDocument : public StructuredDocument
 {
     Q_OBJECT
 public:
-    SynchronizedDocument(QObject* parent = 0);
+    SynchronizedDocument(Environment* environment, QObject* parent = 0);
 
-    void handleSend( DocumentMutation& incoming );
-    void handleReceive( const DocumentMutation& incoming );
+    void handleSend( WaveletDelta& outgoing );
+    void handleReceive( const WaveletDelta& incoming );
 
 private:
     int m_serverMsgCount;
     int m_clientMsgCount;
-    QList<DocumentMutation> m_outgoingMutations;
+    QList<WaveletDelta> m_outgoingDeltas;
+    Environment* m_environment;
 };
 
 #endif // SYNCHRONIZEDDOCUMENT_H

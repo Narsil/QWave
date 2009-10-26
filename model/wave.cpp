@@ -7,7 +7,7 @@
 Wave::Wave(Environment* environment, const QString& domain, const QString &id)
         : QObject(environment), m_id(id), m_domain(domain)
 {
-    m_digestDoc = new SynchronizedDocument(this);
+    m_digestDoc = new SynchronizedDocument(environment, this);
 
     new Wavelet(this, domain, "conv+root");
 }
