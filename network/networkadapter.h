@@ -9,6 +9,7 @@ class DocumentMutation;
 class Environment;
 class RPC;
 class Wavelet;
+class Participant;
 
 class NetworkAdapter : public QObject
 {
@@ -26,6 +27,8 @@ public:
     QString serverName() const { return m_serverName; }
     quint32 serverPort() const { return m_serverPort; }
     bool isOnline() const { return m_isOnline; }
+
+    void sendAddParticipant(Wavelet* wavelet, Participant* participant);
 
 private slots:
     void getOnline();

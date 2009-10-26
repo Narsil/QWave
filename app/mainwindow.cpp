@@ -36,9 +36,10 @@ void MainWindow::showServerSettings()
 
 void MainWindow::newWave()
 {
+    // TODO: This is a crude way of creating new wave IDs
     QString rand;
     rand.setNum( qrand() );
-    Wave* wave = new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
+    Wave* wave = m_environment->createWave("w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
     wave->setDigest("This is a new wave");
     Wavelet* wavelet = wave->wavelet();
     wavelet->addParticipant(m_environment->localUser());
@@ -70,6 +71,11 @@ void MainWindow::newWave()
     m2.apply(bdoc);
     bdoc->print_();
 
+    // Tell the server about the new wave
+    // TODO: This is not final and ugly
+    m_environment->networkAdapter()->sendAddParticipant(wavelet, m_environment->localUser());
+
+    // Add the new wave to the inbox and show it.
     m_environment->inbox()->addWave(wave);
     m_inboxView->select(wave);
 }
