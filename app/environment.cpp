@@ -45,7 +45,7 @@ Wave* Environment::createWave( const QString& id )
     Wave* wave = m_waves[id];
     if ( wave )
         return wave;
-    wave = new Wave(this, "localhost", id);
+    wave = new Wave(this, m_networkAdapter->serverName(), id);
     m_waves[id] = wave;
     return wave;
 }

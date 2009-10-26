@@ -1,6 +1,8 @@
 #include <QtGui/QApplication>
 #include <QGraphicsView>
 #include <QSplitter>
+#include <QDateTime>
+
 #include "mainwindow.h"
 
 #include "model/wave.h"
@@ -33,6 +35,8 @@ void testprotobuf()
 
 int main(int argc, char *argv[])
 {
+    qsrand( QDateTime::currentDateTime().toTime_t());
+
     QApplication a(argc, argv);
 
     for( int i = 0; i < 1; ++i )
