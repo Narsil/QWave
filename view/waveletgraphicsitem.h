@@ -4,6 +4,7 @@
 #include <QGraphicsItem>
 #include <QRectF>
 
+class Wavelet;
 class WaveletView;
 class ParticipantGraphicsItem;
 class QGraphicsSimpleTextItem;
@@ -16,6 +17,8 @@ public:
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     virtual QRectF boundingRect() const;
     void setWidth(qreal width);
+
+    void setWavelet( Wavelet* wavelet );
 
 private:
     WaveletView* m_view;

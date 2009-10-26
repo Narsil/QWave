@@ -7,6 +7,7 @@
 #include "model/synchronizeddocument.h"
 #include "model/documentmutation.h"
 #include "model/wavelist.h"
+#include "model/participant.h"
 #include "environment.h"
 #include "network/networkadapter.h"
 #include "view/wavelistview.h"
@@ -58,7 +59,7 @@ void MainWindow::newWave()
     StructuredDocument* bdoc = b->document();
     DocumentMutation m2;
     map.clear();
-    map["author"] = "torben.weis@googlewave.com";
+    map["author"] = m_environment->localUser()->address();
     m2.insertStart("contributor", map);
     m2.insertEnd();
     map.clear();
