@@ -1,6 +1,5 @@
 #include "wave.h"
 #include "wavelet.h"
-#include "synchronizeddocument.h"
 #include "wavedigest.h"
 #include "app/environment.h"
 

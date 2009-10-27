@@ -9,6 +9,7 @@ class Wave;
 class Participant;
 class StructuredDocument;
 class DocumentMutation;
+class OTProcessor;
 
 class WaveDigest : public QObject
 {
@@ -23,9 +24,23 @@ public:
     QList<Participant*> participants() const { return m_participants; }
     Participant* participant( const QString& address );
 
+    OTProcessor* processor() const { return m_processor; }
+
     QString toPlainText() const;
 
-    void mutate(const DocumentMutation& mutation);
+private slots:
+    /**
+      * Connected to the OTProcessor.
+      */
+    void addParticipant( const QString& address );
+    /**
+      * Connected to the OTProcessor.
+      */
+    void removeParticipant( const QString& address );
+    /**
+      * Connected to the OTProcessor.
+      */
+    void mutateDocument( const QString& documentId, const DocumentMutation& mutation );
 
 signals:
     /**
@@ -45,6 +60,7 @@ private:
     QList<Participant*> m_participants;
     QString m_digest;
     StructuredDocument* m_doc;
+    OTProcessor* m_processor;
 };
 
 #endif // WAVEDIGEST_H

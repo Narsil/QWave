@@ -4,7 +4,7 @@
 #include "model/wave.h"
 #include "model/wavelet.h"
 #include "model/blip.h"
-#include "model/synchronizeddocument.h"
+#include "model/structureddocument.h"
 #include "model/documentmutation.h"
 #include "model/wavelist.h"
 #include "model/participant.h"

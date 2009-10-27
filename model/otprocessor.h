@@ -16,19 +16,12 @@ public:
     OTProcessor(Environment* environment, QObject* parent = 0);
 
     void handleSend( WaveletDelta& outgoing );
-    /**
-      * @param context is used to pass additional information through the OT processor and into the emitted signals.
-      */
-    void handleReceive( const WaveletDelta& incoming, const QString& context = QString::null );
+    void handleReceive( const WaveletDelta& incoming );
 
 signals:
     void participantAdd( const QString& address );
     void participantRemove( const QString& address );
     void documentMutation( const QString& documentId, const DocumentMutation& mutation );
-
-    void participantAdd( const QString& address, const QString& context );
-    void participantRemove( const QString& address, const QString& context );
-    void documentMutation( const QString& documentId, const DocumentMutation& mutation, const QString& context );
 
 private:
     int m_serverMsgCount;

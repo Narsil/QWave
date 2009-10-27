@@ -8,7 +8,7 @@
 #include "model/participant.h"
 #include "model/waveletdelta.h"
 #include "model/otprocessor.h"
-#include "model/digest.h"
+#include "model/wavedigest.h"
 #include "rpc.h"
 
 #include <QUrl>
@@ -215,9 +215,9 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
         QString waveletid = path.mid(index+1);
 
         // Digest?
-        if ( waveid == "/!indexwave/" )
+        if ( waveid == "!indexwave" )
         {
-            Wave* wave = environment()->wave(waveid);
+            Wave* wave = environment()->wave(waveletid);
             // If the wave does not yet exist, then create it in the inbox
             if ( !wave )
             {
@@ -228,7 +228,7 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
             // Apply all updates to the wave digest
             for( int i = 0; i < update.applied_delta_size(); ++i )
             {
-                environment()->digest()->processor()->handleReceive( convert( update.applied_delta(i) ), waveletid );
+                wave->digest()->processor()->handleReceive( convert( update.applied_delta(i) ) );
             }
         }
         // Wavelet?
