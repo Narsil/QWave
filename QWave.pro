@@ -34,7 +34,6 @@ SOURCES += app/main.cpp \
     model/waveletdelta.cpp \
     model/otprocessor.cpp \
     model/waveletdeltaoperation.cpp \
-    model/digest.cpp \
     model/wavedigest.cpp \
     model/contacts.cpp
 HEADERS += app/mainwindow.h \
@@ -66,7 +65,6 @@ HEADERS += app/mainwindow.h \
     model/waveletdelta.h \
     model/otprocessor.h \
     model/waveletdeltaoperation.h \
-    model/digest.h \
     model/wavedigest.h \
     model/contacts.h
 FORMS += app/mainwindow.ui \

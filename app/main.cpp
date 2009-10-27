@@ -9,7 +9,6 @@
 #include "model/wavelet.h"
 #include "model/blipthread.h"
 #include "model/blip.h"
-#include "model/synchronizeddocument.h"
 #include "view/waveview.h"
 #include "view/waveletview.h"
 #include "view/wavelistview.h"
@@ -18,6 +17,7 @@
 #include "model/wavelist.h"
 #include "app/environment.h"
 #include "network/networkadapter.h"
+#include "model/structureddocument.h"
 
 #include "protocol/waveclient-rpc.pb.h"
 #include <fstream>

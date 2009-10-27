@@ -28,7 +28,7 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     m_clientMsgCount++;
 }
 
-void OTProcessor::handleReceive( const WaveletDelta& incoming, const QString& context )
+void OTProcessor::handleReceive( const WaveletDelta& incoming )
 {
     // Throw away all delta that we have in common with the server
     while( !m_outgoingDeltas.isEmpty() )
@@ -42,7 +42,7 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming, const QString& co
 
     // Transform the received delta and transform the operations which have not
     // yet been acknowledged by the server
-    Q_ASSERT( incoming.version().version == m_serverMsgCount );
+    // Disabled because of a bug in the google code: Q_ASSERT( incoming.version().version == m_serverMsgCount );
     WaveletDelta msg(incoming);
     for( int i = 0; i < m_outgoingDeltas.count(); ++i )
     {
@@ -63,20 +63,11 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming, const QString& co
     {
         const WaveletDeltaOperation sop = msg.operations()[s];
         if ( sop.hasMutation() )
-        {
             emit documentMutation(sop.documentId(), *(sop.mutation()));
-            emit documentMutation(sop.documentId(), *(sop.mutation()), context);
-        }
         if ( sop.hasAddParticipant() )
-        {
             emit participantAdd( sop.addParticipant() );
-            emit participantAdd( sop.addParticipant(), context );
-        }
         if ( sop.hasRemoveParticipant() )
-        {
             emit participantRemove( sop.removeParticipant() );
-            emit participantRemove( sop.removeParticipant(), context );
-        }
     }
     m_serverMsgCount++;
 }
