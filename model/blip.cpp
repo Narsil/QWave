@@ -4,6 +4,7 @@
 #include "synchronizeddocument.h"
 #include "app/environment.h"
 #include "wave.h"
+#include "documentmutation.h"
 #include <QtDebug>
 
 Blip::Blip(Wavelet* wavelet, const QString& id)

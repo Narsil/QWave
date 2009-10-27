@@ -7,7 +7,7 @@
 class Wavelet;
 class Environment;
 class SynchronizedDocument;
-class DocumentMutation;
+class WaveletDelta;
 
 class Wave : public QObject
 {
@@ -21,9 +21,10 @@ public:
     void setDigest(const QString& digest);
 
     Wavelet* wavelet() const;
+    Wavelet* wavelet(const QString& id) const;
     Environment* environment() const;
 
-    void mutateDigest(const DocumentMutation& mutation);
+    void updateDigest(const WaveletDelta& delta);
 
 signals:
     void digestChanged();

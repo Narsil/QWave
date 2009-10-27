@@ -3,7 +3,6 @@
 #include "model/wave.h"
 #include "model/wavelet.h"
 #include "model/wavelist.h"
-
 #include "network/networkadapter.h"
 
 Environment::Environment(const QString& address, const QString& name)
