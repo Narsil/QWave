@@ -1,7 +1,7 @@
 #include "blip.h"
 #include "blipthread.h"
 #include "wavelet.h"
-#include "synchronizeddocument.h"
+#include "structureddocument.h"
 #include "app/environment.h"
 #include "wave.h"
 #include "documentmutation.h"
@@ -22,7 +22,7 @@ Blip::Blip(BlipThread* thread, const QString& id)
 void Blip::setup()
 {
      setObjectName(m_id);
-     m_doc = new SynchronizedDocument(environment(), this);
+     m_doc = new StructuredDocument(this);
 }
 
 BlipThread* Blip::parentThread() const

@@ -56,7 +56,6 @@ int main(int argc, char *argv[])
         p3->setPixmap( QPixmap("images/user3.jpg") );
 
         Wave* wave = new Wave(en, "localhost", "w+12345");
-        wave->setDigest("This is some wave which as a digest which can be longer than the space available in here.");
         // Wavelet* wavelet = new Wavelet(wave, "localhost", "conv+root");
         Wavelet* wavelet = wave->wavelet();
         wavelet->addParticipant(en->localUser());

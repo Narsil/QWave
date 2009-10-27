@@ -10,6 +10,8 @@ class Wavelet;
 class Participant;
 class NetworkAdapter;
 class WaveList;
+class Digest;
+class Contacts;
 
 class Environment : public QObject
 {
@@ -18,8 +20,10 @@ public:
 
     Participant* localUser() const;
     NetworkAdapter* networkAdapter() const;
+    Digest* digest() const { return m_digest; }
     Wavelet* wavelet( const QString& id ) const { return m_wavelets[id]; }
     WaveList* inbox() const { return m_inbox; }
+    Contacts* contacts() const { return m_contacts; }
 
     Wave* wave( const QString& id );
     Wave* createWave( const QString& id );
@@ -33,6 +37,8 @@ private:
     QHash<QString,Wavelet*> m_wavelets;
     QHash<QString,Wave*> m_waves;
     WaveList* m_inbox;
+    Digest* m_digest;
+    Contacts* m_contacts;
 };
 
 #endif // ENVIRONMENT_H

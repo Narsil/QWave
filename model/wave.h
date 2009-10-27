@@ -6,8 +6,7 @@
 
 class Wavelet;
 class Environment;
-class SynchronizedDocument;
-class WaveletDelta;
+class WaveDigest;
 
 class Wave : public QObject
 {
@@ -17,23 +16,17 @@ public:
 
     QString id() const { return this->m_id; }
     QString domain() const { return this->m_domain; }
-    QString digest() const { return m_digest; }
-    void setDigest(const QString& digest);
+
+    WaveDigest* digest() const { return m_digest; }
 
     Wavelet* wavelet() const;
     Wavelet* wavelet(const QString& id) const;
     Environment* environment() const;
 
-    void updateDigest(const WaveletDelta& delta);
-
-signals:
-    void digestChanged();
-
 private:
     QString m_id;
     QString m_domain;
-    QString m_digest;
-    SynchronizedDocument* m_digestDoc;
+    WaveDigest* m_digest;
 };
 
 #endif // WAVE_H

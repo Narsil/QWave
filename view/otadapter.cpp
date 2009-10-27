@@ -4,7 +4,8 @@
 #include "model/wave.h"
 #include "blipgraphicsitem.h"
 #include "graphicstextitem.h"
-#include "model/synchronizeddocument.h"
+#include "model/otprocessor.h"
+#include "model/structureddocument.h"
 #include "model/documentmutation.h"
 #include "app/environment.h"
 #include "network/networkadapter.h"
@@ -43,7 +44,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
         return;
 
     QTextDocument* doc = textItem()->document();
-    SynchronizedDocument* bdoc = blip()->document();
+    StructuredDocument* bdoc = blip()->document();
 
     // Did the user modify the first block in the first blib? -> change the title
     if ( blip()->isRootBlip() && doc->findBlock(position).blockNumber() == doc->begin().blockNumber() )
@@ -137,16 +138,16 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     }
     m.retain( bdoc->count() - index );
 
-    // Apply the mutation to the document
+    // Send the mutation to the OTProcessor
     WaveletDelta delta;
     WaveletDeltaOperation op;
     op.setMutation(m);
     delta.addOperation(op);
-    bdoc->handleSend(delta);
+    blip()->wavelet()->processor()->handleSend(delta);
     bdoc->print_();
 
     // Send the mutation
-    environment()->networkAdapter()->send(m, blip()->wavelet()->id(), blip()->id());
+    // environment()->networkAdapter()->send(m, blip()->wavelet()->id(), blip()->id());
 
 //    for( int i = 0; i < doc->characterCount(); ++i )
 //    {

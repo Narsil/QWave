@@ -2,6 +2,7 @@
 #include "participantgraphicsitem.h"
 #include "model/wave.h"
 #include "model/wavelet.h"
+#include "model/wavedigest.h"
 #include "model/participant.h"
 
 #include <QPen>
@@ -15,9 +16,9 @@ WaveDigestGraphicsItem::WaveDigestGraphicsItem(Wave* wave, int width, QGraphicsI
     setFlag(QGraphicsItem::ItemClipsChildrenToShape, true);
     setFlag(QGraphicsItem::ItemIsSelectable, true);
 
-    connect(wave, SIGNAL(digestChanged()), SLOT(updateDigest()));
-    connect(wave->wavelet(), SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));
-    connect(wave->wavelet(), SIGNAL(participantRemoved(Participant*)), SLOT(removeParticipant(Participant*)));
+    connect(wave->digest(), SIGNAL(digestChanged()), SLOT(updateDigest()));
+    connect(wave->digest(), SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));
+    connect(wave->digest(), SIGNAL(participantRemoved(Participant*)), SLOT(removeParticipant(Participant*)));
 
     foreach( Participant* p, wave->wavelet()->participants() )
     {
@@ -27,7 +28,11 @@ WaveDigestGraphicsItem::WaveDigestGraphicsItem(Wave* wave, int width, QGraphicsI
     m_textItem = new QGraphicsTextItem(this);
     m_textItem->setPos( 4 + 32 * 3, 1 );
     m_textItem->setTextWidth(width - m_textItem->x() - 4);
-    m_textItem->setPlainText( wave->digest() );
+
+    QString digest = wave->digest()->toPlainText();
+    if ( digest.isEmpty() )
+        digest = "-";
+    m_textItem->setPlainText( digest );
 }
 
 void WaveDigestGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)
@@ -63,7 +68,10 @@ void WaveDigestGraphicsItem::setWidth( int width )
 
 void WaveDigestGraphicsItem::updateDigest()
 {
-    m_textItem->setPlainText( m_wave->digest() );
+    QString digest = m_wave->digest()->toPlainText();
+    if ( digest.isEmpty() )
+        digest = "-";
+    m_textItem->setPlainText( digest );
 }
 
 void WaveDigestGraphicsItem::addParticipant(Participant* participant)

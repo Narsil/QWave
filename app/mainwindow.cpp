@@ -40,7 +40,6 @@ void MainWindow::newWave()
     QString rand;
     rand.setNum( qrand() );
     Wave* wave = m_environment->createWave("w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
-    wave->setDigest("This is a new wave");
     Wavelet* wavelet = wave->wavelet();
     wavelet->addParticipant(m_environment->localUser());
 

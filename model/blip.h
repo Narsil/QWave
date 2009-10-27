@@ -6,7 +6,7 @@
 
 class BlipThread;
 class Wavelet;
-class SynchronizedDocument;
+class StructuredDocument;
 class Participant;
 class DocumentMutation;
 class Environment;
@@ -20,7 +20,7 @@ public:
 
     QList<BlipThread*> threads() const;
     QString id() const { return this->m_id; }
-    SynchronizedDocument* document() { return m_doc; }
+    StructuredDocument* document() { return m_doc; }
     BlipThread* parentThread() const;
     Wavelet* wavelet() const;
     Environment* environment() const;
@@ -34,13 +34,17 @@ public:
     void receive( const DocumentMutation& mutation );
 
 signals:
+    /**
+      * Emitted when a mutation has been applied to the blip.
+      * This signal is therefore connected to the GUI to show the update.
+      */
     void update( const DocumentMutation& mutation );
 
 private:
     void setup();
 
     QString m_id;
-    SynchronizedDocument* m_doc;
+    StructuredDocument* m_doc;
 };
 
 #endif // BLIP_H

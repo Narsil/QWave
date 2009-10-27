@@ -6,6 +6,7 @@
 #include "participant.h"
 #include "documentmutation.h"
 #include "otprocessor.h"
+#include "contacts.h"
 #include "app/environment.h"
 
 #include <QStack>
@@ -174,8 +175,7 @@ Participant* Wavelet::participant( const QString& address )
 
 void Wavelet::addParticipant( const QString& address )
 {
-    // TODO: Do not always create a new participant
-    this->addParticipant( new Participant(address) );
+    this->addParticipant( environment()->contacts()->addParticipant(address) );
 }
 
 void Wavelet::removeParticipant( const QString& address )
