@@ -3,6 +3,8 @@
 #include "model/wave.h"
 #include "model/wavelet.h"
 #include "model/wavelist.h"
+#include "model/digest.h"
+#include "model/contacts.h"
 #include "network/networkadapter.h"
 
 Environment::Environment(const QString& address, const QString& name)
@@ -10,8 +12,10 @@ Environment::Environment(const QString& address, const QString& name)
     m_localUser = new Participant(address);
     m_localUser->setName(name);
 
+    m_contacts = new Contacts(this, this);
     m_inbox = new WaveList(this);
-    m_networkAdapter = new NetworkAdapter(this);
+    m_digest = new Digest(this, this);
+    m_networkAdapter = new NetworkAdapter(this);    
 }
 
 Participant* Environment::localUser() const

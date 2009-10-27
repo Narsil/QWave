@@ -24,7 +24,6 @@ SOURCES += app/main.cpp \
     view/graphicstextitem.cpp \
     view/otadapter.cpp \
     network/networkadapter.cpp \
-    model/synchronizeddocument.cpp \
     protocol/waveclient-rpc.pb.cc \
     protocol/common.pb.cc \
     network/rpc.cpp \
@@ -34,7 +33,10 @@ SOURCES += app/main.cpp \
     app/serversettingsdialog.cpp \
     model/waveletdelta.cpp \
     model/otprocessor.cpp \
-    model/waveletdeltaoperation.cpp
+    model/waveletdeltaoperation.cpp \
+    model/digest.cpp \
+    model/wavedigest.cpp \
+    model/contacts.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -54,7 +56,6 @@ HEADERS += app/mainwindow.h \
     view/graphicstextitem.h \
     view/otadapter.h \
     network/networkadapter.h \
-    model/synchronizeddocument.h \
     protocol/waveclient-rpc.pb.h \
     protocol/common.pb.h \
     network/rpc.h \
@@ -64,7 +65,10 @@ HEADERS += app/mainwindow.h \
     app/serversettingsdialog.h \
     model/waveletdelta.h \
     model/otprocessor.h \
-    model/waveletdeltaoperation.h
+    model/waveletdeltaoperation.h \
+    model/digest.h \
+    model/wavedigest.h \
+    model/contacts.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf \

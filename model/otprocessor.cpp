@@ -28,7 +28,7 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     m_clientMsgCount++;
 }
 
-void OTProcessor::handleReceive( const WaveletDelta& incoming )
+void OTProcessor::handleReceive( const WaveletDelta& incoming, const QString& context )
 {
     // Throw away all delta that we have in common with the server
     while( !m_outgoingDeltas.isEmpty() )
@@ -63,11 +63,20 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming )
     {
         const WaveletDeltaOperation sop = msg.operations()[s];
         if ( sop.hasMutation() )
+        {
             emit documentMutation(sop.documentId(), *(sop.mutation()));
+            emit documentMutation(sop.documentId(), *(sop.mutation()), context);
+        }
         if ( sop.hasAddParticipant() )
+        {
             emit participantAdd( sop.addParticipant() );
+            emit participantAdd( sop.addParticipant(), context );
+        }
         if ( sop.hasRemoveParticipant() )
+        {
             emit participantRemove( sop.removeParticipant() );
+            emit participantRemove( sop.removeParticipant(), context );
+        }
     }
     m_serverMsgCount++;
 }
