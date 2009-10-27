@@ -11,6 +11,8 @@ class BlipThread;
 class StructuredDocument;
 class Participant;
 class Environment;
+class OTProcessor;
+class DocumentMutation;
 
 class Wavelet : public QObject
 {
@@ -26,6 +28,7 @@ public:
     QList<Blip*> rootBlips() const;
     Blip* blip(const QString& id);
     Environment* environment() const;
+    OTProcessor* processor() const { return m_processor; }
 
     void addParticipant( Participant* participant);
     void removeParticipant( Participant* participant);
@@ -37,8 +40,28 @@ public:
     void print_();
 
 signals:
+    /**
+      * Consumed by the GUI.
+      */
     void participantAdded(Participant* participant);
+    /**
+      * Consumed by the GUI.
+      */
     void participantRemoved(Participant* participant);
+
+private slots:
+    /**
+      * Connected to the OTProcessor.
+      */
+    void addParticipant( const QString& address );
+    /**
+      * Connected to the OTProcessor.
+      */
+    void removeParticipant( const QString& address );
+    /**
+      * Connected to the OTProcessor.
+      */
+    void mutateDocument( const QString& documentId, const DocumentMutation& mutation );
 
 private:
     QString m_id;
@@ -61,6 +84,7 @@ private:
     QHash<QString,Blip*> m_blips;
     QHash<QString,BlipThread*> m_blipThreads;
     QList<Participant*> m_participants;
+    OTProcessor* m_processor;
 };
 
 #endif // WAVELET_H

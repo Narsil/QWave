@@ -4,6 +4,8 @@
 #include "blipthread.h"
 #include "structureddocument.h"
 #include "participant.h"
+#include "documentmutation.h"
+#include "otprocessor.h"
 #include "app/environment.h"
 
 #include <QStack>
@@ -14,6 +16,11 @@ Wavelet::Wavelet(Wave* wave, const QString& domain, const QString &id)
 {
     environment()->addWavelet(this);
     m_doc = new StructuredDocument(this);
+    m_processor = new OTProcessor(environment(), this);
+
+    connect( m_processor, SIGNAL(documentMutation(QString,DocumentMutation)), SLOT(mutateDocument(QString,DocumentMutation)));
+    connect( m_processor, SIGNAL(participantAdd(QString)), SLOT(addParticipant(QString)));
+    connect( m_processor, SIGNAL(participantRemove(QString)), SLOT(removeParticipant(QString)));
 }
 
 Wavelet::~Wavelet()
@@ -163,4 +170,36 @@ Participant* Wavelet::participant( const QString& address )
             return p;
     }
     return 0;
+}
+
+void Wavelet::addParticipant( const QString& address )
+{
+    // TODO: Do not always create a new participant
+    this->addParticipant( new Participant(address) );
+}
+
+void Wavelet::removeParticipant( const QString& address )
+{
+    foreach( Participant* p, m_participants)
+    {
+        if ( p->address() == address )
+        {
+            m_participants.removeAll(p);
+            return;
+        }
+    }
+}
+
+void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation& mutation )
+{
+    if ( documentId == "conversation" )
+    {
+        mutation.apply(m_doc);
+    }
+    else
+    {
+        Blip* b = blip(documentId);
+        if ( b )
+            b->receive(mutation);
+    }
 }

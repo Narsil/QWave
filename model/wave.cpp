@@ -23,6 +23,17 @@ Wavelet* Wave::wavelet() const
     return 0;
 }
 
+Wavelet* Wave::wavelet(const QString& id) const
+{
+    for( QObjectList::const_iterator it = children().begin(); it != children().end(); ++it )
+    {
+        Wavelet* w = qobject_cast<Wavelet*>(*it);
+        if ( w && w->id() == id )
+            return w;
+    }
+    return 0;
+}
+
 void Wave::setDigest(const QString& digest)
 {
     m_digest = digest;

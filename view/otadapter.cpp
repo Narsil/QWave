@@ -139,7 +139,9 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
 
     // Apply the mutation to the document
     WaveletDelta delta;
-    delta.setMutation(m);
+    WaveletDeltaOperation op;
+    op.setMutation(m);
+    delta.addOperation(op);
     bdoc->handleSend(delta);
     bdoc->print_();
 
