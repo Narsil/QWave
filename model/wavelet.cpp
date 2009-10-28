@@ -17,7 +17,7 @@ Wavelet::Wavelet(Wave* wave, const QString& domain, const QString &id)
 {
     environment()->addWavelet(this);
     m_doc = new StructuredDocument(this);
-    m_processor = new OTProcessor(environment(), this);
+    m_processor = new OTProcessor(this);
 
     connect( m_processor, SIGNAL(documentMutation(QString,DocumentMutation)), SLOT(mutateDocument(QString,DocumentMutation)));
     connect( m_processor, SIGNAL(participantAdd(QString)), SLOT(addParticipant(QString)));

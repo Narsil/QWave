@@ -8,6 +8,7 @@
 #include "model/documentmutation.h"
 #include "model/wavelist.h"
 #include "model/participant.h"
+#include "model/otprocessor.h"
 #include "environment.h"
 #include "network/networkadapter.h"
 #include "view/wavelistview.h"
@@ -43,22 +44,10 @@ void MainWindow::newWave()
     Wavelet* wavelet = wave->wavelet();
     wavelet->addParticipant(m_environment->localUser());
 
-    StructuredDocument* doc = wavelet->document();
-    DocumentMutation m1;
-    m1.insertStart("conversation");
-    QHash<QString,QString> map;
-    map["id"] = "b+b1";
-    m1.insertStart("blip", map);
-    m1.insertEnd();
-    m1.insertEnd();
-    m1.apply(doc);
-    wavelet->updateConversation();
-    wavelet->print_();
-
     Blip* b = wavelet->blip("b+b1");
     StructuredDocument* bdoc = b->document();
     DocumentMutation m2;
-    map.clear();
+    QHash<QString,QString> map;
     map["author"] = m_environment->localUser()->address();
     m2.insertStart("contributor", map);
     m2.insertEnd();
@@ -67,8 +56,24 @@ void MainWindow::newWave()
     m2.insertStart("line", map);
     m2.insertEnd();
     m2.insertEnd();
+    wavelet->processor()->handleSend( m2, b->id() );
+    // todo: This should go away
     m2.apply(bdoc);
     bdoc->print_();
+
+    StructuredDocument* doc = wavelet->document();
+    DocumentMutation m1;
+    m1.insertStart("conversation");
+    map.clear();
+    map["id"] = "b+b1";
+    m1.insertStart("blip", map);
+    m1.insertEnd();
+    m1.insertEnd();
+    wavelet->processor()->handleSend( m1, "conversation" );
+    m1.apply(doc);
+    // todo: This should go away
+    wavelet->updateConversation();
+    wavelet->print_();
 
     // Tell the server about the new wave
     // TODO: This is not final and ugly

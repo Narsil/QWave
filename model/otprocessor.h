@@ -8,13 +8,19 @@
 
 class Environment;
 class DocumentMutation;
+class Wavelet;
 
 class OTProcessor : public QObject
 {
     Q_OBJECT
 public:
+    /**
+      * This constructor is used for OT processing of the wavelet digest.
+      */
     OTProcessor(Environment* environment, QObject* parent = 0);
+    OTProcessor(Wavelet* wavelet);
 
+    void handleSend( const DocumentMutation& mutation, const QString& documentId );
     void handleSend( WaveletDelta& outgoing );
     void handleReceive( const WaveletDelta& incoming );
 
@@ -28,6 +34,10 @@ private:
     int m_clientMsgCount;
     QList<WaveletDelta> m_outgoingDeltas;
     Environment* m_environment;
+    /**
+      * May be null if used for the digest.
+      */
+    Wavelet* m_wavelet;
 };
 
 #endif // OTPROCESSOR_H
