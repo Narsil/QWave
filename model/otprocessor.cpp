@@ -1,18 +1,36 @@
 #include "otprocessor.h"
 #include "participant.h"
+#include "wavelet.h"
 #include "app/environment.h"
+#include "network/networkadapter.h"
 
 OTProcessor::OTProcessor(Environment* environment, QObject* parent)
-        : QObject( parent ), m_environment(environment)
+        : QObject( parent ), m_environment(environment), m_wavelet(0)
 {
      m_serverMsgCount = 0;
      m_clientMsgCount = 0;
 }
 
+OTProcessor::OTProcessor(Wavelet* wavelet)
+        : QObject( wavelet ), m_environment(wavelet->environment()), m_wavelet(wavelet)
+{
+     m_serverMsgCount = 0;
+     m_clientMsgCount = 0;
+}
+
+void OTProcessor::handleSend( const DocumentMutation& mutation, const QString& documentId )
+{
+    WaveletDelta delta;
+    WaveletDeltaOperation op;
+    op.setMutation(mutation);
+    op.setDocumentId(documentId);
+    delta.addOperation(op);
+    handleSend(delta);
+}
+
 void OTProcessor::handleSend( WaveletDelta& outgoing )
 {
-    // incoming.setLocalVersion(m_clientMsgCount);
-    // incoming.setRemoteVersion(m_serverMsgCount);
+    Q_ASSERT( m_wavelet != 0 );
     outgoing.version().version = m_serverMsgCount;
     // TODO: Hash
     outgoing.setAuthor(m_environment->localUser()->address());
@@ -26,6 +44,9 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     // Remember that this message has been sent but not yet acked
     m_outgoingDeltas.append(outgoing);
     m_clientMsgCount++;
+
+    // Send it to the server via the network
+    m_environment->networkAdapter()->sendDelta(outgoing, m_wavelet);
 }
 
 void OTProcessor::handleReceive( const WaveletDelta& incoming )

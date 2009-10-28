@@ -19,6 +19,97 @@
 #include <string>
 
 /**
+  * Convert the Qt-ified representation to the protocol buffer representation.
+  */
+void convert(protocol::ProtocolWaveletDelta* result, const WaveletDelta& delta )
+{
+    // Author
+    result->set_author(delta.author().toStdString());
+    // HashedVersion
+    result->mutable_hashed_version()->set_version( delta.version().version );
+    result->mutable_hashed_version()->set_history_hash( std::string( delta.version().hash.constData(), delta.version().hash.length() ) );
+
+    for( int i = 0; i < delta.operations().length(); ++i )
+    {
+        const WaveletDeltaOperation& op = delta.operations()[i];
+        protocol::ProtocolWaveletOperation* o = result->add_operation();
+        if ( op.hasAddParticipant() )
+            o->set_add_participant( op.addParticipant().toStdString() );
+        if ( op.hasRemoveParticipant() )
+            o->set_remove_participant( op.removeParticipant().toStdString() );
+        if ( op.hasMutation() )
+        {
+            const DocumentMutation* mutation = op.mutation();
+            protocol::ProtocolWaveletOperation_MutateDocument* m = o->mutable_mutate_document();
+            m->set_document_id( op.documentId().toStdString() );
+            protocol::ProtocolDocumentOperation* mo = m->mutable_document_operation();
+            for( QList<DocumentMutation::Item>::const_iterator it = mutation->begin(); it != mutation->end(); ++it )
+            {
+                protocol::ProtocolDocumentOperation_Component* comp = mo->add_component();
+                switch( (*it).type )
+                {
+                    case DocumentMutation::ElementStart:
+                        comp->mutable_element_start()->set_type( (*it).text.toStdString() );
+                        if ( (*it).map )
+                            foreach( QString key, (*it).map->keys() )
+                            {
+                                protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
+                                pair->set_key( key.toStdString() );
+                                pair->set_value( ((*it).map)->value(key).toStdString() );
+                            }
+                        break;
+                    case DocumentMutation::ElementEnd:
+                        comp->set_element_end(true);
+                        break;
+                    case DocumentMutation::Retain:
+                        comp->set_retain_item_count((*it).count);
+                        break;
+                    case DocumentMutation::InsertChars:
+                        comp->set_characters( (*it).text.toStdString() );
+                        break;
+                    case DocumentMutation::DeleteStart:
+                        comp->mutable_delete_element_start()->set_type( (*it).text.toStdString() );
+                        if ( (*it).map )
+                            foreach( QString key, (*it).map->keys() )
+                            {
+                                protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
+                                pair->set_key( key.toStdString() );
+                                pair->set_value( ((*it).map)->value(key).toStdString() );
+                            }
+                        break;
+                    case DocumentMutation::DeleteEnd:
+                        comp->set_delete_element_end(true);
+                        break;
+                    case DocumentMutation::DeleteChars:
+                        comp->set_delete_characters( (*it).text.toStdString() );
+                        break;
+                    case DocumentMutation::AnnotationBoundary:                        
+                        if ( (*it).map )
+                            foreach( QString key, (*it).map->keys() )
+                            {
+                                protocol::ProtocolDocumentOperation_Component_KeyValueUpdate* pair = comp->mutable_annotation_boundary()->add_change();
+                                pair->set_key( key.toStdString() );
+                                pair->set_new_value( ((*it).map)->value(key).toStdString() );
+                                // TODO: Set old value ...
+                            }
+                        if ( (*it).endKeys )
+                        {
+                            foreach( QString ek, *((*it).endKeys) )
+                            {
+                                comp->mutable_annotation_boundary()->add_end( ek.toStdString() );
+                            }
+                        }
+                        break;
+                    case DocumentMutation::NoItem:
+                        // Do nothing by intention
+                        break;
+                }
+            }
+        }
+    }
+}
+
+/**
   * Convert the protocol buffer representation to the Qt-ified representation.
   */
 WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
@@ -185,6 +276,27 @@ void NetworkAdapter::sendAddParticipant(Wavelet* wavelet, Participant* participa
     delta->mutable_hashed_version()->set_history_hash(url.toString().toStdString());
     protocol::ProtocolWaveletOperation* op = delta->add_operation();
     op->set_add_participant(participant->address().toStdString());
+
+    std::ostringstream str;
+    req.SerializeToOstream(&str);
+
+    qDebug("msg>> %s", req.DebugString().data());
+
+    m_rpc->send("waveserver.ProtocolSubmitRequest", str.str().data(), str.str().length());
+}
+
+void NetworkAdapter::sendDelta(const WaveletDelta& delta, Wavelet* wavelet)
+{
+    QString waveId = wavelet->wave()->id();
+    QString waveletId = wavelet->id();
+    waveserver::ProtocolSubmitRequest req;
+    QUrl url;
+    url.setScheme("wave");
+    url.setHost(m_serverName);
+    url.setPath(waveId + "/" + waveletId);
+    req.set_wavelet_name( url.toString().toStdString() );
+    protocol::ProtocolWaveletDelta* d = req.mutable_delta();
+    convert( d, delta );
 
     std::ostringstream str;
     req.SerializeToOstream(&str);

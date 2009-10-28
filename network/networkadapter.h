@@ -9,6 +9,7 @@ class DocumentMutation;
 class Environment;
 class RPC;
 class Wavelet;
+class WaveletDelta;
 class Participant;
 
 class NetworkAdapter : public QObject
@@ -29,6 +30,7 @@ public:
     bool isOnline() const { return m_isOnline; }
 
     void sendAddParticipant(Wavelet* wavelet, Participant* participant);
+    void sendDelta(const WaveletDelta& delta, Wavelet* wavelet);
 
 private slots:
     void getOnline();
