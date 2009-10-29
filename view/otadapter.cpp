@@ -251,6 +251,13 @@ void OTAdapter::setGraphicsText(const QString& names)
     }
 
     m_suspendContentsChange = false;
+
+    // Did this modify the first block in the first blib? -> change the title
+    if ( blip()->isRootBlip()  )
+    {
+        QString title = textItem()->document()->begin().text().mid( textItem()->forbiddenTextRange() );
+        emit titleChanged(title);
+    }
 }
 
 int OTAdapter::mapToBlip(int position)
