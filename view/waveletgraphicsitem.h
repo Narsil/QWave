@@ -10,6 +10,7 @@ class WaveletView;
 class Participant;
 class ParticipantGraphicsItem;
 class QGraphicsSimpleTextItem;
+class QGraphicsPixmapItem;
 
 class WaveletGraphicsItem : public QObject, public QGraphicsItem
 {
@@ -37,6 +38,7 @@ private:
     QList<ParticipantGraphicsItem*> m_participantItems;
     QRectF m_rect;
     QGraphicsSimpleTextItem* m_titleItem;
+    QGraphicsPixmapItem* m_addUserButton;
 };
 
 #endif // WAVELETGRAPHICSITEM_H

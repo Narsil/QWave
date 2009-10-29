@@ -6,12 +6,15 @@
 #include <QPainter>
 #include <QBrush>
 #include <QGraphicsSimpleTextItem>
+#include <QGraphicsPixmapItem>
 #include <QLinearGradient>
 #include <QGraphicsScene>
 
 WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
        : m_wavelet(0), m_view(view)
 {    
+    m_addUserButton = new QGraphicsPixmapItem( QPixmap("images/adduser.png"), this );
+
     m_titleItem = new QGraphicsSimpleTextItem("Title", this);
     m_titleItem->setPos(6, 3);
     m_titleItem->setBrush(QBrush(Qt::white));
@@ -63,6 +66,8 @@ void WaveletGraphicsItem::updateParticipants()
         dx += item->boundingRect().width() + 5;
         m_participantItems.append( item );
     }
+
+    m_addUserButton->setPos( (42 + 5) * m_participantItems.length() + 5, dy + 16);
 }
 
 void WaveletGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)
