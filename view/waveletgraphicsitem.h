@@ -3,14 +3,17 @@
 
 #include <QGraphicsItem>
 #include <QRectF>
+#include <QObject>
 
 class Wavelet;
 class WaveletView;
+class Participant;
 class ParticipantGraphicsItem;
 class QGraphicsSimpleTextItem;
 
-class WaveletGraphicsItem : public QGraphicsItem
+class WaveletGraphicsItem : public QObject, public QGraphicsItem
 {
+    Q_OBJECT
 public:
     WaveletGraphicsItem(WaveletView* view);
 
@@ -22,7 +25,14 @@ public:
 
     void setTitle( const QString& title );
 
+private slots:
+    void addParticipant(Participant* participant);
+    void removeParticipant(Participant* participant);
+
 private:
+    void updateParticipants();
+
+    Wavelet* m_wavelet;
     WaveletView* m_view;
     QList<ParticipantGraphicsItem*> m_participantItems;
     QRectF m_rect;

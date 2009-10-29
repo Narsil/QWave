@@ -10,7 +10,7 @@
 #include <QGraphicsScene>
 
 WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
-       : m_view(view)
+       : m_wavelet(0), m_view(view)
 {    
     m_titleItem = new QGraphicsSimpleTextItem("Title", this);
     m_titleItem->setPos(6, 3);
@@ -24,6 +24,30 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
 
 void WaveletGraphicsItem::setWavelet( Wavelet* wavelet )
 {
+    if ( m_wavelet )
+    {
+        disconnect(wavelet, SIGNAL(participantAdded(Participant*)), this, SLOT(addParticipant(Participant*)));
+        disconnect(wavelet, SIGNAL(participantRemoved(Participant*)), this, SLOT(removeParticipant(Participant*)));
+    }
+    m_wavelet = wavelet;
+    connect(wavelet, SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));
+    connect(wavelet, SIGNAL(participantRemoved(Participant*)), SLOT(removeParticipant(Participant*)));
+
+    updateParticipants();
+}
+
+void WaveletGraphicsItem::addParticipant(Participant*)
+{
+    updateParticipants();
+}
+
+void WaveletGraphicsItem::removeParticipant(Participant*)
+{
+    updateParticipants();
+}
+
+void WaveletGraphicsItem::updateParticipants()
+{
     foreach( ParticipantGraphicsItem* item, m_participantItems)
     {
         delete item;
@@ -32,7 +56,7 @@ void WaveletGraphicsItem::setWavelet( Wavelet* wavelet )
 
     qreal dx = 0;
     qreal dy = 2 *3 + m_titleItem->boundingRect().height();
-    foreach( Participant* p, wavelet->participants() )
+    foreach( Participant* p, m_wavelet->participants() )
     {
         ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 42, this);
         item->setPos(dx + 5, dy + 5);
