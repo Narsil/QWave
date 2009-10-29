@@ -35,7 +35,8 @@ SOURCES += app/main.cpp \
     model/otprocessor.cpp \
     model/waveletdeltaoperation.cpp \
     model/wavedigest.cpp \
-    model/contacts.cpp
+    model/contacts.cpp \
+    view/contactsview.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -66,7 +67,8 @@ HEADERS += app/mainwindow.h \
     model/otprocessor.h \
     model/waveletdeltaoperation.h \
     model/wavedigest.h \
-    model/contacts.h
+    model/contacts.h \
+    view/contactsview.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf \
