@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QHash>
 #include <QList>
+#include <QUrl>
 
 class Wave;
 class Blip;
@@ -29,6 +30,7 @@ public:
     Blip* blip(const QString& id);
     Environment* environment() const;
     OTProcessor* processor() const { return m_processor; }
+    QUrl url() const;
 
     void addParticipant( Participant* participant);
     void removeParticipant( Participant* participant);
@@ -48,6 +50,10 @@ signals:
       * Consumed by the GUI.
       */
     void participantRemoved(Participant* participant);
+    /**
+      * Consumed by the GUI.
+      */
+    void conversationChanged();
 
 private slots:
     /**

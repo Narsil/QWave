@@ -29,8 +29,8 @@ public:
     quint32 serverPort() const { return m_serverPort; }
     bool isOnline() const { return m_isOnline; }
 
-    void sendAddParticipant(Wavelet* wavelet, Participant* participant);
-    void sendDelta(const WaveletDelta& delta, Wavelet* wavelet);
+    // void sendAddParticipant(Wavelet* wavelet, Participant* participant);
+    void submit(const WaveletDelta& delta, Wavelet* wavelet);
 
 private slots:
     void getOnline();

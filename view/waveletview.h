@@ -25,11 +25,13 @@ public:
     QGraphicsScene* headScene();
 
     void fitToWidth( qreal headWidth, qreal width );
-    void layoutBlips();
 
     void setTitle( const QString& title );
 
     void setWavelet( Wavelet* wavelet );
+
+public slots:
+    void layoutBlips();
 
 private:
     void layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal width);

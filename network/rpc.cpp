@@ -29,31 +29,53 @@ void RPC::open(const QString& host, quint16 port)
 
 void RPC::send(const QString& methodName, const char* data, quint32 size)
 {
-    QAbstractSocket* dev = m_socket;
+    QByteArray buffer( 100 + methodName.length() + size, 0 );
+    char* ptr = buffer.data();
+    // Skip the size. We will set it later
+    int offset = 4;
 
-    // Attention: This code works only on CPUs with little endian encoding
+    encodeVarint(ptr, ++m_counter, offset);
+    encodeVarint(ptr, methodName.length(), offset);
+    buffer.insert(offset, methodName);
+    ptr = buffer.data();
+    offset += methodName.length();
+    encodeVarint(ptr, size, offset);
+    buffer.insert( offset, QByteArray::fromRawData(data, size) );
+    ptr = buffer.data();
     IntUnion u;
-    // Size of the message
-    u.i = 1 + 1 + methodName.length() + 1 + size;
-    dev->write(u.str, 4);
+    u.i = offset - 4 + size;
+    ptr[0] = u.str[0];
+    ptr[1] = u.str[1];
+    ptr[2] = u.str[2];
+    ptr[3] = u.str[3];
 
-    char buf[10];
-    int offset = 0;
-    encodeVarint(buf, ++m_counter, offset);
-    dev->write(buf, offset);
+    qDebug("Sending %i bytes, thereof %i payload", 4 + u.i, size);
+    m_socket->write(ptr, 4 + u.i);
+    m_socket->flush();
 
-    offset = 0;
-    encodeVarint(buf, methodName.length(), offset);
-    dev->write(buf, offset);
-
-    dev->write(methodName.toAscii().constData(), methodName.length());
-
-    offset = 0;
-    encodeVarint(buf, size, offset);
-    dev->write(buf, offset);
-
-    dev->write(data, size);
-    dev->flush();
+//    // Attention: This code works only on CPUs with little endian encoding
+//    IntUnion u;
+//    // Size of the message
+//    u.i = 1 + 1 + methodName.length() + 1 + size;
+//    dev->write(u.str, 4);
+//
+//    char buf[10];
+//    int offset = 0;
+//    encodeVarint(buf, ++m_counter, offset);
+//    dev->write(buf, offset);
+//
+//    offset = 0;
+//    encodeVarint(buf, methodName.length(), offset);
+//    dev->write(buf, offset);
+//
+//    dev->write(methodName.toAscii().constData(), methodName.length());
+//
+//    offset = 0;
+//    encodeVarint(buf, size, offset);
+//    dev->write(buf, offset);
+//
+//    dev->write(data, size);
+//    dev->flush();
 }
 
 void RPC::start()
@@ -193,7 +215,12 @@ void RPC::encodeVarint(char* ptr, quint32 value, int &offset )
 {
     do
     {
-        ptr[offset++] = value & 0x7f;
+        ptr[offset] = (value & 0x7f) | 0x80;
         value >>= 7;
-    } while( value > 0 );
+        if ( value == 0 )
+            break;
+        offset++;
+    } while( true );
+    ptr[offset] = ptr[offset] & 0x7f;
+    offset++;
 }

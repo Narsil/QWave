@@ -142,6 +142,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     WaveletDelta delta;
     WaveletDeltaOperation op;
     op.setMutation(m);
+    op.setDocumentId(blip()->id());
     delta.addOperation(op);
     blip()->wavelet()->processor()->handleSend(delta);
     bdoc->print_();

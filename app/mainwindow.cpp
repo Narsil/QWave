@@ -41,13 +41,38 @@ void MainWindow::newWave()
     QString rand;
     rand.setNum( qrand() );
     Wave* wave = m_environment->createWave("w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
+    // Add the new wave to the inbox and show it.
+    m_environment->inbox()->addWave(wave);
     Wavelet* wavelet = wave->wavelet();
-    wavelet->addParticipant(m_environment->localUser());
+    // todo: This should go away
+    // wavelet->addParticipant(m_environment->localUser());
 
-    Blip* b = wavelet->blip("b+b1");
-    StructuredDocument* bdoc = b->document();
-    DocumentMutation m2;
+    // Tell the server about the new wave
+    // TODO: This is not final and ugly
+    wavelet->processor()->handleSendAddParticipant(m_environment->localUser());
+    // DEBUG
+    // wavelet->processor()->handleSendAddParticipant(new Participant("HeinzWurst@localhost"));
+    // m_environment->networkAdapter()->sendAddParticipant(wavelet, m_environment->localUser());
+
+    //StructuredDocument* doc = wavelet->document();
+    DocumentMutation m1;
+    m1.insertStart("conversation");
     QHash<QString,QString> map;
+    map["id"] = "b+b1";
+    m1.insertStart("blip", map);
+    m1.insertEnd();
+    m1.insertEnd();
+    wavelet->processor()->handleSend( m1, "conversation" );
+    // todo: This should go away
+//    m1.apply(doc);
+    // todo: This should go away
+//    wavelet->updateConversation();
+   // wavelet->print_();
+
+    // Blip* b = wavelet->blip("b+b1");
+    //StructuredDocument* bdoc = b->document();
+    DocumentMutation m2;
+    map.clear();
     map["author"] = m_environment->localUser()->address();
     m2.insertStart("contributor", map);
     m2.insertEnd();
@@ -56,30 +81,10 @@ void MainWindow::newWave()
     m2.insertStart("line", map);
     m2.insertEnd();
     m2.insertEnd();
-    wavelet->processor()->handleSend( m2, b->id() );
+    wavelet->processor()->handleSend( m2, "b+b1" );
     // todo: This should go away
-    m2.apply(bdoc);
-    bdoc->print_();
+    // m2.apply(bdoc);
+    // bdoc->print_();
 
-    StructuredDocument* doc = wavelet->document();
-    DocumentMutation m1;
-    m1.insertStart("conversation");
-    map.clear();
-    map["id"] = "b+b1";
-    m1.insertStart("blip", map);
-    m1.insertEnd();
-    m1.insertEnd();
-    wavelet->processor()->handleSend( m1, "conversation" );
-    m1.apply(doc);
-    // todo: This should go away
-    wavelet->updateConversation();
-    wavelet->print_();
-
-    // Tell the server about the new wave
-    // TODO: This is not final and ugly
-    m_environment->networkAdapter()->sendAddParticipant(wavelet, m_environment->localUser());
-
-    // Add the new wave to the inbox and show it.
-    m_environment->inbox()->addWave(wave);
     m_inboxView->select(wave);
 }
