@@ -17,6 +17,8 @@ WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet )
     headScene()->addItem(m_gfx);
 
     layoutBlips(100);
+
+    connect( wavelet, SIGNAL(conversationChanged()), SLOT(layoutBlips()));
 }
 
 WaveletView::~WaveletView()
@@ -26,7 +28,10 @@ WaveletView::~WaveletView()
 
 void WaveletView::setWavelet( Wavelet* wavelet )
 {
+    if ( m_wavelet )
+        disconnect(m_wavelet, SIGNAL(conversationChanged()), this, SLOT(layoutBlips()));
     m_wavelet = wavelet;
+    connect( wavelet, SIGNAL(conversationChanged()), this, SLOT(layoutBlips()));
     m_gfx->setWavelet(wavelet);
     foreach( BlipGraphicsItem* item, m_blipItems.values() )
     {

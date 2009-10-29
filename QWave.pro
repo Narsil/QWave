@@ -71,3 +71,4 @@ FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf \
     -lqca
+INCLUDEPATH += /usr/include/QtCrypto

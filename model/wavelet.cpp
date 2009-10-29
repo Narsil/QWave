@@ -8,6 +8,7 @@
 #include "otprocessor.h"
 #include "contacts.h"
 #include "app/environment.h"
+#include "network/networkadapter.h"
 
 #include <QStack>
 #include <QtDebug>
@@ -27,6 +28,16 @@ Wavelet::Wavelet(Wave* wave, const QString& domain, const QString &id)
 Wavelet::~Wavelet()
 {
     environment()->removeWavelet(this);
+}
+
+QUrl Wavelet::url() const
+{
+    QUrl url;
+    url.setScheme("wave");
+    url.setHost( environment()->networkAdapter()->serverName() );
+    // TODO: This is only true for local wavelets!
+    url.setPath( "/" + wave()->id() + "/" + m_id );
+    return url;
 }
 
 void Wavelet::updateConversation()
@@ -195,6 +206,8 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
     if ( documentId == "conversation" )
     {
         mutation.apply(m_doc);
+        this->updateConversation();
+        emit conversationChanged();
     }
     else
     {

@@ -255,37 +255,37 @@ void NetworkAdapter::sendOpenWave(const QString& waveId, const QString& waveletI
     req.add_wavelet_id_prefix(waveletId.toStdString());
     req.SerializeToOstream(&str);
 
-    qDebug("msg>> %s", req.DebugString().data());
+    qDebug("OpenRequest>> %s", req.DebugString().data());
 
     m_rpc->send("waveserver.ProtocolOpenRequest", str.str().data(), str.str().length());
 }
 
-void NetworkAdapter::sendAddParticipant(Wavelet* wavelet, Participant* participant)
-{
-    QString waveId = wavelet->wave()->id();
-    QString waveletId = wavelet->id();
-    waveserver::ProtocolSubmitRequest req;
-    QUrl url;
-    url.setScheme("wave");
-    url.setHost(m_serverName);
-    url.setPath(waveId + "/" + waveletId);
-    req.set_wavelet_name( url.toString().toStdString() );
-    protocol::ProtocolWaveletDelta* delta = req.mutable_delta();
-    delta->set_author(environment()->localUser()->address().toStdString());
-    delta->mutable_hashed_version()->set_version(0);
-    delta->mutable_hashed_version()->set_history_hash(url.toString().toStdString());
-    protocol::ProtocolWaveletOperation* op = delta->add_operation();
-    op->set_add_participant(participant->address().toStdString());
+//void NetworkAdapter::sendAddParticipant(Wavelet* wavelet, Participant* participant)
+//{
+//    QString waveId = wavelet->wave()->id();
+//    QString waveletId = wavelet->id();
+//    waveserver::ProtocolSubmitRequest req;
+//    QUrl url;
+//    url.setScheme("wave");
+//    url.setHost(m_serverName);
+//    url.setPath(waveId + "/" + waveletId);
+//    req.set_wavelet_name( url.toString().toStdString() );
+//    protocol::ProtocolWaveletDelta* delta = req.mutable_delta();
+//    delta->set_author(environment()->localUser()->address().toStdString());
+//    delta->mutable_hashed_version()->set_version(0);
+//    delta->mutable_hashed_version()->set_history_hash(url.toString().toStdString());
+//    protocol::ProtocolWaveletOperation* op = delta->add_operation();
+//    op->set_add_participant(participant->address().toStdString());
+//
+//    std::ostringstream str;
+//    req.SerializeToOstream(&str);
+//
+//    qDebug("SubmitRequest>> %s", req.DebugString().data());
+//
+//    m_rpc->send("waveserver.ProtocolSubmitRequest", str.str().data(), str.str().length());
+//}
 
-    std::ostringstream str;
-    req.SerializeToOstream(&str);
-
-    qDebug("msg>> %s", req.DebugString().data());
-
-    m_rpc->send("waveserver.ProtocolSubmitRequest", str.str().data(), str.str().length());
-}
-
-void NetworkAdapter::sendDelta(const WaveletDelta& delta, Wavelet* wavelet)
+void NetworkAdapter::submit(const WaveletDelta& delta, Wavelet* wavelet)
 {
     QString waveId = wavelet->wave()->id();
     QString waveletId = wavelet->id();
@@ -301,7 +301,7 @@ void NetworkAdapter::sendDelta(const WaveletDelta& delta, Wavelet* wavelet)
     std::ostringstream str;
     req.SerializeToOstream(&str);
 
-    qDebug("msg>> %s", req.DebugString().data());
+    qDebug("SubmitRequest>> %s", req.DebugString().data());
 
     m_rpc->send("waveserver.ProtocolSubmitRequest", str.str().data(), str.str().length());
 }
@@ -349,11 +349,23 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
             Wavelet* wavelet = environment()->wavelet(waveletid);
             if ( !wavelet )
                 return;
+
             for( int i = 0; i < update.applied_delta_size(); ++i )
             {
-                wavelet->processor()->handleReceive( convert( update.applied_delta(i) ) );
+                WaveletDelta wd = convert( update.applied_delta(i) );
+                wavelet->processor()->handleReceive( wd );
             }
+
+            QByteArray resultingHash( update.resulting_version().history_hash().data(), update.resulting_version().history_hash().length() );
+            int resultingVersion = update.resulting_version().version();
+            wavelet->processor()->setResultingHash( resultingVersion, resultingHash);
         }
+    }
+    else if ( methodName == "waveserver.ProtocolSubmitResponse" )
+    {
+        waveserver::ProtocolSubmitResponse response;
+        response.ParseFromArray(data.constData(), data.length());
+        qDebug("msg<< %s", response.DebugString().data());
     }
 }
 
