@@ -3,23 +3,27 @@
 #include "model/wave.h"
 #include "network/networkadapter.h"
 #include "app/environment.h"
+#include "titlebar.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QVBoxLayout>
 
-WaveView::WaveView(Wave* wave )
-        : m_wave(wave)
+WaveView::WaveView(Wave* wave, QWidget* parent )
+        : QWidget(parent), m_wave(wave)
 {
     setMinimumWidth(500);
 
     m_scene = new QGraphicsScene();
     m_headScene = new QGraphicsScene();
+    m_titleBar = new TitleBar(this);
 
     m_verticalLayout = new QVBoxLayout(this);
     m_verticalLayout->setSpacing(0);
     m_verticalLayout->setMargin(0);
     m_verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
+    m_verticalLayout->addWidget(m_titleBar);
+
     m_graphicsViewHead = new QGraphicsView(this);
     m_graphicsViewHead->setObjectName(QString::fromUtf8("graphicsViewHead"));
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Fixed);
@@ -27,8 +31,8 @@ WaveView::WaveView(Wave* wave )
     sizePolicy.setVerticalStretch(0);
     sizePolicy.setHeightForWidth(m_graphicsViewHead->sizePolicy().hasHeightForWidth());
     m_graphicsViewHead->setSizePolicy(sizePolicy);
-    m_graphicsViewHead->setMinimumSize(QSize(0, 98));
-    m_graphicsViewHead->setMaximumSize(QSize(16777215, 98));
+    m_graphicsViewHead->setMinimumSize(QSize(0, 76));
+    m_graphicsViewHead->setMaximumSize(QSize(16777215, 76));
     m_graphicsViewHead->setFrameShape(QFrame::NoFrame);
     m_graphicsViewHead->setVerticalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
     m_graphicsViewHead->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
@@ -72,4 +76,9 @@ void WaveView::setWave( Wave* wave )
     wave->environment()->networkAdapter()->openWavelet( wave->wavelet() );
 
     m_waveletView->setWavelet(wave->wavelet());    
+}
+
+void WaveView::setTitle( const QString& title )
+{
+    m_titleBar->setText(title);
 }

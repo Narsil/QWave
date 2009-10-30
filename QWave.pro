@@ -38,7 +38,10 @@ SOURCES += app/main.cpp \
     model/contacts.cpp \
     view/contactsview.cpp \
     view/searchbox.cpp \
-    view/participantlistview.cpp
+    view/participantlistview.cpp \
+    view/titlebar.cpp \
+    view/inboxview.cpp \
+    view/bigbar.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -72,7 +75,10 @@ HEADERS += app/mainwindow.h \
     model/contacts.h \
     view/contactsview.h \
     view/searchbox.h \
-    view/participantlistview.h
+    view/participantlistview.h \
+    view/titlebar.h \
+    view/inboxview.h \
+    view/bigbar.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf \

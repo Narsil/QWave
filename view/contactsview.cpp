@@ -2,8 +2,11 @@
 #include "model/contacts.h"
 #include "searchbox.h"
 #include "participantlistview.h"
+#include "titlebar.h"
+#include "bigbar.h"
 
 #include <QVBoxLayout>
+#include <QHBoxLayout>
 
 ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
         : QWidget(parent), m_contacts(contacts)
@@ -15,10 +18,18 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
     m_verticalLayout->setMargin(0);
     m_verticalLayout->setObjectName(QString::fromUtf8("verticalLayout"));
 
-    m_searchBox = new SearchBox(this);
+    m_bigBar = new BigBar(this);
+    m_searchBox = new SearchBox(m_bigBar);
+    QHBoxLayout* l = new QHBoxLayout(m_bigBar);
+    l->addWidget(m_searchBox);
+
     m_listView = new ParticipantListView(this);
-    m_verticalLayout->addWidget(m_searchBox);
+    m_titleBar = new TitleBar(this);
+    m_verticalLayout->addWidget(m_titleBar);
+    m_verticalLayout->addWidget(m_bigBar);
     m_verticalLayout->addWidget(m_listView);
+
+    m_titleBar->setText(tr("Contacts"));
 
     m_listView->setParticipants(contacts->participants());
     connect( contacts, SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));

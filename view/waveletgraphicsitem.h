@@ -24,8 +24,6 @@ public:
 
     void setWavelet( Wavelet* wavelet );
 
-    void setTitle( const QString& title );
-
 private slots:
     void addParticipant(Participant* participant);
     void removeParticipant(Participant* participant);
@@ -37,7 +35,6 @@ private:
     WaveletView* m_view;
     QList<ParticipantGraphicsItem*> m_participantItems;
     QRectF m_rect;
-    QGraphicsSimpleTextItem* m_titleItem;
     QGraphicsPixmapItem* m_addUserButton;
 };
 

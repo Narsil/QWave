@@ -20,6 +20,7 @@
 #include "network/networkadapter.h"
 #include "model/structureddocument.h"
 #include "view/contactsview.h"
+#include "view/inboxview.h"
 
 #include "protocol/waveclient-rpc.pb.h"
 #include <fstream>
@@ -233,7 +234,8 @@ int main(int argc, char *argv[])
         QSplitter* splitter = new QSplitter();
 
         WaveView* view = new WaveView(wave);
-        WaveListView* wlview = new WaveListView(en->inbox());
+        // WaveListView* wlview = new WaveListView(en->inbox());
+        InboxView* wlview = new InboxView(en);
         ContactsView* cview = new ContactsView( en->contacts() );
 
         splitter->addWidget(cview);

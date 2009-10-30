@@ -12,6 +12,7 @@
 #include "environment.h"
 #include "network/networkadapter.h"
 #include "view/wavelistview.h"
+#include "view/inboxview.h"
 
 #include <QtGlobal>
 

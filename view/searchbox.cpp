@@ -1,40 +1,45 @@
 #include "searchbox.h"
-#include <QLineEdit>
 #include <QPainter>
 #include <QColor>
 #include <QBrush>
+#include <QPixmap>
+
+QPixmap* SearchBox::s_pixmapLeft = 0;
+QPixmap* SearchBox::s_pixmapRight = 0;
 
 SearchBox::SearchBox(QWidget* parent)
-        : QWidget(parent)
+        : QLineEdit(parent)
 {
-    setMinimumHeight( 42 + 2*5 );
-    setMaximumHeight( minimumHeight() );
+    if ( !s_pixmapLeft )
+        s_pixmapLeft = new QPixmap("images/searchbox_left.png");
+    if ( !s_pixmapRight )
+        s_pixmapRight = new QPixmap("images/searchbox_right.png");
 
-    m_edit = new QLineEdit(this);
-    m_edit->setFrame(false);
-
-    connect( m_edit, SIGNAL(textChanged(QString)), SIGNAL(searchChanged(QString)));
+    setFrame(false);
+    this->setTextMargins(11, 3, 22, 3);
 }
 
-void SearchBox::setSearchText(const QString& search)
+void SearchBox::paintEvent(QPaintEvent* event)
 {
-    m_edit->setText(search);
-}
+    QLineEdit::paintEvent(event);
 
-QString SearchBox::searchText() const
-{
-    return m_edit->text();
-}
-
-void SearchBox::resizeEvent(QResizeEvent*)
-{
-    m_edit->setGeometry( 10, ( 42 + 2*5 - m_edit->height()) / 2, width() - 2*10, m_edit->height() );
-}
-
-void SearchBox::paintEvent(QPaintEvent*)
-{
     QPainter painter(this);
+    painter.drawPixmap(0, 0, *s_pixmapLeft);
+    painter.drawPixmap(width() - 22, 0, *s_pixmapRight);
 
-    QBrush brush2(QColor(0xc9,0xe2,0xfc));
-    painter.fillRect(0, 0, width(), height(), brush2);
+    painter.setPen(QColor(0xff,0xff,0xff));
+    painter.drawLine(11, height() - 1, width() - 22, height() - 1);
+    painter.setPen(QColor(195,195,195));
+    painter.drawLine(11, height() - 2, width() - 22, height() - 2);
+
+    painter.setPen(QColor(167,167,167));
+    painter.drawLine(11, 0, width() - 22, 0);
+    painter.setPen(QColor(221,221,221));
+    painter.drawLine(11, 1, width() - 22, 1);
+    painter.setPen(QColor(230,230,230));
+    painter.drawLine(11, 2, width() - 22, 2);
+    painter.setPen(QColor(242,242,242));
+    painter.drawLine(11, 3, width() - 22, 3);
+    painter.setPen(QColor(251,251,251));
+    painter.drawLine(11, 4, width() - 22, 4);
 }
