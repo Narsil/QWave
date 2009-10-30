@@ -4,6 +4,7 @@
 #include "participantgraphicsitem.h"
 #include "buttongraphicsitem.h"
 #include "addparticipantdialog.h"
+#include "model/otprocessor.h"
 
 #include <QPainter>
 #include <QBrush>
@@ -104,4 +105,7 @@ void WaveletGraphicsItem::showAddParticipantDialog()
 {
     AddParticipantDialog dlg(m_wavelet->environment(), QApplication::activeWindow() );
     dlg.exec();
+
+    if ( dlg.result() )
+        m_wavelet->processor()->handleSendAddParticipant(dlg.result());
 }

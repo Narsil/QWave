@@ -5,11 +5,13 @@
 #include "model/wavelist.h"
 #include "model/contacts.h"
 #include "network/networkadapter.h"
+#include "settings.h"
 
-Environment::Environment(const QString& address, const QString& name)
+Environment::Environment()
 {
-    m_localUser = new Participant(address);
-    m_localUser->setName(name);
+    m_settings = new Settings(this);
+    m_localUser = new Participant(m_settings->userAddress());
+    m_localUser->setName(m_settings->userName());
 
     m_contacts = new Contacts(this, this);
     m_inbox = new WaveList(this);
@@ -19,6 +21,13 @@ Environment::Environment(const QString& address, const QString& name)
 Participant* Environment::localUser() const
 {
     return m_localUser;
+}
+
+void Environment::configure()
+{
+    m_localUser->setAddress(m_settings->userAddress());
+    m_localUser->setName(m_settings->userName());
+    m_networkAdapter->setServer( m_settings->serverName(), m_settings->serverPort() );
 }
 
 NetworkAdapter* Environment::networkAdapter() const
