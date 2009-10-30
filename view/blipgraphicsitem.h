@@ -3,11 +3,11 @@
 
 #include <QGraphicsItem>
 #include <QRectF>
+#include <QPixmap>
 
 class GraphicsTextItem;
 class QGraphicsView;
 class QTextDocument;
-class QPixmap;
 
 class WaveletView;
 class BlipReplyGraphicsItem;
@@ -29,6 +29,8 @@ public:
     virtual QRectF boundingRect() const;
     void setWidth(qreal width);
 
+    void setAuthorPixmap(const QPixmap& pixmap);
+
 protected:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * event );
     virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent * event );
@@ -42,7 +44,7 @@ private:
     Blip* m_blip;
     GraphicsTextItem* m_text;
     BlipReplyGraphicsItem* m_replyItem;
-    QPixmap* m_userPixmap;
+    QPixmap m_userPixmap;
     QRectF m_lastTextRect;
     WaveletView* m_view;
     qreal m_lastWidth;

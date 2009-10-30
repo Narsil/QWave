@@ -10,6 +10,7 @@
 #include "app/environment.h"
 #include "network/networkadapter.h"
 #include "model/waveletdelta.h"
+#include "model/participant.h"
 
 #include <QStack>
 #include <QTextDocument>
@@ -158,20 +159,29 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
 
 void OTAdapter::setGraphicsText()
 {
-    setGraphicsText(m_authorNames);
-}
+    // Get user names    
+    m_authorNames = "";
+    foreach( Participant* p, blip()->authors() )
+    {
+        if ( m_authorNames != "" )
+            m_authorNames += ",";
+        if ( p == blip()->wavelet()->wave()->environment()->localUser() )
+            m_authorNames += tr("me");
+        else
+            m_authorNames += p->name();
+    }
+    m_authorNames += ": ";
+    if ( blip()->authors().length() > 0 )
+        blipItem()->setAuthorPixmap(blip()->authors().first()->pixmap());
 
-void OTAdapter::setGraphicsText(const QString& names)
-{
     m_suspendContentsChange = true;
-    m_authorNames = names;
 
     textItem()->document()->clear();
     QTextCursor cursor( textItem()->document() );
     QTextCharFormat format;
 
-    textItem()->textCursor().insertText(names);
-    textItem()->setForbiddenTextRange(names.length());
+    textItem()->textCursor().insertText(m_authorNames);
+    textItem()->setForbiddenTextRange(m_authorNames.length());
 
     QStack<int> stack;
     stack.push(0);
@@ -213,7 +223,7 @@ void OTAdapter::setGraphicsText(const QString& names)
                     QString key = (*it).data.map->value("type");
                     if ( key == "body" )
                         stack.push(1);
-                    else if ( key == "contributor" )
+                    else if ( key == "contributor" )                    
                         stack.push(2);
                     else if ( key == "line" )
                     {

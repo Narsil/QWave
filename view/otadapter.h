@@ -28,7 +28,7 @@ public:
     /**
       * Puts the text stored in the Blip into the GraphicsTextItem.
       */
-    void setGraphicsText(const QString& authorNames);
+    void setGraphicsText();
 
     /**
       * charIndex is the position of a character in the QTextDocument.
@@ -45,8 +45,6 @@ private slots:
     void update( const DocumentMutation& mutation );
 
 private:
-    void setGraphicsText();
-
     bool m_suspendContentsChange;
     QString m_authorNames;
 };

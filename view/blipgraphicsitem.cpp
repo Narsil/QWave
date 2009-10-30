@@ -27,28 +27,12 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
 
     m_adapter = new OTAdapter(this);
 
-    // Get the image of the first author
-    m_userPixmap = new QPixmap( blip->authors().first()->pixmap().scaledToWidth(28, Qt::SmoothTransformation) );
-
-    // Get user names
-    QString names = "";
-    foreach( Participant* p, blip->authors() )
-    {
-        if ( names != "" )
-            names += ",";
-        if ( p == blip->wavelet()->wave()->environment()->localUser() )
-            names += tr("me");
-        else
-            names += p->name();
-    }
-    names += ": ";
-
     m_text = new GraphicsTextItem(m_adapter, this);
     m_text->setTextInteractionFlags( Qt::TextEditorInteraction);
     m_text->setPos(40,2);
     m_text->setTextWidth(width - m_text->x());
 
-    m_adapter->setGraphicsText(names);
+    m_adapter->setGraphicsText();
 
     /*
     m_caretIface = CaretInterface::initialize(document(), this);
@@ -82,7 +66,7 @@ void BlipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*,
 {
     QRectF rect = boundingRect();
 
-    painter->drawPixmap(12, 6, *m_userPixmap);
+    painter->drawPixmap(12, 6, m_userPixmap);
 
     if ( m_blip->isLastBlipInThread() && !m_blip->isRootBlip() )
     {
@@ -152,6 +136,13 @@ QRectF BlipGraphicsItem::boundingRect() const
 {
     QRectF rect = m_text->boundingRect();
     return QRectF( 0, 0, rect.width() + 40, qMax( 34.0, rect.height() ) + 12 );
+}
+
+void BlipGraphicsItem::setAuthorPixmap(const QPixmap& pixmap)
+{
+    // Get the image of the first author
+    m_userPixmap = pixmap.scaledToWidth(28, Qt::SmoothTransformation);
+    update();
 }
 
 void BlipGraphicsItem::hoverEnterEvent ( QGraphicsSceneHoverEvent* )

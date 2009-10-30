@@ -5,6 +5,7 @@
 #include "app/environment.h"
 #include "wave.h"
 #include "documentmutation.h"
+#include "contacts.h"
 #include <QtDebug>
 
 Blip::Blip(Wavelet* wavelet, const QString& id)
@@ -78,18 +79,41 @@ bool Blip::isLastBlipInThread() const
     return ( t->blips().last() == this );
 }
 
-QList<Participant*> Blip::authors() const
+const QList<Participant*>& Blip::authors() const
 {
-    // TODO: Bogus implementation
-    Environment* en = wavelet()->wave()->environment();
-    QList<Participant*> result;
-    result.append( en->localUser() );
-    return result;
+    return m_authors;
+//
+//    // TODO: Bogus implementation
+//    Environment* en = wavelet()->wave()->environment();
+//    QList<Participant*> result;
+//    result.append( en->localUser() );
+//    return result;
 }
 
 void Blip::receive( const DocumentMutation& mutation )
 {
     mutation.apply(m_doc);
+
+    // Find authors
+    m_authors.clear();
+    for( QList<StructuredDocument::Item>::const_iterator it = m_doc->begin(); it != m_doc->end(); ++it )
+    {
+        if ( (*it).type == StructuredDocument::Start && (*it).data.map )
+        {
+            QString key = (*it).data.map->value("type");
+            if ( key == "contributor" )
+            {
+                QString name = (*it).data.map->value("name");
+                if ( !name.isEmpty() )
+                {
+                    Participant* p = wavelet()->environment()->contacts()->addParticipant(name);
+                    if ( !m_authors.contains(p) )
+                        m_authors.append(p);
+                }
+            }
+        }
+    }
+
     emit update(mutation);
 }
 
