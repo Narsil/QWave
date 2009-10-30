@@ -47,6 +47,10 @@ private slots:
 private:
     bool m_suspendContentsChange;
     QString m_authorNames;
+    /**
+      * This flag avoids that edit actions made by the user come back as DocumentMutation.
+      */
+    bool m_blockUpdate;
 };
 
 #endif // OTADAPTER_H

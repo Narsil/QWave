@@ -54,6 +54,7 @@ int main(int argc, char *argv[])
             ServerSettingsDialog dlg(en);
             dlg.exec();
         }
+        en->configure();
 
         en->localUser()->setPixmap( QPixmap("images/user1.jpg") );
 

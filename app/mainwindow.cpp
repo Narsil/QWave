@@ -45,8 +45,6 @@ void MainWindow::newWave()
     // Add the new wave to the inbox and show it.
     m_environment->inbox()->addWave(wave);
     Wavelet* wavelet = wave->wavelet();
-    // todo: This should go away
-    // wavelet->addParticipant(m_environment->localUser());
 
     // Tell the server about the new wave
     // TODO: This is not final and ugly
@@ -64,17 +62,10 @@ void MainWindow::newWave()
     m1.insertEnd();
     m1.insertEnd();
     wavelet->processor()->handleSend( m1, "conversation" );
-    // todo: This should go away
-//    m1.apply(doc);
-    // todo: This should go away
-//    wavelet->updateConversation();
-   // wavelet->print_();
 
-    // Blip* b = wavelet->blip("b+b1");
-    //StructuredDocument* bdoc = b->document();
     DocumentMutation m2;
     map.clear();
-    map["author"] = m_environment->localUser()->address();
+    map["name"] = m_environment->localUser()->address();
     m2.insertStart("contributor", map);
     m2.insertEnd();
     map.clear();
@@ -83,9 +74,6 @@ void MainWindow::newWave()
     m2.insertEnd();
     m2.insertEnd();
     wavelet->processor()->handleSend( m2, "b+b1" );
-    // todo: This should go away
-    // m2.apply(bdoc);
-    // bdoc->print_();
 
     m_inboxView->select(wave);
 }
