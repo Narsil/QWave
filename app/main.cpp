@@ -62,10 +62,10 @@ int main(int argc, char *argv[])
 
         MainWindow* w = new MainWindow(en);
 
-        Participant* p2 = en->contacts()->addParticipant("joe@acme.com");
+        Participant* p2 = en->contacts()->addParticipant("tux@localhost");
         p2->setName("Tux");
         p2->setPixmap( QPixmap("images/user2.jpg") );
-        Participant* p3 = en->contacts()->addParticipant("pam@foobar.com");
+        Participant* p3 = en->contacts()->addParticipant("kenny@localhost");
         p3->setName("Kenny");
         p3->setPixmap( QPixmap("images/user3.jpg") );
 
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
         DocumentMutation m1;
         // bdoc->beginDelta();
         map.clear();
-        map["author"] = "torben.weis@googlewave.com";
+        map["name"] = "torben@localhost";
         m1.insertStart("contributor", map);
         m1.insertEnd();
         map.clear();
@@ -155,7 +155,7 @@ int main(int argc, char *argv[])
         m1.insertChars("Here comes a new line");
         m1.insertEnd();
         // bdoc->endDelta();
-        m1.apply(bdoc);
+        b->receive(m1);
         bdoc->print_();
 
         // bdoc->beginDelta();
@@ -171,37 +171,39 @@ int main(int argc, char *argv[])
         end2.append("italic");
         m2.annotationBoundary(end2, QHash<QString,QString>());
         m2.retain(49);
-        m2.apply(bdoc);
+        b->receive(m2);
         bdoc->print_();
 
         b = wavelet->blip("b+b3");
         DocumentMutation m3;
         bdoc = b->document();
         map.clear();
-        map["author"] = "torben.weis@googlewave.com";
+        map["name"] = "tux@localhost";
         m3.insertStart("contributor", map);
         m3.insertEnd();
         map.clear();
         m3.insertStart("body", map);
         m3.insertStart("line", map);
         m3.insertEnd();
+        m3.insertChars("Oh no, they killed Kenny");
         m3.insertEnd();
-        m3.apply(bdoc);
+        b->receive(m3);
         bdoc->print_();
 
         b = wavelet->blip("b+b4");
         DocumentMutation m4;
         bdoc = b->document();
         map.clear();
-        map["author"] = "torben.weis@googlewave.com";
+        map["name"] = "kenny@localhost";
         m4.insertStart("contributor", map);
         m4.insertEnd();
         map.clear();
         m4.insertStart("body", map);
         m4.insertStart("line", map);
         m4.insertEnd();
+        m4.insertChars("Not dead yet, ... oh wait ... arrrg");
         m4.insertEnd();
-        m4.apply(bdoc);
+        b->receive(m4);
         bdoc->print_();
 
         /*

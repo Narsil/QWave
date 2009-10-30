@@ -27,7 +27,7 @@ public:
     bool isRootBlip() const;
     bool isFirstRootBlip() const;
     bool isLastBlipInThread() const;
-    QList<Participant*> authors() const;
+    const QList<Participant*>& authors() const;
 
     void print_(int indent);
 
@@ -45,6 +45,7 @@ private:
 
     QString m_id;
     StructuredDocument* m_doc;
+    QList<Participant*> m_authors;
 };
 
 #endif // BLIP_H
