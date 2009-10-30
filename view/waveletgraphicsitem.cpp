@@ -2,18 +2,21 @@
 #include "waveletview.h"
 #include "model/wavelet.h"
 #include "participantgraphicsitem.h"
+#include "buttongraphicsitem.h"
+#include "addparticipantdialog.h"
 
 #include <QPainter>
 #include <QBrush>
 #include <QGraphicsSimpleTextItem>
-#include <QGraphicsPixmapItem>
 #include <QLinearGradient>
 #include <QGraphicsScene>
+#include <QApplication>
 
 WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
        : m_wavelet(0), m_view(view)
 {    
-    m_addUserButton = new QGraphicsPixmapItem( QPixmap("images/adduser.png"), this );
+    m_addUserButton = new ButtonGraphicsItem( QPixmap("images/adduser.png"), this );
+    connect( m_addUserButton, SIGNAL(clicked()), SLOT(showAddParticipantDialog()));
 
     int dy = 42 + 2 * 5 + 1 + 22 + 1;
     m_rect = QRectF( 0, 0, 100, dy);
@@ -95,4 +98,10 @@ void WaveletGraphicsItem::setWidth(qreal width)
 {
     m_rect.setWidth(width);
     this->prepareGeometryChange();
+}
+
+void WaveletGraphicsItem::showAddParticipantDialog()
+{
+    AddParticipantDialog dlg(m_wavelet->environment(), QApplication::activeWindow() );
+    dlg.exec();
 }

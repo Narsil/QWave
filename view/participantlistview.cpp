@@ -28,9 +28,16 @@ void ParticipantListView::setSelectable(bool selectable)
     if ( m_selectable == selectable )
         return;
     m_selectable = selectable;
-    foreach( ParticipantGraphicsItem* item, m_items.values() )
+    if ( m_selectable )
     {
-        item->setSelectable(m_selectable);
+        foreach( ParticipantGraphicsItem* item, m_items.values() )
+        {
+            item->setSelectable(m_selectable);
+        }
+    }
+    else
+    {
+        // TODO
     }
 }
 
@@ -46,6 +53,7 @@ void ParticipantListView::setParticipants( const QList<Participant*>& participan
     {
         ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 28, true);
         item->setWidth( frameRect().width() );
+        item->setSelectable(m_selectable);
         connect( item, SIGNAL(clicked(Participant*)), SLOT(selectParticipant(Participant*)));
         m_scene->addItem(item);
         m_items[p] = item;
@@ -60,6 +68,7 @@ void ParticipantListView::addParticipant(Participant* participant)
     {
         ParticipantGraphicsItem* item = new ParticipantGraphicsItem(participant, 28, true);
         item->setWidth( frameRect().width() );
+        item->setSelectable(m_selectable);
         connect( item, SIGNAL(clicked(Participant*)), SLOT(selectParticipant(Participant*)));
         m_scene->addItem(item);
         m_items[participant] = item;

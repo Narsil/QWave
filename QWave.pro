@@ -41,7 +41,9 @@ SOURCES += app/main.cpp \
     view/participantlistview.cpp \
     view/titlebar.cpp \
     view/inboxview.cpp \
-    view/bigbar.cpp
+    view/bigbar.cpp \
+    view/addparticipantdialog.cpp \
+    view/buttongraphicsitem.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -78,7 +80,9 @@ HEADERS += app/mainwindow.h \
     view/participantlistview.h \
     view/titlebar.h \
     view/inboxview.h \
-    view/bigbar.h
+    view/bigbar.h \
+    view/addparticipantdialog.h \
+    view/buttongraphicsitem.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf \

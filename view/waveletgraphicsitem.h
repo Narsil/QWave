@@ -9,8 +9,8 @@ class Wavelet;
 class WaveletView;
 class Participant;
 class ParticipantGraphicsItem;
+class ButtonGraphicsItem;
 class QGraphicsSimpleTextItem;
-class QGraphicsPixmapItem;
 
 class WaveletGraphicsItem : public QObject, public QGraphicsItem
 {
@@ -27,6 +27,7 @@ public:
 private slots:
     void addParticipant(Participant* participant);
     void removeParticipant(Participant* participant);
+    void showAddParticipantDialog();
 
 private:
     void updateParticipants();
@@ -35,7 +36,7 @@ private:
     WaveletView* m_view;
     QList<ParticipantGraphicsItem*> m_participantItems;
     QRectF m_rect;
-    QGraphicsPixmapItem* m_addUserButton;
+    ButtonGraphicsItem* m_addUserButton;
 };
 
 #endif // WAVELETGRAPHICSITEM_H
