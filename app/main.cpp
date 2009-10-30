@@ -9,6 +9,7 @@
 #include "model/wavelet.h"
 #include "model/blipthread.h"
 #include "model/blip.h"
+#include "model/contacts.h"
 #include "view/waveview.h"
 #include "view/waveletview.h"
 #include "view/wavelistview.h"
@@ -18,6 +19,7 @@
 #include "app/environment.h"
 #include "network/networkadapter.h"
 #include "model/structureddocument.h"
+#include "view/contactsview.h"
 
 #include "protocol/waveclient-rpc.pb.h"
 #include <fstream>
@@ -48,10 +50,10 @@ int main(int argc, char *argv[])
 
         MainWindow* w = new MainWindow(en);
 
-        Participant* p2 = new Participant("joe@acme.com");
+        Participant* p2 = en->contacts()->addParticipant("joe@acme.com");
         p2->setName("Tux");
         p2->setPixmap( QPixmap("images/user2.jpg") );
-        Participant* p3 = new Participant("pam@foobar.com");
+        Participant* p3 = en->contacts()->addParticipant("pam@foobar.com");
         p3->setName("Kenny");
         p3->setPixmap( QPixmap("images/user3.jpg") );
 
@@ -231,9 +233,10 @@ int main(int argc, char *argv[])
         QSplitter* splitter = new QSplitter();
 
         WaveView* view = new WaveView(wave);
-
         WaveListView* wlview = new WaveListView(en->inbox());
+        ContactsView* cview = new ContactsView( en->contacts() );
 
+        splitter->addWidget(cview);
         splitter->addWidget(wlview);
         splitter->addWidget(view);
         w->setCentralWidget(splitter);

@@ -78,7 +78,7 @@ void WaveDigestGraphicsItem::addParticipant(Participant* participant)
 {
     if ( m_participants.count() >= 3 )
         return;
-    ParticipantGraphicsItem* item = new ParticipantGraphicsItem(participant, 28, this);
+    ParticipantGraphicsItem* item = new ParticipantGraphicsItem(participant, 28, false, this);
     item->setPos( 4 + 32 * m_participants.count(), 4 );
     m_participants.append(item);
 }

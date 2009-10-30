@@ -24,5 +24,18 @@ Participant* Contacts::addParticipant( const QString& address )
         return p;
     p = new Participant(address);
     m_participants[address] = p;
+
+    emit participantAdded(p);
+
     return p;
+}
+
+QList<Participant*> Contacts::participants() const
+{
+    QList<Participant*> result;
+    foreach( Participant* p, m_participants.values() )
+    {
+        result.append(p);
+    }
+    return result;
 }
