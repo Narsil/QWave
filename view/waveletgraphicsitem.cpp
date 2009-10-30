@@ -61,7 +61,7 @@ void WaveletGraphicsItem::updateParticipants()
     qreal dy = 2 *3 + m_titleItem->boundingRect().height();
     foreach( Participant* p, m_wavelet->participants() )
     {
-        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 42, this);
+        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 42, false, this);
         item->setPos(dx + 5, dy + 5);
         dx += item->boundingRect().width() + 5;
         m_participantItems.append( item );
