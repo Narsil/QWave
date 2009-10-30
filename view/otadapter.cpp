@@ -19,7 +19,7 @@
 #include <QTextBlock>
 
 OTAdapter::OTAdapter(BlipGraphicsItem* parent )
-        : QObject( parent ), m_suspendContentsChange(false)
+        : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false)
 {
     connect(blip(), SIGNAL(update(const DocumentMutation&)), SLOT(update(const DocumentMutation&)));
 }
@@ -140,12 +140,14 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     m.retain( bdoc->count() - index );
 
     // Send the mutation to the OTProcessor
+    m_blockUpdate = true;
     WaveletDelta delta;
     WaveletDeltaOperation op;
     op.setMutation(m);
     op.setDocumentId(blip()->id());
-    delta.addOperation(op);
+    delta.addOperation(op);    
     blip()->wavelet()->processor()->handleSend(delta);
+    m_blockUpdate = false;
     bdoc->print_();
 
     // Send the mutation
@@ -360,5 +362,6 @@ Environment* OTAdapter::environment() const
 
 void OTAdapter::update( const DocumentMutation& mutation )
 {
-    setGraphicsText();
+    if ( !m_blockUpdate )
+        setGraphicsText();
 }
