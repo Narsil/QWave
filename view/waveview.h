@@ -6,6 +6,7 @@
 class Wave;
 class WaveletView;
 class MainWindow;
+class TitleBar;
 class QGraphicsScene;
 class QVBoxLayout;
 class QGraphicsView;
@@ -14,11 +15,13 @@ class WaveView : public QWidget
 {
     Q_OBJECT
 public:
-    WaveView(Wave* wave);
+    WaveView(Wave* wave, QWidget* parent = 0);
     ~WaveView();
 
     QGraphicsScene* scene() { return m_scene; }
     QGraphicsScene* headScene() { return m_headScene; }
+
+    void setTitle( const QString& title );
 
 public slots:
     void setWave( Wave* wave );
@@ -29,6 +32,7 @@ protected:
 private:
     Wave* m_wave;
     WaveletView* m_waveletView;
+    TitleBar* m_titleBar;
     QGraphicsScene* m_scene;
     QGraphicsScene* m_headScene;
     QVBoxLayout *m_verticalLayout;

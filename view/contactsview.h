@@ -7,6 +7,8 @@ class Contacts;
 class Participant;
 class ParticipantListView;
 class SearchBox;
+class TitleBar;
+class BigBar;
 class QVBoxLayout;
 
 class ContactsView : public QWidget
@@ -25,6 +27,8 @@ private:
     Contacts* m_contacts;
     ParticipantListView* m_listView;
     SearchBox* m_searchBox;
+    TitleBar* m_titleBar;
+    BigBar* m_bigBar;
     QVBoxLayout* m_verticalLayout;
 };
 

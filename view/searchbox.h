@@ -1,28 +1,22 @@
 #ifndef SEARCHBOX_H
 #define SEARCHBOX_H
 
-#include <QWidget>
+#include <QLineEdit>
 
-class QLineEdit;
+class QPixmap;
 
-class SearchBox : public QWidget
+class SearchBox : public QLineEdit
 {
     Q_OBJECT
 public:
     SearchBox(QWidget* parent = 0);
 
-    void setSearchText(const QString& search);
-    QString searchText() const;
-
-signals:
-    void searchChanged( const QString& search );
-
 protected:
-    virtual void resizeEvent(QResizeEvent* event);
     virtual void paintEvent(QPaintEvent* event);
 
 private:
-    QLineEdit* m_edit;
+    static QPixmap* s_pixmapLeft;
+    static QPixmap* s_pixmapRight;
 };
 
 #endif // SEARCHBOX_H

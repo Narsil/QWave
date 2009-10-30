@@ -17,7 +17,7 @@ class QGraphicsTextItem;
 class QTextDocument;
 class QPixmap;
 
-class WaveListView;
+class InboxView;
 class WaveView;
 
 class MainWindow : public QMainWindow
@@ -29,7 +29,7 @@ public:
     ~MainWindow();
 
     Environment* environment() const { return m_environment; }
-    void setInboxView( WaveListView* view ) { m_inboxView = view; }
+    void setInboxView(InboxView* view ) { m_inboxView = view; }
     void setWaveView( WaveView* view ) { m_waveView = view; }
 
 private slots:
@@ -39,7 +39,7 @@ private slots:
 private:
     Ui::MainWindowClass *ui;
     Environment* m_environment;
-    WaveListView* m_inboxView;
+    InboxView* m_inboxView;
     WaveView* m_waveView;
 };
 

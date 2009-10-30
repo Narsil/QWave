@@ -15,11 +15,7 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
 {    
     m_addUserButton = new QGraphicsPixmapItem( QPixmap("images/adduser.png"), this );
 
-    m_titleItem = new QGraphicsSimpleTextItem("Title", this);
-    m_titleItem->setPos(6, 3);
-    m_titleItem->setBrush(QBrush(Qt::white));
-
-    int dy = 2 *3 + m_titleItem->boundingRect().height() + 42 + 2 * 5 + 1 + 22 + 1;
+    int dy = 42 + 2 * 5 + 1 + 22 + 1;
     m_rect = QRectF( 0, 0, 100, dy);
 
     setWavelet(view->wavelet());
@@ -58,7 +54,7 @@ void WaveletGraphicsItem::updateParticipants()
     m_participantItems.clear();
 
     qreal dx = 0;
-    qreal dy = 2 *3 + m_titleItem->boundingRect().height();
+    qreal dy = 0;
     foreach( Participant* p, m_wavelet->participants() )
     {
         ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 42, false, this);
@@ -73,9 +69,6 @@ void WaveletGraphicsItem::updateParticipants()
 void WaveletGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)
 {
     qreal dy = 0;
-    QBrush brush(QColor(0x55,0x90,0xd2));
-    painter->fillRect(0, 0, m_rect.width(), m_titleItem->boundingRect().height() + 2 * 3, brush);
-    dy += 2 *3 + m_titleItem->boundingRect().height();
 
     QBrush brush2(QColor(0xc9,0xe2,0xfc));
     painter->fillRect(0, dy, m_rect.width(), 42 + 2 * 5, brush2);
@@ -102,9 +95,4 @@ void WaveletGraphicsItem::setWidth(qreal width)
 {
     m_rect.setWidth(width);
     this->prepareGeometryChange();
-}
-
-void WaveletGraphicsItem::setTitle( const QString& title )
-{
-    m_titleItem->setText(title);
 }
