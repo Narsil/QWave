@@ -2,9 +2,9 @@
 #include <QGraphicsView>
 #include <QSplitter>
 #include <QDateTime>
+#include <QSettings>
 
 #include "mainwindow.h"
-
 #include "model/wave.h"
 #include "model/wavelet.h"
 #include "model/blipthread.h"
@@ -17,10 +17,12 @@
 #include "model/participant.h"
 #include "model/wavelist.h"
 #include "app/environment.h"
+#include "app/settings.h"
 #include "network/networkadapter.h"
 #include "model/structureddocument.h"
 #include "view/contactsview.h"
 #include "view/inboxview.h"
+#include "serversettingsdialog.h"
 
 #include "protocol/waveclient-rpc.pb.h"
 #include <fstream>
@@ -44,10 +46,19 @@ int main(int argc, char *argv[])
 
     for( int i = 0; i < 1; ++i )
     {
-        // Test
-        Environment* en = new Environment("torben@localhost", "Torben");
+        Environment* en = new Environment();
+        // Configure the local user
+        Settings* settings = en->settings();
+        while( !settings->isConfigured() )
+        {
+            ServerSettingsDialog dlg(en);
+            dlg.exec();
+        }
+
         en->localUser()->setPixmap( QPixmap("images/user1.jpg") );
-        en->networkAdapter()->setServer( "localhost", 9876 );
+
+//        // Configure the server connection
+//        en->networkAdapter()->setServer( serverName, port );
 
         MainWindow* w = new MainWindow(en);
 

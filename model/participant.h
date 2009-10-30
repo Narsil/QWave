@@ -10,6 +10,7 @@ class Participant : public QObject
 public:
     Participant(const QString& address);
 
+    void setAddress(const QString& address) { m_address = address; }
     /**
       * Address in the form user@domain.
       */

@@ -1,23 +1,20 @@
 #include "serversettingsdialog.h"
 #include "ui_serversettingsdialog.h"
-
-#include <QSettings>
+#include "app/environment.h"
+#include "app/settings.h"
 
 ServerSettingsDialog::ServerSettingsDialog(Environment* environment, QWidget *parent) :
     QDialog(parent), m_ui(new Ui::ServerSettingsDialog), m_environment(environment)
 {
     m_ui->setupUi(this);
 
-    QSettings settings( "T.Weis", "QWaveClient");
-    settings.beginGroup("server");
-    m_ui->server->setText( settings.value("serverName", QVariant("localhost") ).toString() );
-    int port = settings.value("serverPort", QVariant((int)9876) ).toInt();
+    Settings* s = environment->settings();
+    m_ui->server->setText( s->serverName() );
     QString str;
-    str.setNum(port);
+    str.setNum(s->serverPort());
     m_ui->port->setText( str );
-    m_ui->userName->setText( settings.value("userName", QVariant("torben") ).toString() );
-    m_ui->password->setText( settings.value("password", QVariant("") ).toString() );
-    settings.endGroup();
+    m_ui->userName->setText( s->userName() );
+    m_ui->password->setText( s->password() );
 }
 
 ServerSettingsDialog::~ServerSettingsDialog()
@@ -38,13 +35,13 @@ void ServerSettingsDialog::changeEvent(QEvent *e)
 
 void ServerSettingsDialog::accept()
 {
-    QSettings settings( "T.Weis", "QWaveClient");
-    settings.beginGroup("server");
-    settings.setValue( "serverName", QVariant( m_ui->server->text() ) );
-    settings.setValue( "serverPort", QVariant( m_ui->port->text().toInt() ) );
-    settings.setValue( "userName", QVariant( m_ui->userName->text() ) );
-    settings.setValue( "password", QVariant( m_ui->password->text() ) );
-    settings.endGroup();
+    Settings* s = m_environment->settings();
+
+    s->setServerName( m_ui->server->text() );
+    s->setServerPort( m_ui->port->text().toInt() );
+    s->setUserName( m_ui->userName->text() );
+    s->setUserAddress( m_ui->userAddress->text() );
+    s->setPassword( m_ui->password->text() );
 
     QDialog::accept();
 }
