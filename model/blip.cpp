@@ -9,13 +9,25 @@
 #include <QtDebug>
 
 Blip::Blip(Wavelet* wavelet, const QString& id)
-        : QObject(wavelet), m_id(id)
+        : QObject(wavelet), m_id(id), m_doc(0)
 {
     setup();
 }
 
 Blip::Blip(BlipThread* thread, const QString& id)
-        : QObject(thread), m_id(id)
+        : QObject(thread), m_id(id), m_doc(0)
+{
+    setup();
+}
+
+Blip::Blip(Wavelet* wavelet, const QString& id, StructuredDocument* doc)
+       : QObject(wavelet), m_id(id), m_doc(doc)
+{
+    setup();
+}
+
+Blip::Blip(BlipThread* thread, const QString& id, StructuredDocument* doc)
+      : QObject(thread), m_id(id), m_doc(doc)
 {
     setup();
 }
@@ -23,7 +35,8 @@ Blip::Blip(BlipThread* thread, const QString& id)
 void Blip::setup()
 {
      setObjectName(m_id);
-     m_doc = new StructuredDocument(this);
+     if ( !m_doc )
+        m_doc = new StructuredDocument(this);
 }
 
 BlipThread* Blip::parentThread() const

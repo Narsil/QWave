@@ -17,6 +17,8 @@ class Blip : public QObject
 public:
     Blip(Wavelet* wavelet, const QString& id);
     Blip(BlipThread* thread, const QString& id);
+    Blip(Wavelet* wavelet, const QString& id, StructuredDocument* doc);
+    Blip(BlipThread* thread, const QString& id, StructuredDocument* doc);
 
     QList<BlipThread*> threads() const;
     QString id() const { return this->m_id; }

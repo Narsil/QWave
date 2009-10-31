@@ -44,7 +44,8 @@ SOURCES += app/main.cpp \
     view/bigbar.cpp \
     view/addparticipantdialog.cpp \
     view/buttongraphicsitem.cpp \
-    app/settings.cpp
+    app/settings.cpp \
+    model/unknowndocument.cpp
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -84,7 +85,8 @@ HEADERS += app/mainwindow.h \
     view/bigbar.h \
     view/addparticipantdialog.h \
     view/buttongraphicsitem.h \
-    app/settings.h
+    app/settings.h \
+    model/unknowndocument.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf \

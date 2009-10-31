@@ -9,7 +9,7 @@
 #include "contacts.h"
 #include "app/environment.h"
 #include "network/networkadapter.h"
-
+#include "unknowndocument.h"
 #include <QStack>
 #include <QtDebug>
 
@@ -47,6 +47,9 @@ void Wavelet::updateConversation()
     m_blips.clear();
     m_blipThreads.clear();
 
+    // Parse the conversation document and rebuild the conversation.
+    // Keep all blips which already exist.
+
     QObject* currentParent = this;
     QStack<StructuredDocument::Item> stack;
     QStack<QObject*> objectStack;
@@ -68,14 +71,32 @@ void Wavelet::updateConversation()
                 Blip* blip = blips[id];
                 if ( !blip )
                 {
-                    if ( currentParent == this )                    
-                        blip = new Blip( (Wavelet*)currentParent, id );
-                    else if ( qobject_cast<BlipThread*>(currentParent) )
-                        blip = new Blip( (BlipThread*)currentParent, id );
+                    UnknownDocument* u = m_unknownDocs[id];
+                    if ( u )
+                    {
+                        if ( currentParent == this )
+                            blip = new Blip( (Wavelet*)currentParent, id, u->releaseDocument() );
+                        else if ( qobject_cast<BlipThread*>(currentParent) )
+                            blip = new Blip( (BlipThread*)currentParent, id, u->releaseDocument() );
+                        else
+                        {
+                            // Ooooops
+                            return;
+                        }
+                        m_unknownDocs.remove(id);
+                        delete u;
+                    }
                     else
                     {
-                        // Ooooops
-                        return;
+                        if ( currentParent == this )
+                            blip = new Blip( (Wavelet*)currentParent, id );
+                        else if ( qobject_cast<BlipThread*>(currentParent) )
+                            blip = new Blip( (BlipThread*)currentParent, id );
+                        else
+                        {
+                            // Ooooops
+                            return;
+                        }
                     }
                 }
                 m_blips[id] = blip;
@@ -214,5 +235,15 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
         Blip* b = blip(documentId);
         if ( b )
             b->receive(mutation);
+        else
+        {
+            UnknownDocument* d = m_unknownDocs[documentId];
+            if ( !d )
+            {
+                d = new UnknownDocument(documentId);
+                m_unknownDocs[documentId] = d;
+            }
+            d->receive(mutation);
+        }
     }
 }
