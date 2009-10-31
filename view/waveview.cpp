@@ -8,6 +8,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsView>
 #include <QVBoxLayout>
+#include <QScrollBar>
 
 WaveView::WaveView(Wave* wave, QWidget* parent )
         : QWidget(parent), m_wave(wave)
@@ -51,10 +52,10 @@ WaveView::WaveView(Wave* wave, QWidget* parent )
     m_graphicsView->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     m_verticalLayout->addWidget(m_graphicsView);
 
-    m_waveletView = new WaveletView(this, wave->wavelet());
+    m_waveletView = new WaveletView(this, wave->wavelet(), m_graphicsView->frameRect().width());
 
     m_graphicsView->setScene( m_scene );
-    m_graphicsView->setSceneRect(0,0,1000,2000);
+    // m_graphicsView->setSceneRect(0,0,1000,2000);
     m_graphicsViewHead->setScene( m_headScene );
     m_graphicsViewHead->setSceneRect( m_headScene->itemsBoundingRect());
 }
@@ -76,6 +77,11 @@ void WaveView::setWave( Wave* wave )
     wave->environment()->networkAdapter()->openWavelet( wave->wavelet() );
 
     m_waveletView->setWavelet(wave->wavelet());    
+
+    if ( m_graphicsView->verticalScrollBar() )
+        m_graphicsView->verticalScrollBar()->setValue(0);
+    if ( m_graphicsView->horizontalScrollBar() )
+        m_graphicsView->horizontalScrollBar()->setValue(0);
 }
 
 void WaveView::setTitle( const QString& title )

@@ -37,7 +37,7 @@ NetworkAdapter* Environment::networkAdapter() const
 
 void Environment::addWavelet( Wavelet* wavelet )
 {
-    m_wavelets[wavelet->id()] = wavelet;
+    m_wavelets[wavelet->url().toString()] = wavelet;
 }
 
 void Environment::removeWavelet( Wavelet* wavelet )

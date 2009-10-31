@@ -176,7 +176,10 @@ void OTAdapter::setGraphicsText()
     if ( blip()->authors().length() > 0 )
         blipItem()->setAuthorPixmap(blip()->authors().first()->pixmap());
     else
+    {
+        m_authorNames = blip()->creator()->name() + m_authorNames;
         blipItem()->setAuthorPixmap(blip()->creator()->pixmap());
+    }
 
     m_suspendContentsChange = true;
 

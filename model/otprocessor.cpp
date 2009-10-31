@@ -86,6 +86,10 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     {
         if ( op.hasMutation() )
             emit documentMutation(op.documentId(), *(op.mutation()), outgoing.author());
+        if ( op.hasAddParticipant() )
+            emit participantAdd( op.addParticipant() );
+        if ( op.hasRemoveParticipant() )
+            emit participantRemove( op.removeParticipant() );
     }
     // Remember that this message has been sent but not yet acked
     m_outgoingDeltas.append(outgoing);

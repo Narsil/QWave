@@ -8,7 +8,7 @@
 
 #include <QGraphicsScene>
 
-WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet )
+WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet, qreal width )
         : QObject( parent ), m_wavelet(wavelet)
 {
     m_gfx = new WaveletGraphicsItem(this);
@@ -16,7 +16,7 @@ WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet )
     m_gfx->setZValue(1);
     headScene()->addItem(m_gfx);
 
-    layoutBlips(100);
+    layoutBlips(width);
 
     connect( wavelet, SIGNAL(conversationChanged()), SLOT(layoutBlips()));
 }
@@ -48,6 +48,8 @@ void WaveletView::layoutBlips()
 
 void WaveletView::layoutBlips(qreal width)
 {
+    QGraphicsItem* focus = scene()->focusItem();
+
     m_lastWidth = width;
     qreal dy = 0;
     qreal dx = 0;
@@ -55,6 +57,9 @@ void WaveletView::layoutBlips(qreal width)
     {
         layoutBlip(blip, dx, dy, width);
     }
+
+    if ( focus )
+        scene()->setFocusItem(focus);
 }
 
 void WaveletView::layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal width )
