@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
         doc->insertEnd();
         doc->insertEnd();
         doc->endDelta();
-        wavelet->updateConversation();
+        wavelet->updateConversation("torben@localhost");
         wavelet->print_();
 
         doc->beginDelta();
@@ -117,7 +117,7 @@ int main(int argc, char *argv[])
         doc->insertEnd();
         doc->retain(7);
         doc->endDelta();
-        wavelet->updateConversation();
+        wavelet->updateConversation("torben@localhost");
         wavelet->print_();
 
         doc->beginDelta();
@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
         doc->deleteEnd();
         doc->retain(7);
         doc->endDelta();
-        wavelet->updateConversation();
+        wavelet->updateConversation("torben@localhost");
         wavelet->print_();
 
         Blip* b = wavelet->blip("b+b1");

@@ -8,26 +8,14 @@ BlipThread::BlipThread(Blip* blip, const QString& id)
     this->setObjectName(id);
 }
 
-Blip* BlipThread::parentBlip()
+Blip* BlipThread::parentBlip() const
 {
     return qobject_cast<Blip*>(parent());
 }
 
-Wavelet* BlipThread::wavelet()
+Wavelet* BlipThread::wavelet() const
 {
     return parentBlip()->wavelet();
-}
-
-QList<Blip*> BlipThread::blips()
-{
-    QList<Blip*> result;
-    for( QObjectList::const_iterator it = children().begin(); it != children().end(); ++it )
-    {
-        Blip* blip = qobject_cast<Blip*>(*it);
-        if ( blip )
-            result.append(blip);
-    }
-    return result;
 }
 
 void BlipThread::print_(int ind)
@@ -42,3 +30,12 @@ void BlipThread::print_(int ind)
     }
 }
 
+void BlipThread::addBlip(Blip* blip)
+{
+    m_blips.append(blip);
+}
+
+void BlipThread::clearBlipList()
+{
+    m_blips.clear();
+}

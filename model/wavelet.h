@@ -27,7 +27,7 @@ public:
     QString domain() const { return this->m_domain; }
     Wave* wave() const { return this->m_wave; }
     StructuredDocument* document() const { return m_doc; }
-    QList<Blip*> rootBlips() const;
+    const QList<Blip*>& rootBlips() const { return m_rootBlips; }
     Blip* blip(const QString& id);
     Environment* environment() const;
     OTProcessor* processor() const { return m_processor; }
@@ -38,9 +38,10 @@ public:
     QList<Participant*> participants() const { return m_participants; }
     Participant* participant( const QString& address );
 
-    void updateConversation();
-
     void print_();
+
+    // TODO: This should become private
+    void updateConversation(const QString& author);
 
 signals:
     /**
@@ -68,7 +69,7 @@ private slots:
     /**
       * Connected to the OTProcessor.
       */
-    void mutateDocument( const QString& documentId, const DocumentMutation& mutation );
+    void mutateDocument( const QString& documentId, const DocumentMutation& mutation, const QString& author );
 
 private:
     QString m_id;
@@ -93,6 +94,7 @@ private:
     QList<Participant*> m_participants;
     OTProcessor* m_processor;
     QHash<QString, UnknownDocument*> m_unknownDocs;
+    QList<Blip*> m_rootBlips;
 };
 
 #endif // WAVELET_H

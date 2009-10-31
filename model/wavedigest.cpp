@@ -14,7 +14,7 @@ WaveDigest::WaveDigest(Wave* parent)
 
     m_processor = new OTProcessor(parent->environment(), this);
 
-    connect( m_processor, SIGNAL(documentMutation(QString,DocumentMutation)), SLOT(mutateDocument(QString,DocumentMutation)));
+    connect( m_processor, SIGNAL(documentMutation(QString,DocumentMutation,QString)), SLOT(mutateDocument(QString,DocumentMutation,QString)));
     connect( m_processor, SIGNAL(participantAdd(QString)), SLOT(addParticipant(QString)));
     connect( m_processor, SIGNAL(participantRemove(QString)), SLOT(removeParticipant(QString)));
 }
@@ -36,7 +36,7 @@ void WaveDigest::removeParticipant( const QString& address )
     emit participantRemoved(p);
 }
 
-void WaveDigest::mutateDocument( const QString&, const DocumentMutation& mutation )
+void WaveDigest::mutateDocument( const QString&, const DocumentMutation& mutation, const QString& )
 {
     mutation.apply(m_doc);
     emit digestChanged();
