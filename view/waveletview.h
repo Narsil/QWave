@@ -17,7 +17,7 @@ class WaveletView : public QObject
 {
     Q_OBJECT
 public:
-    WaveletView(WaveView* parent, Wavelet* wavelet);
+    WaveletView(WaveView* parent, Wavelet* wavelet, qreal width);
     ~WaveletView();
 
     Wavelet* wavelet() { return m_wavelet; }

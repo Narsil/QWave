@@ -346,7 +346,7 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
         // Wavelet?
         else
         {
-            Wavelet* wavelet = environment()->wavelet(waveletid);
+            Wavelet* wavelet = environment()->wavelet(url.toString());
             if ( !wavelet )
                 return;
 
