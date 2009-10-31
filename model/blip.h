@@ -15,12 +15,15 @@ class Blip : public QObject
 {
     Q_OBJECT
 public:
-    Blip(Wavelet* wavelet, const QString& id);
-    Blip(BlipThread* thread, const QString& id);
-    Blip(Wavelet* wavelet, const QString& id, StructuredDocument* doc);
-    Blip(BlipThread* thread, const QString& id, StructuredDocument* doc);
+    Blip(Wavelet* wavelet, const QString& id, Participant* creator);
+    Blip(BlipThread* thread, const QString& id, Participant* creator);
+    Blip(Wavelet* wavelet, const QString& id, Participant* creator, StructuredDocument* doc);
+    Blip(BlipThread* thread, const QString& id, Participant* creator, StructuredDocument* doc);
 
-    QList<BlipThread*> threads() const;
+    /**
+      * A ordered list of all thread belonging to the blip.
+      */
+    const QList<BlipThread*>& threads() const { return m_threads; }
     QString id() const { return this->m_id; }
     StructuredDocument* document() { return m_doc; }
     BlipThread* parentThread() const;
@@ -29,7 +32,24 @@ public:
     bool isRootBlip() const;
     bool isFirstRootBlip() const;
     bool isLastBlipInThread() const;
+    /**
+      * Resembles the authors as given by the contributor tags.
+      * Enlisting an author here is not mandatory. The list can even be empty.
+      */
     const QList<Participant*>& authors() const;
+    /**
+      * The user who created the blip.
+      */
+    Participant* creator() const { return m_creator; }
+
+    /**
+      * @internal
+      */
+    void clearThreadList();
+    /**
+      * @internal
+      */
+    void addThread(BlipThread* thread);
 
     void print_(int indent);
 
@@ -47,7 +67,19 @@ private:
 
     QString m_id;
     StructuredDocument* m_doc;
+    /**
+      * Resembles the authors as given by the contributor tags.
+      * Enlisting an author here is not mandatory. The list can even be empty.
+      */
     QList<Participant*> m_authors;
+    /**
+      * The user who created the blip.
+      */
+    Participant* m_creator;
+    /**
+      * A ordered list of all thread belonging to the blip.
+      */
+    QList<BlipThread*> m_threads;
 };
 
 #endif // BLIP_H

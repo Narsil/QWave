@@ -20,7 +20,7 @@ Wavelet::Wavelet(Wave* wave, const QString& domain, const QString &id)
     m_doc = new StructuredDocument(this);
     m_processor = new OTProcessor(this);
 
-    connect( m_processor, SIGNAL(documentMutation(QString,DocumentMutation)), SLOT(mutateDocument(QString,DocumentMutation)));
+    connect( m_processor, SIGNAL(documentMutation(QString,DocumentMutation,QString)), SLOT(mutateDocument(QString,DocumentMutation,QString)));
     connect( m_processor, SIGNAL(participantAdd(QString)), SLOT(addParticipant(QString)));
     connect( m_processor, SIGNAL(participantRemove(QString)), SLOT(removeParticipant(QString)));
 }
@@ -40,16 +40,18 @@ QUrl Wavelet::url() const
     return url;
 }
 
-void Wavelet::updateConversation()
+void Wavelet::updateConversation(const QString& author)
 {
     QHash<QString,Blip*> blips( m_blips );
     QHash<QString,BlipThread*> blipThreads( m_blipThreads );
     m_blips.clear();
     m_blipThreads.clear();
+    m_rootBlips.clear();
 
     // Parse the conversation document and rebuild the conversation.
     // Keep all blips which already exist.
 
+    Participant* creator = environment()->contacts()->addParticipant(author);
     QObject* currentParent = this;
     QStack<StructuredDocument::Item> stack;
     QStack<QObject*> objectStack;
@@ -75,9 +77,9 @@ void Wavelet::updateConversation()
                     if ( u )
                     {
                         if ( currentParent == this )
-                            blip = new Blip( (Wavelet*)currentParent, id, u->releaseDocument() );
+                            blip = new Blip( (Wavelet*)currentParent, id, creator, u->releaseDocument() );
                         else if ( qobject_cast<BlipThread*>(currentParent) )
-                            blip = new Blip( (BlipThread*)currentParent, id, u->releaseDocument() );
+                            blip = new Blip( (BlipThread*)currentParent, id, creator, u->releaseDocument() );
                         else
                         {
                             // Ooooops
@@ -89,9 +91,9 @@ void Wavelet::updateConversation()
                     else
                     {
                         if ( currentParent == this )
-                            blip = new Blip( (Wavelet*)currentParent, id );
+                            blip = new Blip( (Wavelet*)currentParent, id, creator );
                         else if ( qobject_cast<BlipThread*>(currentParent) )
-                            blip = new Blip( (BlipThread*)currentParent, id );
+                            blip = new Blip( (BlipThread*)currentParent, id, creator );
                         else
                         {
                             // Ooooops
@@ -99,9 +101,16 @@ void Wavelet::updateConversation()
                         }
                     }
                 }
-                m_blips[id] = blip;
-                if ( blip->parent() != currentParent )
+                else
+                {
                     blip->setParent(currentParent);
+                    blip->clearThreadList();
+                }
+                if ( currentParent == this )
+                    m_rootBlips.append(blip);
+                else if ( qobject_cast<BlipThread*>(currentParent) )
+                    ((BlipThread*)currentParent)->addBlip(blip);
+                m_blips[id] = blip;
                 currentParent = blip;
             }
             else if ( (*it).data.map->value("type") == "thread" )
@@ -118,6 +127,9 @@ void Wavelet::updateConversation()
                         return;
                     }
                 }
+                else
+                    thread->clearBlipList();
+                ((Blip*)currentParent)->addThread(thread);
                 m_blipThreads[id] = thread;
                 if ( thread->parent() != currentParent )
                     thread->setParent(currentParent);
@@ -149,18 +161,6 @@ void Wavelet::updateConversation()
         if ( !m_blipThreads.contains(key) )
             delete blipThreads[key];
     }
-}
-
-QList<Blip*> Wavelet::rootBlips() const
-{
-    QList<Blip*> result;
-    for( QObjectList::const_iterator it = children().begin(); it != children().end(); ++it )
-    {
-        Blip* blip = qobject_cast<Blip*>(*it);
-        if ( blip )
-            result.append( blip );
-    }
-    return result;
 }
 
 void Wavelet::print_()
@@ -222,12 +222,12 @@ void Wavelet::removeParticipant( const QString& address )
     }
 }
 
-void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation& mutation )
+void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation& mutation, const QString& author )
 {
     if ( documentId == "conversation" )
     {
         mutation.apply(m_doc);
-        this->updateConversation();
+        this->updateConversation(author);
         emit conversationChanged();
     }
     else

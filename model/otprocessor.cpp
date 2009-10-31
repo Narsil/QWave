@@ -85,7 +85,7 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     foreach( WaveletDeltaOperation op, outgoing.operations() )
     {
         if ( op.hasMutation() )
-            emit documentMutation(op.documentId(), *(op.mutation()));
+            emit documentMutation(op.documentId(), *(op.mutation()), outgoing.author());
     }
     // Remember that this message has been sent but not yet acked
     m_outgoingDeltas.append(outgoing);
@@ -141,7 +141,7 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming )
     {
         const WaveletDeltaOperation sop = msg.operations()[s];
         if ( sop.hasMutation() )
-            emit documentMutation(sop.documentId(), *(sop.mutation()));
+            emit documentMutation(sop.documentId(), *(sop.mutation()), msg.author());
         if ( sop.hasAddParticipant() )
             emit participantAdd( sop.addParticipant() );
         if ( sop.hasRemoveParticipant() )

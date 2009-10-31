@@ -31,7 +31,7 @@ public:
 signals:
     void participantAdd( const QString& address );
     void participantRemove( const QString& address );
-    void documentMutation( const QString& documentId, const DocumentMutation& mutation );
+    void documentMutation( const QString& documentId, const DocumentMutation& mutation, const QString& author );
 
 private:
     void setup();

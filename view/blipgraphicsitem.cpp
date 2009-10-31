@@ -32,6 +32,7 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
     m_text->setPos(40,2);
     m_text->setTextWidth(width - m_text->x());
 
+    QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SLOT(titleChanged(const QString&)));
     m_adapter->setGraphicsText();
 
     /*
@@ -43,10 +44,9 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
 
     m_lastTextRect = m_text->boundingRect();
     QObject::connect(m_text->document(), SIGNAL(contentsChanged()), SLOT(onContentsChanged()));
-    QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SLOT(titleChanged(const QString&)));
 
-    if ( blip->isRootBlip() )
-        titleChanged( m_text->document()->begin().text().mid( m_text->forbiddenTextRange() ) );
+//    if ( blip->isRootBlip() )
+//        titleChanged( m_text->document()->begin().text().mid( m_text->forbiddenTextRange() ) );
 }
 
 QTextDocument* BlipGraphicsItem::document()

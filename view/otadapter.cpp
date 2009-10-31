@@ -48,7 +48,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     StructuredDocument* bdoc = blip()->document();
 
     // Did the user modify the first block in the first blib? -> change the title
-    if ( blip()->isRootBlip() && doc->findBlock(position).blockNumber() == doc->begin().blockNumber() )
+    if ( blip()->isFirstRootBlip() && doc->findBlock(position).blockNumber() == doc->begin().blockNumber() )
     {
         QString title = doc->begin().text().mid( textItem()->forbiddenTextRange() );
         emit titleChanged(title);
@@ -175,6 +175,8 @@ void OTAdapter::setGraphicsText()
     m_authorNames += ": ";
     if ( blip()->authors().length() > 0 )
         blipItem()->setAuthorPixmap(blip()->authors().first()->pixmap());
+    else
+        blipItem()->setAuthorPixmap(blip()->creator()->pixmap());
 
     m_suspendContentsChange = true;
 
@@ -265,7 +267,7 @@ void OTAdapter::setGraphicsText()
     m_suspendContentsChange = false;
 
     // Did this modify the first block in the first blib? -> change the title
-    if ( blip()->isRootBlip()  )
+    if ( blip()->isFirstRootBlip()  )
     {
         QString title = textItem()->document()->begin().text().mid( textItem()->forbiddenTextRange() );
         emit titleChanged(title);

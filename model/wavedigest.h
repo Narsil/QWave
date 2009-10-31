@@ -11,6 +11,10 @@ class StructuredDocument;
 class DocumentMutation;
 class OTProcessor;
 
+/**
+  * Contains a digest of the wave. The contents of the digest is
+  * calculated at the server.
+  */
 class WaveDigest : public QObject
 {
     Q_OBJECT
@@ -40,7 +44,7 @@ private slots:
     /**
       * Connected to the OTProcessor.
       */
-    void mutateDocument( const QString& documentId, const DocumentMutation& mutation );
+    void mutateDocument( const QString& documentId, const DocumentMutation& mutation, const QString& author );
 
 signals:
     /**

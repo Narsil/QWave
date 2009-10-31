@@ -8,26 +8,26 @@
 #include "contacts.h"
 #include <QtDebug>
 
-Blip::Blip(Wavelet* wavelet, const QString& id)
-        : QObject(wavelet), m_id(id), m_doc(0)
+Blip::Blip(Wavelet* wavelet, const QString& id, Participant* creator)
+        : QObject(wavelet), m_id(id), m_doc(0), m_creator(creator)
 {
     setup();
 }
 
-Blip::Blip(BlipThread* thread, const QString& id)
-        : QObject(thread), m_id(id), m_doc(0)
+Blip::Blip(BlipThread* thread, const QString& id, Participant* creator)
+        : QObject(thread), m_id(id), m_doc(0), m_creator(creator)
 {
     setup();
 }
 
-Blip::Blip(Wavelet* wavelet, const QString& id, StructuredDocument* doc)
-       : QObject(wavelet), m_id(id), m_doc(doc)
+Blip::Blip(Wavelet* wavelet, const QString& id, Participant* creator, StructuredDocument* doc)
+       : QObject(wavelet), m_id(id), m_doc(doc), m_creator(creator)
 {
     setup();
 }
 
-Blip::Blip(BlipThread* thread, const QString& id, StructuredDocument* doc)
-      : QObject(thread), m_id(id), m_doc(doc)
+Blip::Blip(BlipThread* thread, const QString& id, Participant* creator, StructuredDocument* doc)
+      : QObject(thread), m_id(id), m_doc(doc), m_creator(creator)
 {
     setup();
 }
@@ -55,18 +55,6 @@ Wavelet* Blip::wavelet() const
 Environment* Blip::environment() const
 {
     return wavelet()->environment();
-}
-
-QList<BlipThread*> Blip::threads() const
-{
-    QList<BlipThread*> result;
-    for( QObjectList::const_iterator it = children().begin(); it != children().end(); ++it )
-    {
-        BlipThread* thread = qobject_cast<BlipThread*>(*it);
-        if ( thread )
-            result.append(thread);
-    }
-    return result;
 }
 
 bool Blip::isRootBlip() const
@@ -140,4 +128,14 @@ void Blip::print_(int indent)
     {
         t->print_(indent+1);
     }
+}
+
+void Blip::clearThreadList()
+{
+    m_threads.clear();
+}
+
+void Blip::addThread(BlipThread* thread)
+{
+    m_threads.append(thread);
 }
