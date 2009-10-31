@@ -14,6 +14,7 @@ class Participant;
 class Environment;
 class OTProcessor;
 class DocumentMutation;
+class UnknownDocument;
 
 class Wavelet : public QObject
 {
@@ -91,6 +92,7 @@ private:
     QHash<QString,BlipThread*> m_blipThreads;
     QList<Participant*> m_participants;
     OTProcessor* m_processor;
+    QHash<QString, UnknownDocument*> m_unknownDocs;
 };
 
 #endif // WAVELET_H

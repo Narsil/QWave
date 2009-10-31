@@ -6,7 +6,6 @@ WaveletDelta::WaveletDelta()
 
 WaveletDelta::WaveletDelta(const WaveletDelta& delta)
         : m_version( delta.m_version ),
-          m_resultingVersion( delta.m_resultingVersion ),
           m_author( delta.m_author ),
           m_operations( delta.m_operations )
 {

@@ -26,15 +26,12 @@ public:
     void setAuthor( const QString& author ) { m_author = author; }
     HashedVersion& version() { return m_version; }
     const HashedVersion& version() const { return m_version; }
-    HashedVersion& resultingVersion() { return m_resultingVersion; }
-    const HashedVersion& resultingVersion() const { return m_resultingVersion; }
     const QList<WaveletDeltaOperation>& operations() const { return m_operations; }
     QList<WaveletDeltaOperation>& operations() { return m_operations; }
     void addOperation(const WaveletDeltaOperation& op);
 
 private:
     HashedVersion m_version;
-    HashedVersion m_resultingVersion;
     QString m_author;
     QList<WaveletDeltaOperation> m_operations;
 };
