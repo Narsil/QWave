@@ -83,6 +83,19 @@ public:
 
     void print_();
 
+protected:
+    virtual void onMutationStart();
+    virtual void onRetainChar(int index);
+    virtual void onRetainElementStart(int index);
+    virtual void onRetainElementEnd(int index);
+    virtual void onDeleteChar(int index);
+    virtual void onDeleteElementStart(int index);
+    virtual void onDeleteElementEnd(int index);
+    virtual void onInsertChar(int index);
+    virtual void onInsertElementStart(int index);
+    virtual void onInsertElementEnd(int index);
+    virtual void onMutationEnd();
+
 private:
     void insertStart( int index, const QString& tag, const QHash<QString,QString>& map, const Annotation& anno);
 

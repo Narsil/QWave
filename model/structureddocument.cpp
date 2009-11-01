@@ -261,31 +261,56 @@ void StructuredDocument::print_()
     qDebug() << result;
 }
 
+void StructuredDocument::onMutationStart()
+{
+}
+
+void StructuredDocument::onRetainChar(int index)
+{
+}
+
+void StructuredDocument::onRetainElementStart(int index)
+{
+}
+
+void StructuredDocument::onRetainElementEnd(int index)
+{
+}
+
+void StructuredDocument::onDeleteChar(int index)
+{
+}
+
+void StructuredDocument::onDeleteElementStart(int index)
+{
+}
+
+void StructuredDocument::onDeleteElementEnd(int index)
+{
+}
+
+void StructuredDocument::onInsertChar(int index)
+{
+}
+
+void StructuredDocument::onInsertElementStart(int index)
+{
+}
+
+void StructuredDocument::onInsertElementEnd(int index)
+{
+}
+
+void StructuredDocument::onMutationEnd()
+{
+}
+
 /*******************************************************************************
   *
   * StructuredDocument::Annotation
   *
   ******************************************************************************/
 
-//QHash<QString,QString> StructuredDocument::Annotation::merge( const QHash<QString,QString>& changes, const QList<QString>& endKeys  )
-//{
-//    if ( isNull() )
-//        return changes;
-//    QHash<QString,QString> result(d->map);
-//    foreach(QString key, changes.keys())
-//    {
-//        QString val = changes[key];
-//        if ( val.isEmpty() )
-//            result.remove(key);
-//        else
-//            result[key] = val;
-//    }
-//    foreach( QString e, endKeys )
-//    {
-//        result.remove(e);
-//    }
-//    return result;
-//}
 
 StructuredDocument::Annotation StructuredDocument::Annotation::merge(const QHash<QString,QString>& update) const
 {
