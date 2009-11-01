@@ -5,7 +5,7 @@
 #include "blipgraphicsitem.h"
 #include "graphicstextitem.h"
 #include "model/otprocessor.h"
-#include "model/structureddocument.h"
+#include "model/blipdocument.h"
 #include "model/documentmutation.h"
 #include "app/environment.h"
 #include "network/networkadapter.h"
@@ -59,17 +59,18 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     int index = this->mapToBlip(position);
     m.retain(index);
 
+    qDebug("INDEX=%i", index);
+
     if ( charsRemoved > 0 )
     {
         QString text = "";
         int pos = index;
-        for( int i = index; i < index + charsRemoved; ++i, pos++ )
+        for( int i = 0; i < charsRemoved; ++i, pos++ )
         {
-            const StructuredDocument::Item& item = (*bdoc)[pos];
-            switch ( item.type )
+            switch ( bdoc->typeAt(pos) )
             {
                 case StructuredDocument::Char:
-                    text += item.ch;
+                    text += bdoc->charAt(pos);
                     break;
                 case StructuredDocument::Start:
                     {
@@ -78,20 +79,19 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
                             m.deleteChars(text);
                             text = "";
                         }
-                        m.deleteStart(item.tagType());
+                        m.deleteStart(bdoc->tagAt(pos));
                         int stack = 1;
                         while( stack > 0 )
                         {
                             pos++;
-                            const StructuredDocument::Item& item2 = (*bdoc)[pos];
-                            switch ( item2.type )
+                            switch ( bdoc->typeAt(pos) )
                             {
                                 case StructuredDocument::Char:
-                                    m.deleteChars( QString(item2.ch) );
+                                    m.deleteChars( QString(bdoc->charAt(pos) ) );
                                     break;
                                 case StructuredDocument::Start:
                                     stack++;
-                                    m.deleteStart(item2.tagType());
+                                    m.deleteStart(bdoc->tagAt(pos));
                                     break;
                                 case StructuredDocument::End:
                                     stack--;
@@ -135,7 +135,8 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
             else
                 text += ch;
         }
-        m.insertChars(text);
+        if ( !text.isEmpty() )
+            m.insertChars(text);
     }
     m.retain( bdoc->count() - index );
 
@@ -195,39 +196,37 @@ void OTAdapter::setGraphicsText()
     bool isFirstLine = true;
 
     StructuredDocument* doc = blip()->document();
-    StructuredDocument::Annotation annotation;
-    annotation.endPos = 0;
+    StructuredDocument::Annotation anno;
     QString text = "";
-    int pos = 0;
-    for( QList<StructuredDocument::Item>::const_iterator it = doc->begin(); it != doc->end(); ++it, pos++ )
+    for( int i = 0; i < doc->count(); ++i )
     {
-        if ( pos == annotation.endPos )
+        StructuredDocument::Annotation a = doc->annotationAt(i);
+        if ( anno != a )
         {
             if ( text != "" )
             {
                 cursor.insertText(text, format);
                 text = "";
             }
-            annotation = doc->annotation(pos);
-            if ( annotation.map["bold"] == "true" )
+            anno = a;
+            if ( anno.value("style/fontWeight") == "bold" )
                 format.setFontWeight(QFont::Bold);
             else
                 format.setFontWeight(QFont::Normal);
-            if ( annotation.map["italic"] == "true" )
+            if ( anno.value("style/fontStyle") == "italic" )
                 format.setFontItalic(true);
             else
                 format.setFontItalic(false);
         }
-        switch( (*it).type )
+        switch( doc->typeAt(i) )
         {
             case StructuredDocument::Char:
                 if ( stack.top() == 1 )
-                    text += (*it).ch;
+                    text += doc->charAt(i);
                 break;
             case StructuredDocument::Start:
-                if ( (*it).data.map )
                 {
-                    QString key = (*it).data.map->value("type");
+                    QString key = doc->tagAt(i);
                     if ( key == "body" )
                         stack.push(1);
                     else if ( key == "contributor" )                    
@@ -296,30 +295,28 @@ int OTAdapter::mapToBlip(int position)
 
     int charsSeen = 0;
     int linesSeen = 0;
-    int pos = 0;
 
     QStack<int> stack;
     stack.push(0);
 
     // Skip the required number of characters and newlines.
     StructuredDocument* doc = blip()->document();
-    for( QList<StructuredDocument::Item>::const_iterator it = doc->begin(); it != doc->end(); ++it, pos++ )
+    for( int i = 0; i < doc->count(); ++i )
     {
-        switch( (*it).type )
+        switch( doc->typeAt(i) )
         {
             case StructuredDocument::Char:
                 // Text in the body element?
                 if ( stack.top() == 1 )
                 {
                     if ( charsSeen == charIndex && linesSeen - 1 == blockCount )
-                        return pos;
+                        return i;
                     charsSeen++;
                 }
                 break;
             case StructuredDocument::Start:
-                if ( (*it).data.map )
                 {
-                    QString key = (*it).data.map->value("type");
+                    QString key = doc->tagAt(i);
                     if ( key == "body" )
                         stack.push(1);
                     else if ( key == "contributor" )
@@ -327,7 +324,7 @@ int OTAdapter::mapToBlip(int position)
                     else if ( key == "line" )
                     {
                         if ( linesSeen - 1 == blockCount && charsSeen == charIndex )
-                            return pos;
+                            return i;
                         stack.push(3);
                     }
                     else if ( key == "image" )
@@ -346,12 +343,12 @@ int OTAdapter::mapToBlip(int position)
                 }
                 // End of the last line? -> return this position since there are no additional characters
                 if ( t == 1 )
-                    return pos;
+                    return i;
                 else if ( t == 3 )
                 {
                     linesSeen++;
                     if ( charsSeen == charIndex && linesSeen - 1 == blockCount )
-                        return pos + 1;
+                        return i + 1;
                 }
                 break;
         }

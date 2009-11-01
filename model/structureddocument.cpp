@@ -1,230 +1,169 @@
 #include "structureddocument.h"
+#include "documentmutation.h"
 #include <QStack>
 #include <QtDebug>
 
 StructuredDocument::StructuredDocument(QObject* parent)
-        : QObject(parent), m_newItems(0), m_newAnnotations(0)
+        : QObject(parent)
 {
-    m_items = new QList<Item>();
-    m_annotations = new QList<Annotation>();
-    Annotation annotation;
-    annotation.startPos = 0;
-    annotation.endPos = 0;
-    m_annotations->append(annotation);
+}
+
+StructuredDocument::StructuredDocument(const StructuredDocument& doc)
+        : QObject(), m_items( doc.m_items ), m_annotations( doc.m_annotations ), m_cursors( doc.m_cursors )
+{
 }
 
 StructuredDocument::~StructuredDocument()
 {
-    freeItems( m_items );
-    delete m_annotations;
-    if ( m_newItems )
-        freeItems( m_newItems );
-    if ( m_newAnnotations )
-        delete m_newAnnotations;
 }
 
-void StructuredDocument::freeItems(QList<Item>* items)
+void StructuredDocument::insertStart( int index, const QString& tag, const QHash<QString,QString>& map, const Annotation& anno)
 {
-    foreach( Item item, *items )
-    {
-        if ( item.type == Start && item.data.map )
-            delete item.data.map;
-    }
-    delete items;
+    m_items.insert(index, QChar(0) );
+    m_annotations.insert( index, anno );
+    QHash<QString,QString> m( map );
+    m["**t"] = tag;
+    m_attributes.insert( index, m );
 }
 
-const StructuredDocument::Annotation& StructuredDocument::annotation(int pos) const
+bool StructuredDocument::apply(const DocumentMutation& mutation)
 {
-    for( int i = 0; i < m_annotations->count(); ++i )
-    {
-        if ( m_annotations->at(i).startPos <= pos && m_annotations->at(i).endPos > pos )
-            return m_annotations->at(i);
-    }
-    return m_annotations->last();
-}
+    int stackCount = 0;
+    int pos = 0;
 
-int StructuredDocument::annotationIndex(int pos) const
-{
-    for( int i = 0; i < m_annotations->count(); ++i )
-    {
-        if ( m_annotations->at(i).startPos <= pos && m_annotations->at(i).endPos > pos )
-            return i;
-    }
-    return m_annotations->count() - 1;
-}
+    QHash<QString, QString> annoUpdates;
+    Annotation oldAnno;
+    Annotation currentAnno;
 
-void StructuredDocument::beginDelta()
-{
-    m_newItems = new QList<Item>();
-    m_newAnnotations = new QList<Annotation>();
-    m_deltaPos = 0;
-    Annotation annotation( m_annotations->at(0) );
-    m_newAnnotations->append(annotation);
-    m_deltaAnnotationIndex = 0;
-    m_annotationChanges.clear();
-}
-
-void StructuredDocument::writeAnnotation( const QHash<QString,QString>& map )
-{
-    if ( m_newAnnotations->last().isEqual(map) )
-        return;
-    Annotation a( m_newItems->count(), m_newItems->count(), map);
-    if ( m_newItems->count() == m_newAnnotations->last().startPos)
+    for( QList<DocumentMutation::Item>::const_iterator it = mutation.begin(); it != mutation.end(); ++it )
     {
-        (*m_newAnnotations)[m_newAnnotations->count() - 1] = a;
-        return;
-    }
-    else
-    {
-        m_newAnnotations->last().endPos = m_newItems->count();
-        m_newAnnotations->append(a);
-    }
-}
-
-void StructuredDocument::insertStart(const QString& tag)
-{
-    insertStart(tag, QHash<QString,QString>());
-}
-
-void StructuredDocument::insertStart(const QString& tag, const QHash<QString,QString>& map)
-{
-    Item item;
-    item.type = Start;
-    item.data.map = new QHash<QString,QString>(map);
-    item.data.map->insert("type", tag);
-    writeAnnotation( (*m_annotations)[m_deltaAnnotationIndex].merge(m_annotationChanges) );
-    m_newItems->append(item);
-}
-
-void StructuredDocument::insertEnd()
-{
-    Item item;
-    item.type = End;
-    writeAnnotation( (*m_annotations)[m_deltaAnnotationIndex].merge(m_annotationChanges) );
-    m_newItems->append(item);
-}
-
-void StructuredDocument::insertChars(const QString& chars)
-{
-    for( int i = 0; i < chars.length(); ++i )
-    {
-        Item item;
-        item.type = Char;
-        item.ch = chars[i];
-        writeAnnotation( (*m_annotations)[m_deltaAnnotationIndex].merge(m_annotationChanges) );
-        m_newItems->append(item);
-    }
-}
-
-void StructuredDocument::incDeltaPos()
-{
-    foreach( QString cursorName, m_cursors.keys() )
-    {
-        if ( m_deltaPos == m_cursors[cursorName] )
-            m_cursors[cursorName] = m_items->count();
-    }
-
-    int index = annotationIndex(m_deltaPos);
-    if ( index != m_deltaAnnotationIndex )
-    {
-        m_deltaAnnotationIndex = index;
-        writeAnnotation( (*m_annotations)[m_deltaAnnotationIndex].merge(m_annotationChanges) );
-    }
-    m_deltaPos++;
-}
-
-void StructuredDocument::retain(int count)
-{
-    for( int i = 0; i < count; ++i )
-    {
-        if ( m_items->count() <= m_deltaPos )
-            break;
-        incDeltaPos();
-        m_newItems->append( m_items->at(m_deltaPos - 1) );
-    }
-}
-
-void StructuredDocument::deleteStart(const QString& tag)
-{
-    if ( m_items->count() <= m_deltaPos )
-    {
-        qDebug("Oooops");
-        // Oooops
-        return;
-    }
-    Item item = m_items->at(m_deltaPos);
-    if ( item.type != Start || item.data.map->value("type") != tag )
-    {
-        qDebug("Oooops");
-        // Oooops
-        return;
-    }
-    delete item.data.map;
-    incDeltaPos();
-}
-
-void StructuredDocument::deleteEnd()
-{
-    if ( m_items->count() <= m_deltaPos )
-    {
-        qDebug("Oooops");
-        // Oooops
-        return;
-    }
-    Item item = m_items->at(m_deltaPos);
-    if ( item.type != End )
-    {
-        qDebug("Oooops");
-        // Oooops
-        return;
-    }
-    incDeltaPos();
-}
-
-void StructuredDocument::deleteChars(const QString& chars)
-{
-    for( int i = 0; i < chars.length(); ++i )
-    {
-        if ( m_items->count() <= m_deltaPos )
+        switch( (*it).type )
         {
-            qDebug("Oooops");
-            // Oooops
-            return;
+            case DocumentMutation::ElementStart:
+                if ( (*it).map )
+                    insertStart(pos++, (*it).text, *((*it).map), currentAnno);
+                else
+                    insertStart(pos++, (*it).text, QHash<QString,QString>(), currentAnno);
+                stackCount++;
+                break;
+            case DocumentMutation::ElementEnd:
+                if ( stackCount == 0 )
+                    return false;
+                m_items.insert(pos, QChar(1));
+                m_annotations.insert(pos, currentAnno);
+                m_attributes.insert(pos, AttributeList() );
+                pos++;
+                break;
+            case DocumentMutation::InsertChars:
+                {
+                    for( int i = 0; i < (*it).text.length(); ++i )
+                    {
+                        m_items.insert(pos, (*it).text[i]);
+                        m_annotations.insert(pos, currentAnno);
+                        m_attributes.insert(pos, AttributeList() );
+                        pos++;
+                    }
+                }
+                break;
+            case DocumentMutation::Retain:
+                {
+                    for( int i = 0; i < (*it).count; ++i, ++pos )
+                    {
+                        if ( pos >= m_items.count() )
+                            return false;
+                        Annotation a = m_annotations[pos];
+                        if ( a != oldAnno )
+                        {
+                            oldAnno = a;
+                            currentAnno = oldAnno.merge( annoUpdates );
+                        }
+                        m_annotations[pos] = currentAnno;
+                        QChar ch = m_items[pos];
+                        if ( ch.unicode() == 0 )
+                            stackCount++;
+                        else if ( ch.unicode() == 1 )
+                        {
+                            if ( stackCount == 0 )
+                                return false;
+                            stackCount--;
+                        }
+                    }
+                }
+                break;
+            case DocumentMutation::DeleteStart:
+                {
+                if ( pos >= m_items.count() )
+                    return false;
+                Annotation a = m_annotations[pos];
+                if ( a != oldAnno )
+                {
+                    oldAnno = a;
+                    currentAnno = oldAnno.merge( annoUpdates );
+                }
+                stackCount++;
+                m_items.removeAt(pos);
+                m_annotations.removeAt(pos);
+                m_attributes.removeAt(pos);
+            }
+                break;
+            case DocumentMutation::DeleteEnd:
+                {
+                if ( pos >= m_items.count() )
+                    return false;
+                Annotation a = m_annotations[pos];
+                if ( a != oldAnno )
+                {
+                    oldAnno = a;
+                    currentAnno = oldAnno.merge( annoUpdates );
+                }
+                if ( stackCount == 0 )
+                    return false;
+                stackCount--;
+                m_items.removeAt(pos);
+                m_annotations.removeAt(pos);
+                m_attributes.removeAt(pos);
+            }
+                break;
+            case DocumentMutation::DeleteChars:
+                {
+                    for( int i = 0; i < (*it).text.length(); ++i )
+                    {
+                        if ( pos >= m_items.count() )
+                            return false;
+                        Annotation a = m_annotations[pos];
+                        if ( a != oldAnno )
+                        {
+                            oldAnno = a;
+                            currentAnno = oldAnno.merge( annoUpdates );
+                        }
+                        m_items.removeAt(pos);
+                        m_annotations.removeAt(pos);
+                        m_attributes.removeAt(pos);
+                    }
+                }
+                break;
+            case DocumentMutation::AnnotationBoundary:                
+                if ( (*it).map && (*it).endKeys )
+                {
+                    foreach( QString key, *((*it).endKeys) )
+                    {
+                        annoUpdates.remove(key);
+                    }
+                }
+                if ( (*it).map )
+                {
+                    foreach( QString key, (*it).map->keys() )
+                    {
+                        annoUpdates[key] = (*it).map->value(key);
+                    }
+                }
+                currentAnno = oldAnno.merge(annoUpdates);
+                break;
+            case DocumentMutation::NoItem:
+                break;
         }
-        Item item = m_items->at(m_deltaPos);
-        if ( item.type != Char || item.ch != chars[i] )
-        {
-            qDebug("Oooops");
-            // Oooops
-            return;
-        }
-        incDeltaPos();
     }
-}
-
-void StructuredDocument::annotationBoundary(const QList<QString>& endKeys, const QHash<QString,QString>& changes)
-{
-    foreach(QString endkey, endKeys)
-    {
-        m_annotationChanges.remove(endkey);
-    }
-    foreach(QString key, changes.keys())
-    {
-        m_annotationChanges[key] = changes[key];
-    }
-    writeAnnotation( (*m_annotations)[m_deltaAnnotationIndex].merge(m_annotationChanges) );
-//    writeAnnotation(m_newAnnotations->last().merge(m_annotationChanges));
-}
-
-void StructuredDocument::endDelta()
-{
-    m_newAnnotations->last().endPos = m_newItems->count();
-
-    delete m_items;
-    m_items = m_newItems;
-    m_annotations = m_newAnnotations;
-    m_newItems = 0;
-    m_newAnnotations = 0;
+    return true;
 }
 
 void StructuredDocument::setCursor( const QString& name, int position )
@@ -237,71 +176,66 @@ void StructuredDocument::removeCursor( const QString& name )
     m_cursors.remove(name);
 }
 
-int StructuredDocument::countDelta() const
+StructuredDocument::ItemType StructuredDocument::typeAt( int index ) const
 {
-    if ( m_newItems )
-        return m_newItems->count();
-    return 0;
+    ushort ch = m_items[index].unicode();
+    if ( ch == 0 )
+        return Start;
+    if ( ch == 1 )
+        return End;
+    return Char;
 }
 
-const StructuredDocument::Item& StructuredDocument::operator[] ( int index ) const
+QString StructuredDocument::tagAt( int index ) const
 {
-    return (*m_items)[index];
+    const AttributeList& a = m_attributes[index];
+    return a["**t"];
 }
 
 QString StructuredDocument::toPlainText() const
 {
     QString result = "";
-    foreach( Item item, *m_items )
+    foreach( QChar item, m_items )
     {
-        switch( item.type )
-        {
-            case Start:
-                break;
-            case End:
-                break;
-            case Char:
-                result += item.ch;
-                break;
-        }
+        if ( item.unicode() >=2 )
+            result += item;
     }
     return result;
-}
+}    
 
 void StructuredDocument::print_()
 {
     QString result = "";
 
-    int index = -1;
-    int annoIndex = -1;
+    Annotation anno;
     QStack<QString> stack;
-    foreach( Item item, *m_items )
+    for( int i = 0; i < m_items.length(); ++i )
     {
-        index++;
-        int ai = annotationIndex(index);
-        if ( ai != annoIndex )
+        if ( m_annotations[i] != anno )
         {
-            annoIndex = ai;
+            anno = m_annotations[i];
             result += "[";
-            foreach( QString key, m_annotations->at(annoIndex).map.keys() )
+            foreach( QString key, anno.keys() )
             {
-                result += key + "=\"" +  m_annotations->at(annoIndex).map[key] + "\" ";
+                result += key + "=\"" +  anno.value(key) + "\" ";
             }
             result += "]";
         }
 
-        switch( item.type )
+        QChar ch = m_items[i];
+        switch( ch.unicode() )
         {
             case Start:
             {
-                QString tag = item.data.map->value("type");
+                QString tag = tagAt(i);
                 stack.push(tag);
                 result += "<" + tag;
-                foreach( QString key, item.data.map->keys() )
+                const AttributeList& attribs = attributesAt(i);
+                foreach( QString key, attribs.keys() )
                 {
-                    if ( key == "type" )
+                    if ( key[0] == '*' )
                         continue;
-                    result += key + "=\"" + item.data.map->value(key) + "\" ";
+                    result += key + "=\"" + attribs[key] + "\" ";
                 }
                 result += ">";
                 break;
@@ -318,8 +252,8 @@ void StructuredDocument::print_()
                 result += "</" + tag + ">";
                 break;
             }
-            case Char:
-                result += item.ch;
+            default:
+                result += ch;
                 break;
         }
     }
@@ -329,43 +263,35 @@ void StructuredDocument::print_()
 
 /*******************************************************************************
   *
-  * StructuredDocument::Item
-  *
-  ******************************************************************************/
-
-QString StructuredDocument::Item::tagType() const
-{
-    if ( type == Start && data.map )
-        return data.map->value("type");
-    return QString::null;
-}
-
-/*******************************************************************************
-  *
   * StructuredDocument::Annotation
   *
   ******************************************************************************/
 
-StructuredDocument::Annotation::Annotation()
-{
-    // Do nothing by intention
-}
+//QHash<QString,QString> StructuredDocument::Annotation::merge( const QHash<QString,QString>& changes, const QList<QString>& endKeys  )
+//{
+//    if ( isNull() )
+//        return changes;
+//    QHash<QString,QString> result(d->map);
+//    foreach(QString key, changes.keys())
+//    {
+//        QString val = changes[key];
+//        if ( val.isEmpty() )
+//            result.remove(key);
+//        else
+//            result[key] = val;
+//    }
+//    foreach( QString e, endKeys )
+//    {
+//        result.remove(e);
+//    }
+//    return result;
+//}
 
-StructuredDocument::Annotation::Annotation(const Annotation& annotation)
-        : startPos(annotation.startPos), endPos(annotation.endPos), map(annotation.map)
+StructuredDocument::Annotation StructuredDocument::Annotation::merge(const QHash<QString,QString>& update) const
 {
-    // Do nothing by intention
-}
-
-StructuredDocument::Annotation::Annotation(int start, int end, const QHash<QString,QString>& m)
-        : startPos(start), endPos(end), map(m)
-{
-    // Do nothing by intention
-}
-
-QHash<QString,QString> StructuredDocument::Annotation::merge(QHash<QString,QString> update) const
-{
-    QHash<QString,QString> result(map);
+    if ( isNull() )
+        return Annotation( update );
+    QHash<QString,QString> result(d->map);
     foreach(QString key, update.keys())
     {
         QString val = update[key];
@@ -374,17 +300,5 @@ QHash<QString,QString> StructuredDocument::Annotation::merge(QHash<QString,QStri
         else
             result[key] = val;
     }
-    return result;
-}
-
-bool StructuredDocument::Annotation::isEqual(const QHash<QString,QString>& other)
-{
-    if ( map.count() != other.count() )
-        return false;
-    foreach(QString key, map.keys())
-    {
-        if ( map[key] != other[key] )
-            return false;
-    }
-    return true;
+    return Annotation( result );
 }

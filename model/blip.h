@@ -6,6 +6,7 @@
 
 class BlipThread;
 class Wavelet;
+class BlipDocument;
 class StructuredDocument;
 class Participant;
 class DocumentMutation;
@@ -17,15 +18,15 @@ class Blip : public QObject
 public:
     Blip(Wavelet* wavelet, const QString& id, Participant* creator);
     Blip(BlipThread* thread, const QString& id, Participant* creator);
-    Blip(Wavelet* wavelet, const QString& id, Participant* creator, StructuredDocument* doc);
-    Blip(BlipThread* thread, const QString& id, Participant* creator, StructuredDocument* doc);
+    Blip(Wavelet* wavelet, const QString& id, Participant* creator, const StructuredDocument& doc);
+    Blip(BlipThread* thread, const QString& id, Participant* creator, const StructuredDocument& doc);
 
     /**
       * A ordered list of all thread belonging to the blip.
       */
     const QList<BlipThread*>& threads() const { return m_threads; }
     QString id() const { return this->m_id; }
-    StructuredDocument* document() { return m_doc; }
+    BlipDocument* document() { return m_doc; }
     BlipThread* parentThread() const;
     Wavelet* wavelet() const;
     Environment* environment() const;
@@ -66,7 +67,7 @@ private:
     void setup();
 
     QString m_id;
-    StructuredDocument* m_doc;
+    BlipDocument* m_doc;
     /**
       * Resembles the authors as given by the contributor tags.
       * Enlisting an author here is not mandatory. The list can even be empty.

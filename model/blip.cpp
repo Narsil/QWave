@@ -1,7 +1,7 @@
 #include "blip.h"
 #include "blipthread.h"
 #include "wavelet.h"
-#include "structureddocument.h"
+#include "blipdocument.h"
 #include "app/environment.h"
 #include "wave.h"
 #include "documentmutation.h"
@@ -20,14 +20,14 @@ Blip::Blip(BlipThread* thread, const QString& id, Participant* creator)
     setup();
 }
 
-Blip::Blip(Wavelet* wavelet, const QString& id, Participant* creator, StructuredDocument* doc)
-       : QObject(wavelet), m_id(id), m_doc(doc), m_creator(creator)
+Blip::Blip(Wavelet* wavelet, const QString& id, Participant* creator, const StructuredDocument& doc)
+       : QObject(wavelet), m_id(id), m_doc(new BlipDocument(doc)), m_creator(creator)
 {
     setup();
 }
 
-Blip::Blip(BlipThread* thread, const QString& id, Participant* creator, StructuredDocument* doc)
-      : QObject(thread), m_id(id), m_doc(doc), m_creator(creator)
+Blip::Blip(BlipThread* thread, const QString& id, Participant* creator, const StructuredDocument& doc)
+      : QObject(thread), m_id(id), m_doc(new BlipDocument(doc)), m_creator(creator)
 {
     setup();
 }
@@ -36,7 +36,7 @@ void Blip::setup()
 {
      setObjectName(m_id);
      if ( !m_doc )
-        m_doc = new StructuredDocument(this);
+        m_doc = new BlipDocument(this);
 }
 
 BlipThread* Blip::parentThread() const
@@ -93,24 +93,21 @@ const QList<Participant*>& Blip::authors() const
 
 void Blip::receive( const DocumentMutation& mutation )
 {
-    mutation.apply(m_doc);
+    m_doc->apply(mutation);
 
     // Find authors
     m_authors.clear();
-    for( QList<StructuredDocument::Item>::const_iterator it = m_doc->begin(); it != m_doc->end(); ++it )
+    for( int i = 0; i < m_doc->count(); ++i )
     {
-        if ( (*it).type == StructuredDocument::Start && (*it).data.map )
+        if ( m_doc->typeAt(i) == StructuredDocument::Start && m_doc->tagAt(i) == "contributor" )
         {
-            QString key = (*it).data.map->value("type");
-            if ( key == "contributor" )
+            const StructuredDocument::AttributeList& attribs = m_doc->attributesAt(i);
+            QString name = attribs["name"];
+            if ( !name.isEmpty() )
             {
-                QString name = (*it).data.map->value("name");
-                if ( !name.isEmpty() )
-                {
-                    Participant* p = wavelet()->environment()->contacts()->addParticipant(name);
-                    if ( !m_authors.contains(p) )
-                        m_authors.append(p);
-                }
+                Participant* p = wavelet()->environment()->contacts()->addParticipant(name);
+                if ( !m_authors.contains(p) )
+                    m_authors.append(p);
             }
         }
     }

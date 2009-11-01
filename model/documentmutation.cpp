@@ -1,5 +1,4 @@
 #include "documentmutation.h"
-#include "structureddocument.h"
 #include <QtDebug>
 
 DocumentMutation::DocumentMutation()
@@ -151,64 +150,6 @@ void DocumentMutation::clear()
 {
     freeItems();
     m_items.clear();
-}
-
-int DocumentMutation::apply(StructuredDocument* doc) const
-{
-    int cursorPosition = 0;
-
-    doc->beginDelta();
-    for( QList<Item>::const_iterator it = begin(); it != end(); ++it )
-    {
-        switch( (*it).type )
-        {
-            case ElementStart:
-                if ( (*it).map )
-                    doc->insertStart((*it).text, *((*it).map));
-                else
-                    doc->insertStart((*it).text);
-                cursorPosition = doc->countDelta();
-                break;
-            case ElementEnd:
-                doc->insertEnd();
-                cursorPosition = doc->countDelta();
-                break;
-            case Retain:
-                doc->retain((*it).count);
-                break;
-            case InsertChars:
-                doc->insertChars((*it).text);
-                cursorPosition = doc->countDelta();
-                break;
-            case DeleteStart:
-                doc->deleteStart((*it).text);
-                cursorPosition = doc->countDelta();
-                break;
-            case DeleteEnd:
-                doc->deleteEnd();
-                cursorPosition = doc->countDelta();
-                break;
-            case DeleteChars:
-                doc->deleteChars((*it).text);
-                cursorPosition = doc->countDelta();
-                break;
-            case AnnotationBoundary:
-                if ( (*it).map && (*it).endKeys )
-                    doc->annotationBoundary(*((*it).endKeys), *((*it).map));
-                else if ( (*it).endKeys )
-                    doc->annotationBoundary(*((*it).endKeys), QHash<QString,QString>());
-                else if ( (*it).map )
-                    doc->annotationBoundary(QList<QString>(), *((*it).map));
-                else
-                    doc->annotationBoundary(QList<QString>(), QHash<QString,QString>());
-                cursorPosition = doc->countDelta();
-                break;
-            case NoItem:
-                break;
-        }
-    }
-    doc->endDelta();
-    return cursorPosition;
 }
 
 int DocumentMutation::count() const

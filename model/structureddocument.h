@@ -6,6 +6,9 @@
 #include <QHash>
 #include <QList>
 #include <QString>
+#include <QSharedData>
+
+class DocumentMutation;
 
 class StructuredDocument : public QObject
 {
@@ -14,86 +17,83 @@ public:
 
     enum ItemType
     {
-        Char = 0,
-        Start = 1,
-        End = 2
+        Start = 0,
+        End = 1,
+        Char = 2
     };
 
-    struct Item
+    class AnnotationData : public QSharedData
     {
-        ItemType type;
-        QChar ch;
-        union Data
-        {
-            QHash<QString,QString>* map;
-        } data;
+        public:
+            AnnotationData() { }
+            AnnotationData(const AnnotationData& annotation) : QSharedData(annotation), map( annotation.map ) { }
+            AnnotationData(const QHash<QString,QString>& m) : map( m ) { }
 
-        QString tagType() const;
+            QHash<QString,QString> map;
     };
 
-    struct Annotation
+    class Annotation
     {
-        Annotation();
-        Annotation(const Annotation& annotation);
-        Annotation(int startPos, int endPos, const QHash<QString,QString>& map);
+    public:
+        Annotation() { }
+        Annotation(const QHash<QString,QString>& map) { d = new AnnotationData(map); }
+        Annotation( const Annotation& annotation ) { d = annotation.d; }
 
-        QHash<QString,QString> merge(QHash<QString,QString>) const;
-        bool isEqual(const QHash<QString,QString>& map);
+        bool isNull() const { return d.data() == 0; }
+        QString value(const QString& key) const { if ( isNull() ) return QString::null; return d->map[key]; }
+        QList<QString> keys() const { if ( isNull() ) return QList<QString>(); return d->map.keys(); }
 
-        int startPos;
-        int endPos;
-        QHash<QString,QString> map;
+        Annotation merge(const QHash<QString,QString>& map) const;
+
+        bool operator==( const Annotation& a ) const { return a.d.data() == d.data() || (a.d.data() && d.data() && a.d->map == d->map); }
+        bool operator!=( const Annotation& a ) const { return a.d.data() != d.data() || (d.data() && a.d->map != d->map); }
+
+    private:
+        QSharedDataPointer<AnnotationData> d;
     };
+
+    typedef QHash<QString,QString> AttributeList;
 
     StructuredDocument(QObject* parent = 0);
+    StructuredDocument(const StructuredDocument& doc);
     ~StructuredDocument();
 
-    void beginDelta();
-    void insertStart(const QString& tag, const QHash<QString,QString>& map);
-    void insertStart(const QString& tag);
-    void insertEnd();
-    void retain(int count);
-    void insertChars(const QString& chars);
-    void deleteStart(const QString& tag);
-    void deleteEnd();
-    void deleteChars(const QString& chars);
-    void annotationBoundary(const QList<QString>& endKeys, const QHash<QString,QString>& changes);
     /**
-      * @internal
-      *
-      * This function is only meaningful while a delta is being applied.
+      * @return false is an error occured. In this case the document is malformed and cannot be used any further.
       */
-    int countDelta() const;
-    void endDelta();
+    virtual bool apply(const DocumentMutation& mutation);
 
-    QList<Item>::const_iterator begin() const { return m_items->constBegin(); }
-    QList<Item>::const_iterator end() const { return m_items->constEnd(); }
-    int count() const { return m_items->count(); }
-    const Item& operator[] ( int index ) const;
+    QList<QChar>::const_iterator begin() const { return m_items.constBegin(); }
+    QList<QChar>::const_iterator end() const { return m_items.constEnd(); }
+    int count() const { return m_items.count(); }
+    QChar charAt( int index ) const { return m_items[index]; }
+    const Annotation& annotationAt( int index ) const { return m_annotations[index]; }
+    ItemType typeAt( int index ) const;
+    const AttributeList& attributesAt( int index ) const { return m_attributes[index]; }
+
+    /**
+      * Only meaningful if there is a start tag at this position.
+      */
+    QString tagAt( int index ) const;
 
     void setCursor( const QString& name, int position );
     void removeCursor( const QString& name );
-
-    const Annotation& annotation(int pos) const;
-    int annotationIndex(int pos) const;
 
     QString toPlainText() const;
 
     void print_();
 
 private:
-    void freeItems(QList<Item>* items);
-    void writeAnnotation( const QHash<QString,QString>& map );
-    void incDeltaPos();
+    void insertStart( int index, const QString& tag, const QHash<QString,QString>& map, const Annotation& anno);
 
-    QList<Item>* m_items;
-    QList<Annotation>* m_annotations;
-    int m_deltaPos;
-    int m_deltaAnnotationIndex;
-    QList<Item>* m_newItems;
-    QList<Annotation>* m_newAnnotations;
-    QHash<QString,QString> m_annotationChanges;
+    QList<QChar> m_items;
+    QList<Annotation> m_annotations;
+    QList<AttributeList> m_attributes;
     QHash<QString,int> m_cursors;
+
+
+
+//    void writeAnnotation( int pos, const QHash<QString,QString>& map );
 };
 
 #endif // STRUTCUREDOCUMENT_H

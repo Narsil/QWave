@@ -38,7 +38,7 @@ void WaveDigest::removeParticipant( const QString& address )
 
 void WaveDigest::mutateDocument( const QString&, const DocumentMutation& mutation, const QString& )
 {
-    mutation.apply(m_doc);
+    m_doc->apply(mutation);
     emit digestChanged();
 }
 

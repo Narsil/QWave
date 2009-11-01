@@ -19,7 +19,7 @@
 #include "app/environment.h"
 #include "app/settings.h"
 #include "network/networkadapter.h"
-#include "model/structureddocument.h"
+#include "model/blipdocument.h"
 #include "view/contactsview.h"
 #include "view/inboxview.h"
 #include "serversettingsdialog.h"
@@ -86,46 +86,52 @@ int main(int argc, char *argv[])
         //    Blip* blip2 = new Blip(thread, "b+b1");
         //    Blip* blip3 = new Blip(thread, "b+b1");
         StructuredDocument* doc = wavelet->document();
-        doc->beginDelta();
-        doc->insertStart("conversation");
+        DocumentMutation m0;
+        m0.insertStart("conversation");
         QHash<QString,QString> map;
         map["id"] = "b+b1";
-        doc->insertStart("blip", map);
+        m0.insertStart("blip", map);
         map.clear();
         map["id"] = "t+t1";
-        doc->insertStart("thread", map);
+        m0.insertStart("thread", map);
         map.clear();
         map["id"] = "b+b2";
-        doc->insertStart("blip", map);
-        doc->insertEnd();
+        m0.insertStart("blip", map);
+        m0.insertEnd();
         map.clear();
         map["id"] = "b+b3";
-        doc->insertStart("blip", map);
-        doc->insertEnd();
-        doc->insertEnd();
-        doc->insertEnd();
-        doc->insertEnd();
-        doc->endDelta();
+        m0.insertStart("blip", map);
+        m0.insertEnd();
+        m0.insertEnd();
+        m0.insertEnd();
+        m0.insertEnd();
+        bool result = doc->apply(m0);
+        Q_ASSERT(result);
+        doc->print_();
         wavelet->updateConversation("torben@localhost");
         wavelet->print_();
 
-        doc->beginDelta();
-        doc->retain(3);
+        DocumentMutation m8;
+        m8.retain(3);
         map.clear();
         map["id"] = "b+b4";
-        doc->insertStart("blip", map);
-        doc->insertEnd();
-        doc->retain(7);
-        doc->endDelta();
+        m8.insertStart("blip", map);
+        m8.insertEnd();
+        m8.retain(7);
+        result = doc->apply(m8);
+        Q_ASSERT(result);
+        doc->print_();
         wavelet->updateConversation("torben@localhost");
         wavelet->print_();
 
-        doc->beginDelta();
-        doc->retain(5);
-        doc->deleteStart("blip");
-        doc->deleteEnd();
-        doc->retain(7);
-        doc->endDelta();
+        DocumentMutation m9;
+        m9.retain(5);
+        m9.deleteStart("blip");
+        m9.deleteEnd();
+        m9.retain(5);
+        result = doc->apply(m9);
+        Q_ASSERT(result);
+        doc->print_();
         wavelet->updateConversation("torben@localhost");
         wavelet->print_();
 
@@ -143,11 +149,11 @@ int main(int argc, char *argv[])
         m1.insertEnd();
         m1.insertChars("Hello World ");
         QHash<QString,QString> format;
-        format["bold"] = "true";
+        format["style/fontWeight"] = "bold";
         m1.annotationBoundary(QList<QString>(), format);
         m1.insertChars("this is bold");
         QList<QString> end;
-        end.append("bold");
+        end.append("style/fontWeight");
         m1.annotationBoundary(end, QHash<QString,QString>());
         m1.insertChars(" and normal again");
         map.clear();
@@ -165,11 +171,11 @@ int main(int argc, char *argv[])
         m2.insertChars("a");
         m2.retain(5);
         QHash<QString,QString> format2;
-        format2["italic"] = "true";
+        format2["style/fontStyle"] = "italic";
         m2.annotationBoundary(QList<QString>(), format2);
         m2.retain(10);
         QList<QString> end2;
-        end2.append("italic");
+        end2.append("style/fontStyle");
         m2.annotationBoundary(end2, QHash<QString,QString>());
         m2.retain(49);
         b->receive(m2);
