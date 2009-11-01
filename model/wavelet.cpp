@@ -53,100 +53,106 @@ void Wavelet::updateConversation(const QString& author)
 
     Participant* creator = environment()->contacts()->addParticipant(author);
     QObject* currentParent = this;
-    QStack<StructuredDocument::Item> stack;
+    int stackCount = 0;
     QStack<QObject*> objectStack;
-    for( QList<StructuredDocument::Item>::const_iterator it = m_doc->begin(); it != m_doc->end(); ++it )
+    for( int i = 0; i < m_doc->count(); ++i )
     {
-        if ( (*it).type == StructuredDocument::Char )
+        switch( m_doc->typeAt(i) )
         {
+        case StructuredDocument::Char:
             // Do nothing by intention
-        }
-        else if ( (*it).type == StructuredDocument::Start )
-        {
-            objectStack.push(currentParent);
-            stack.push(*it);
-            QString id = (*it).data.map->value("id");
+            break;
+        case StructuredDocument::Start:
+            {
+                objectStack.push(currentParent);
+                stackCount++;
+                StructuredDocument::AttributeList attribs = m_doc->attributesAt(i);
+                QString id = attribs["id"];
+                QString tag = m_doc->tagAt(i);
 
-            if ( (*it).data.map->value("type") == "blip" )
-            {
-                // Does such a blip already exist?
-                Blip* blip = blips[id];
-                if ( !blip )
+                if ( tag == "blip" )
                 {
-                    UnknownDocument* u = m_unknownDocs[id];
-                    if ( u )
+                    // Does such a blip already exist?
+                    Blip* blip = blips[id];
+                    if ( !blip )
                     {
-                        if ( currentParent == this )
-                            blip = new Blip( (Wavelet*)currentParent, id, creator, u->releaseDocument() );
-                        else if ( qobject_cast<BlipThread*>(currentParent) )
-                            blip = new Blip( (BlipThread*)currentParent, id, creator, u->releaseDocument() );
+                        UnknownDocument* u = m_unknownDocs[id];
+                        if ( u )
+                        {
+                            if ( currentParent == this )
+                                blip = new Blip( (Wavelet*)currentParent, id, creator, *(u->document()) );
+                            else if ( qobject_cast<BlipThread*>(currentParent) )
+                                blip = new Blip( (BlipThread*)currentParent, id, creator, *(u->document()) );
+                            else
+                            {
+                                // Ooooops
+                                return;
+                            }
+                            m_unknownDocs.remove(id);
+                            delete u;
+                        }
+                        else
+                        {
+                            if ( currentParent == this )
+                                blip = new Blip( (Wavelet*)currentParent, id, creator );
+                            else if ( qobject_cast<BlipThread*>(currentParent) )
+                                blip = new Blip( (BlipThread*)currentParent, id, creator );
+                            else
+                            {
+                                // Ooooops
+                                return;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        blip->setParent(currentParent);
+                        blip->clearThreadList();
+                    }
+                    if ( currentParent == this )
+                        m_rootBlips.append(blip);
+                    else if ( qobject_cast<BlipThread*>(currentParent) )
+                        ((BlipThread*)currentParent)->addBlip(blip);
+                    m_blips[id] = blip;
+                    currentParent = blip;
+                }
+                else if ( tag == "thread" )
+                {
+                    // Does such a blip already exist?
+                    BlipThread* thread = blipThreads[id];
+                    if ( !thread )
+                    {
+                        if ( qobject_cast<Blip*>(currentParent) )
+                            thread = new BlipThread( (Blip*)currentParent, id );
                         else
                         {
                             // Ooooops
                             return;
                         }
-                        m_unknownDocs.remove(id);
-                        delete u;
                     }
                     else
-                    {
-                        if ( currentParent == this )
-                            blip = new Blip( (Wavelet*)currentParent, id, creator );
-                        else if ( qobject_cast<BlipThread*>(currentParent) )
-                            blip = new Blip( (BlipThread*)currentParent, id, creator );
-                        else
-                        {
-                            // Ooooops
-                            return;
-                        }
-                    }
+                        thread->clearBlipList();
+                    ((Blip*)currentParent)->addThread(thread);
+                    m_blipThreads[id] = thread;
+                    if ( thread->parent() != currentParent )
+                        thread->setParent(currentParent);
+                    currentParent = thread;
                 }
-                else
+                else if ( tag == "conversation" )
                 {
-                    blip->setParent(currentParent);
-                    blip->clearThreadList();
+                    // Do nothing currently
                 }
-                if ( currentParent == this )
-                    m_rootBlips.append(blip);
-                else if ( qobject_cast<BlipThread*>(currentParent) )
-                    ((BlipThread*)currentParent)->addBlip(blip);
-                m_blips[id] = blip;
-                currentParent = blip;
             }
-            else if ( (*it).data.map->value("type") == "thread" )
+            break;
+        case StructuredDocument::End:
             {
-                // Does such a blip already exist?
-                BlipThread* thread = blipThreads[id];
-                if ( !thread )
-                {
-                    if ( qobject_cast<Blip*>(currentParent) )
-                        thread = new BlipThread( (Blip*)currentParent, id );
-                    else
-                    {
-                        // Ooooops
-                        return;
-                    }
-                }
-                else
-                    thread->clearBlipList();
-                ((Blip*)currentParent)->addThread(thread);
-                m_blipThreads[id] = thread;
-                if ( thread->parent() != currentParent )
-                    thread->setParent(currentParent);
-                currentParent = thread;
+                if ( stackCount == 0 )
+                    // Ooooops
+                    return;
+                stackCount--;
+                currentParent = objectStack.pop();
             }
-            else if ( (*it).data.map->value("type") == "conversation" )
-            {
-                // Do nothing currently
-            }
-        }
-        else if ( (*it).type == StructuredDocument::End )
-        {
-            if ( stack.count() == 0 )
-                // Ooooops
-                return;
-            stack.pop();
-            currentParent = objectStack.pop();
+            break;
         }
     }
 
@@ -226,7 +232,7 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
 {
     if ( documentId == "conversation" )
     {
-        mutation.apply(m_doc);
+        m_doc->apply(mutation);
         this->updateConversation(author);
         emit conversationChanged();
     }

@@ -5,8 +5,6 @@
 #include <QString>
 #include <QList>
 
-class StructuredDocument;
-
 class DocumentMutation
 {
 public:
@@ -56,13 +54,6 @@ public:
     QList<Item>::const_iterator begin() const { return m_items.constBegin(); }
     QList<Item>::const_iterator end() const { return m_items.constEnd(); }
     int count() const;
-
-    /**
-      * @return the position of the item behind the last modified character in the document.
-      * This position can be used as a cursor marker to show where the author if this mutation is typing currently.
-      * If there are no characters in the current document or if nothing has been modified, 0 is returned.
-      */
-    int apply(StructuredDocument* doc) const;
 
     DocumentMutation compose( const DocumentMutation& mutation ) const;
     /**

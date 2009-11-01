@@ -18,12 +18,7 @@ public:
     ~UnknownDocument();
 
     QString id() const { return m_id; }
-
-    /**
-      * Strips the StructuredDocument from the object.
-      * Usually you may want to delete the object in the next step.
-      */
-    StructuredDocument* releaseDocument();
+    const StructuredDocument* document() const { return m_doc; }
 
     /**
       * Applies OT operations.
