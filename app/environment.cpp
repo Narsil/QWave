@@ -7,9 +7,9 @@
 #include "network/networkadapter.h"
 #include "settings.h"
 
-Environment::Environment()
+Environment::Environment(const QString& profile)
 {
-    m_settings = new Settings(this);
+    m_settings = new Settings(profile, this);
     m_localUser = new Participant(m_settings->userAddress());
     m_localUser->setName(m_settings->userName());
 

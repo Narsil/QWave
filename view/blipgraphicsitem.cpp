@@ -33,6 +33,7 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
     m_text->setTextWidth(width - m_text->x());
 
     QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SLOT(titleChanged(const QString&)));
+    // Show the contents of the document
     m_adapter->setGraphicsText();
 
     /*

@@ -24,18 +24,18 @@
 #include "view/inboxview.h"
 #include "serversettingsdialog.h"
 
-#include "protocol/waveclient-rpc.pb.h"
-#include <fstream>
-
-void testprotobuf()
-{
-    std::ofstream str("buf.out");
-    waveserver::ProtocolOpenRequest req;
-    req.set_participant_id("depp@localhost");
-    req.set_wave_id("!indexwave");
-    req.add_wavelet_id_prefix("");
-    req.SerializeToOstream(&str);
-}
+//#include "protocol/waveclient-rpc.pb.h"
+//#include <fstream>
+//
+//void testprotobuf()
+//{
+//    std::ofstream str("buf.out");
+//    waveserver::ProtocolOpenRequest req;
+//    req.set_participant_id("depp@localhost");
+//    req.set_wave_id("!indexwave");
+//    req.add_wavelet_id_prefix("");
+//    req.SerializeToOstream(&str);
+//}
 
 
 int main(int argc, char *argv[])
@@ -44,9 +44,10 @@ int main(int argc, char *argv[])
 
     QApplication a(argc, argv);
 
-    for( int i = 0; i < 1; ++i )
-    {
-        Environment* en = new Environment();
+    QString profile = "QWaveClient";
+    if ( argc == 2 )
+        profile = QString(argv[1]);
+    Environment* en = new Environment(profile);
         // Configure the local user
         Settings* settings = en->settings();
         while( !settings->isConfigured() )
@@ -267,12 +268,11 @@ int main(int argc, char *argv[])
         view->connect( wlview, SIGNAL(selected(Wave*)), SLOT(setWave(Wave*)));
         w->show();    
         en->inbox()->addWave(wave);
-    }
     // End Test
 
     //WaveletView* v = new WaveletView(view, wavelet);
 
-    testprotobuf();
+//    testprotobuf();
 
     //    return 0;
     return a.exec();

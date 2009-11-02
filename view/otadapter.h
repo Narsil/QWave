@@ -44,6 +44,13 @@ signals:
 private slots:
     void update( const DocumentMutation& mutation );
 
+    void mutationStart();
+    void insertText( int lineCount, int inlinePos, const QString& text );
+    void deleteText( int lineCount, int inlinePos, const QString& text );
+    void deleteLineBreak(int lineCount, int inlinePos);
+    void insertLineBreak(int lineCount, int inlinePos);
+    void mutationEnd();
+
 private:
     bool m_suspendContentsChange;
     QString m_authorNames;
