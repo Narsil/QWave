@@ -16,7 +16,7 @@ class Settings;
 class Environment : public QObject
 {
 public:
-    Environment();
+    Environment(const QString& profile);
 
     /**
       * Invoke after the settings are correct.

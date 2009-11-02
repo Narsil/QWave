@@ -21,7 +21,13 @@
 OTAdapter::OTAdapter(BlipGraphicsItem* parent )
         : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false)
 {
-    connect(blip(), SIGNAL(update(const DocumentMutation&)), SLOT(update(const DocumentMutation&)));
+//    connect(blip(), SIGNAL(update(const DocumentMutation&)), SLOT(update(const DocumentMutation&)));
+    connect( blip()->document(), SIGNAL(deletedLineBreak(int,int)), SLOT(deleteLineBreak(int,int)));
+    connect( blip()->document(), SIGNAL(insertedLineBreak(int,int)), SLOT(insertLineBreak(int,int)));
+    connect( blip()->document(), SIGNAL(deletedText(int,int,QString)), SLOT(deleteText(int,int,QString)));
+    connect( blip()->document(), SIGNAL(insertedText(int,int,QString)), SLOT(insertText(int,int,QString)));
+    connect( blip()->document(), SIGNAL(mutationStart()), SLOT(mutationStart()));
+    connect( blip()->document(), SIGNAL(mutationEnd()), SLOT(mutationEnd()));
 }
 
 Blip* OTAdapter::blip() const
@@ -364,6 +370,64 @@ Environment* OTAdapter::environment() const
 
 void OTAdapter::update( const DocumentMutation& mutation )
 {
-    if ( !m_blockUpdate )
-        setGraphicsText();
+//    if ( !m_blockUpdate )
+//        setGraphicsText();
+}
+
+void OTAdapter::mutationStart()
+{
+    if ( m_blockUpdate )
+        return;
+    m_suspendContentsChange = true;
+}
+
+void OTAdapter::insertText( int lineCount, int inlinePos, const QString& text )
+{
+    if ( m_blockUpdate )
+        return;
+    QTextDocument* doc = textItem()->document();
+    QTextBlock block = doc->findBlockByNumber(lineCount);
+    QTextCursor cursor(block);
+    if ( lineCount == 0 )
+        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
+    else
+        cursor.setPosition(inlinePos);
+    cursor.insertText(text);
+}
+
+void OTAdapter::deleteText( int lineCount, int inlinePos, const QString& text )
+{
+    if ( m_blockUpdate )
+        return;
+}
+
+void OTAdapter::deleteLineBreak(int lineCount, int inlinePos)
+{
+    if ( m_blockUpdate )
+        return;
+}
+
+void OTAdapter::insertLineBreak(int lineCount, int inlinePos)
+{
+    if ( m_blockUpdate )
+        return;
+    QTextDocument* doc = textItem()->document();
+    QTextBlock block = doc->findBlockByNumber(lineCount);
+    QTextCursor cursor(block);
+    cursor.setPosition(inlinePos);
+    cursor.insertBlock();
+}
+
+void OTAdapter::mutationEnd()
+{
+    if ( m_blockUpdate )
+        return;
+    m_suspendContentsChange = false;
+
+    // Did this modify the first block in the first blib? -> change the title
+    if ( blip()->isFirstRootBlip()  )
+    {
+        QString title = textItem()->document()->begin().text().mid( textItem()->forbiddenTextRange() );
+        emit titleChanged(title);
+    }
 }

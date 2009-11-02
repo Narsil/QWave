@@ -1,7 +1,7 @@
 #include "settings.h"
 
-Settings::Settings(QObject* parent)
-        : QSettings( "T.Weis", "QWaveClient", parent)
+Settings::Settings(const QString& profile, QObject* parent)
+        : QSettings( "T.Weis", profile, parent)
 {
 }
 

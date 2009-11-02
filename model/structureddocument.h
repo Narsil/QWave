@@ -88,12 +88,13 @@ protected:
     virtual void onRetainChar(int index);
     virtual void onRetainElementStart(int index);
     virtual void onRetainElementEnd(int index);
-    virtual void onDeleteChar(int index);
+    virtual void onDeleteChars(int index, const QString& chars);
     virtual void onDeleteElementStart(int index);
     virtual void onDeleteElementEnd(int index);
-    virtual void onInsertChar(int index);
+    virtual void onInsertChars(int index, const QString& chars);
     virtual void onInsertElementStart(int index);
     virtual void onInsertElementEnd(int index);
+    virtual void onAnnotationUpdate(int index, const QHash<QString,QString>& updates);
     virtual void onMutationEnd();
 
 private:

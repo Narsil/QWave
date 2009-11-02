@@ -28,6 +28,8 @@ void StructuredDocument::insertStart( int index, const QString& tag, const QHash
 
 bool StructuredDocument::apply(const DocumentMutation& mutation)
 {
+    onMutationStart();
+
     int stackCount = 0;
     int pos = 0;
 
@@ -44,6 +46,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                     insertStart(pos++, (*it).text, *((*it).map), currentAnno);
                 else
                     insertStart(pos++, (*it).text, QHash<QString,QString>(), currentAnno);
+                onInsertElementStart(pos - 1 );
                 stackCount++;
                 break;
             case DocumentMutation::ElementEnd:
@@ -52,10 +55,12 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                 m_items.insert(pos, QChar(1));
                 m_annotations.insert(pos, currentAnno);
                 m_attributes.insert(pos, AttributeList() );
+                onInsertElementEnd(pos);
                 pos++;
                 break;
             case DocumentMutation::InsertChars:
                 {
+                    int startpos = pos;
                     for( int i = 0; i < (*it).text.length(); ++i )
                     {
                         m_items.insert(pos, (*it).text[i]);
@@ -63,6 +68,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                         m_attributes.insert(pos, AttributeList() );
                         pos++;
                     }
+                    onInsertChars( startpos, (*it).text );
                 }
                 break;
             case DocumentMutation::Retain:
@@ -80,13 +86,19 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                         m_annotations[pos] = currentAnno;
                         QChar ch = m_items[pos];
                         if ( ch.unicode() == 0 )
+                        {
                             stackCount++;
+                            onRetainElementStart(pos);
+                        }
                         else if ( ch.unicode() == 1 )
                         {
                             if ( stackCount == 0 )
                                 return false;
                             stackCount--;
+                            onRetainElementEnd(pos);
                         }
+                        else
+                            onRetainChar(pos);
                     }
                 }
                 break;
@@ -101,6 +113,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                     currentAnno = oldAnno.merge( annoUpdates );
                 }
                 stackCount++;
+                onDeleteElementStart(pos);
                 m_items.removeAt(pos);
                 m_annotations.removeAt(pos);
                 m_attributes.removeAt(pos);
@@ -119,6 +132,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                 if ( stackCount == 0 )
                     return false;
                 stackCount--;
+                onDeleteElementEnd(pos);
                 m_items.removeAt(pos);
                 m_annotations.removeAt(pos);
                 m_attributes.removeAt(pos);
@@ -126,6 +140,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                 break;
             case DocumentMutation::DeleteChars:
                 {
+                    onDeleteChars(pos, (*it).text);
                     for( int i = 0; i < (*it).text.length(); ++i )
                     {
                         if ( pos >= m_items.count() )
@@ -157,12 +172,15 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
                         annoUpdates[key] = (*it).map->value(key);
                     }
                 }
+                onAnnotationUpdate(pos, annoUpdates);
                 currentAnno = oldAnno.merge(annoUpdates);
                 break;
             case DocumentMutation::NoItem:
                 break;
         }
     }
+
+    onMutationEnd();
     return true;
 }
 
@@ -267,38 +285,55 @@ void StructuredDocument::onMutationStart()
 
 void StructuredDocument::onRetainChar(int index)
 {
+    Q_UNUSED(index);
 }
 
 void StructuredDocument::onRetainElementStart(int index)
 {
+    Q_UNUSED(index);
 }
 
 void StructuredDocument::onRetainElementEnd(int index)
 {
+    Q_UNUSED(index);
 }
 
-void StructuredDocument::onDeleteChar(int index)
+void StructuredDocument::onDeleteChars(int index, const QString& chars)
 {
+    Q_UNUSED(index);
+    Q_UNUSED(chars);
 }
 
 void StructuredDocument::onDeleteElementStart(int index)
 {
+    Q_UNUSED(index);
 }
 
 void StructuredDocument::onDeleteElementEnd(int index)
 {
+    Q_UNUSED(index);
 }
 
-void StructuredDocument::onInsertChar(int index)
+void StructuredDocument::onInsertChars(int index, const QString& chars)
 {
+    Q_UNUSED(index);
+    Q_UNUSED(chars);
 }
 
 void StructuredDocument::onInsertElementStart(int index)
 {
+    Q_UNUSED(index);
 }
 
 void StructuredDocument::onInsertElementEnd(int index)
 {
+    Q_UNUSED(index);
+}
+
+void StructuredDocument::onAnnotationUpdate(int index, const QHash<QString,QString>& updates)
+{
+    Q_UNUSED(index);
+    Q_UNUSED(updates);
 }
 
 void StructuredDocument::onMutationEnd()

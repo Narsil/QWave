@@ -6,7 +6,7 @@
 class Settings : public QSettings
 {
 public:
-    Settings(QObject* parent = 0);
+    Settings(const QString& profile, QObject* parent = 0);
 
     void setServerName( const QString& serverName );
     QString serverName() const;
