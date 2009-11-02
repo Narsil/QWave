@@ -399,12 +399,29 @@ void OTAdapter::deleteText( int lineCount, int inlinePos, const QString& text )
 {
     if ( m_blockUpdate )
         return;
+    QTextDocument* doc = textItem()->document();
+    QTextBlock block = doc->findBlockByNumber(lineCount);
+    QTextCursor cursor(block);
+    if ( lineCount == 0 )
+        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
+    else
+        cursor.setPosition(inlinePos);
+    for( int i = 0; i < text.length(); i++ )
+        cursor.deleteChar();
 }
 
 void OTAdapter::deleteLineBreak(int lineCount, int inlinePos)
 {
     if ( m_blockUpdate )
         return;
+    QTextDocument* doc = textItem()->document();
+    QTextBlock block = doc->findBlockByNumber(lineCount);
+    QTextCursor cursor(block);
+    if ( lineCount == 0 )
+        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
+    else
+        cursor.setPosition(inlinePos);
+    cursor.deleteChar();
 }
 
 void OTAdapter::insertLineBreak(int lineCount, int inlinePos)
@@ -414,7 +431,10 @@ void OTAdapter::insertLineBreak(int lineCount, int inlinePos)
     QTextDocument* doc = textItem()->document();
     QTextBlock block = doc->findBlockByNumber(lineCount);
     QTextCursor cursor(block);
-    cursor.setPosition(inlinePos);
+    if ( lineCount == 0 )
+        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
+    else
+        cursor.setPosition(inlinePos);
     cursor.insertBlock();
 }
 
