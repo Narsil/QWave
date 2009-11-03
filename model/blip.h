@@ -42,7 +42,11 @@ public:
       * The user who created the blip.
       */
     Participant* creator() const { return m_creator; }
-
+    /**
+      * The position in the conversation document where this blip is located.
+      */
+    void setConversationStartIndex( int index ) { m_convStartIndex = index; }
+    void setConversationEndIndex( int index ) { m_convEndIndex = index; }
     /**
       * @internal
       */
@@ -55,6 +59,9 @@ public:
     void print_(int indent);
 
     void receive( const DocumentMutation& mutation );
+
+    void createFollowUpBlip();
+    void createReplyBlip();
 
 signals:
     /**
@@ -81,6 +88,8 @@ private:
       * A ordered list of all thread belonging to the blip.
       */
     QList<BlipThread*> m_threads;
+    int m_convStartIndex;
+    int m_convEndIndex;
 };
 
 #endif // BLIP_H

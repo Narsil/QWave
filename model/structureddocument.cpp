@@ -9,7 +9,7 @@ StructuredDocument::StructuredDocument(QObject* parent)
 }
 
 StructuredDocument::StructuredDocument(const StructuredDocument& doc)
-        : QObject(), m_items( doc.m_items ), m_annotations( doc.m_annotations ), m_cursors( doc.m_cursors )
+        : QObject(), m_items( doc.m_items ), m_annotations( doc.m_annotations ), m_attributes( doc.m_attributes ), m_cursors( doc.m_cursors )
 {
 }
 

@@ -184,7 +184,10 @@ void OTAdapter::setGraphicsText()
         blipItem()->setAuthorPixmap(blip()->authors().first()->pixmap());
     else
     {
-        m_authorNames = blip()->creator()->name() + m_authorNames;
+        if ( blip()->creator() == blip()->wavelet()->wave()->environment()->localUser() )
+            m_authorNames = "me:";
+        else
+            m_authorNames = blip()->creator()->name() + m_authorNames;
         blipItem()->setAuthorPixmap(blip()->creator()->pixmap());
     }
 
@@ -202,6 +205,7 @@ void OTAdapter::setGraphicsText()
     bool isFirstLine = true;
 
     StructuredDocument* doc = blip()->document();
+    doc->print_();
     StructuredDocument::Annotation anno;
     QString text = "";
     for( int i = 0; i < doc->count(); ++i )
