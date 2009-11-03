@@ -6,6 +6,8 @@
 #include "wave.h"
 #include "documentmutation.h"
 #include "contacts.h"
+#include "participant.h"
+#include "otprocessor.h"
 #include <QtDebug>
 
 Blip::Blip(Wavelet* wavelet, const QString& id, Participant* creator)
@@ -136,3 +138,64 @@ void Blip::addThread(BlipThread* thread)
 {
     m_threads.append(thread);
 }
+
+void Blip::createFollowUpBlip()
+{
+    QString rand;
+    rand.setNum( qrand() );
+
+    DocumentMutation m2;
+    QHash<QString,QString> map;
+    map["name"] = environment()->localUser()->address();
+    m2.insertStart("contributor", map);
+    m2.insertEnd();
+    map.clear();
+    m2.insertStart("body", map);
+    m2.insertStart("line", map);
+    m2.insertEnd();
+    m2.insertEnd();
+    wavelet()->processor()->handleSend( m2, "b+" + rand );
+
+    DocumentMutation m1;
+    m1.retain(m_convEndIndex + 1);
+    map.clear();
+    map["id"] = "b+" + rand;
+    m1.insertStart("blip", map);
+    m1.insertEnd();
+    m1.retain( wavelet()->document()->count() - m_convEndIndex - 1 );
+    wavelet()->processor()->handleSend( m1, "conversation" );
+}
+
+void Blip::createReplyBlip()
+{
+    QString rand;
+    rand.setNum( qrand() );
+    QString rand2;
+    rand2.setNum( qrand() );
+
+    DocumentMutation m2;
+    QHash<QString,QString> map;
+    map["name"] = environment()->localUser()->address();
+    m2.insertStart("contributor", map);
+    m2.insertEnd();
+    map.clear();
+    m2.insertStart("body", map);
+    m2.insertStart("line", map);
+    m2.insertEnd();
+    m2.insertEnd();
+    wavelet()->processor()->handleSend( m2, "b+" + rand );
+
+    DocumentMutation m1;
+    m1.retain(m_convStartIndex + 1);
+    map.clear();
+    map["id"] = "t+" + rand2;
+    m1.insertStart("thread", map);
+    map.clear();
+    map["id"] = "b+" + rand;
+    m1.insertStart("blip", map);
+    m1.insertEnd();
+    m1.insertEnd();
+    m1.retain( wavelet()->document()->count() - m_convStartIndex - 1 );
+    wavelet()->processor()->handleSend( m1, "conversation" );
+}
+

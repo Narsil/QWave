@@ -76,6 +76,7 @@ void Wavelet::updateConversation(const QString& author)
                     Blip* blip = blips[id];
                     if ( !blip )
                     {
+                        // Does a blip document already exist?
                         UnknownDocument* u = m_unknownDocs[id];
                         if ( u )
                         {
@@ -87,7 +88,7 @@ void Wavelet::updateConversation(const QString& author)
                             {
                                 // Ooooops
                                 return;
-                            }
+                            }                            
                             m_unknownDocs.remove(id);
                             delete u;
                         }
@@ -104,11 +105,13 @@ void Wavelet::updateConversation(const QString& author)
                             }
                         }
                     }
+                    // The blip already exists
                     else
                     {
                         blip->setParent(currentParent);
                         blip->clearThreadList();
                     }
+                    blip->setConversationStartIndex(i);
                     if ( currentParent == this )
                         m_rootBlips.append(blip);
                     else if ( qobject_cast<BlipThread*>(currentParent) )
@@ -149,6 +152,8 @@ void Wavelet::updateConversation(const QString& author)
                 if ( stackCount == 0 )
                     // Ooooops
                     return;
+                if ( qobject_cast<Blip*>(currentParent) )
+                    qobject_cast<Blip*>(currentParent)->setConversationEndIndex(i);
                 stackCount--;
                 currentParent = objectStack.pop();
             }

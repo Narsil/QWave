@@ -234,5 +234,15 @@ QPixmap* BlipReplyGraphicsItem::pixmap()
 
 void BlipReplyGraphicsItem::mousePressEvent ( QGraphicsSceneMouseEvent* )
 {
-    qDebug("REPLY");
+
+    if ( ((BlipGraphicsItem*)parentItem())->blip()->isLastBlipInThread() )
+    {
+        qDebug("FOLLOWUP");
+        ((BlipGraphicsItem*)parentItem())->blip()->createFollowUpBlip();
+    }
+    else
+    {
+        qDebug("REPLY");
+        ((BlipGraphicsItem*)parentItem())->blip()->createReplyBlip();
+    }
 }
