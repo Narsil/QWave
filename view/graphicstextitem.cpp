@@ -1,6 +1,7 @@
 #include "graphicstextitem.h"
 #include "blipgraphicsitem.h"
 #include "otadapter.h"
+#include "caret.h"
 
 #include <QTextDocument>
 #include <QTextCursor>
@@ -9,6 +10,8 @@ GraphicsTextItem::GraphicsTextItem(OTAdapter* adapter, QGraphicsItem* parent)
         : QGraphicsTextItem(parent), m_forbiddenTextRange(0), m_adapter(adapter)
 {
     connect(document(), SIGNAL(contentsChange(int,int,int)), SLOT(onContentsChange(int,int,int)));
+
+    m_caretIface = CaretInterface::initialize(this->document(), this);
 }
 
 void GraphicsTextItem::mousePressEvent( QGraphicsSceneMouseEvent * event )
@@ -37,4 +40,9 @@ void GraphicsTextItem::checkCursor()
 void GraphicsTextItem::onContentsChange( int position, int charsRemoved, int charsAdded )
 {
     m_adapter->onContentsChange( position, charsRemoved, charsAdded );
+}
+
+void GraphicsTextItem::insertCaret( QTextCursor* cursor, const QString& text, const QColor& color )
+{
+    m_caretIface->insertCaret(cursor, text, color);
 }

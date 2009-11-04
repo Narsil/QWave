@@ -22,13 +22,19 @@
 OTAdapter::OTAdapter(BlipGraphicsItem* parent )
         : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false)
 {
-//    connect(blip(), SIGNAL(update(const DocumentMutation&)), SLOT(update(const DocumentMutation&)));
-    connect( blip()->document(), SIGNAL(deletedLineBreak(int,int)), SLOT(deleteLineBreak(int,int)));
-    connect( blip()->document(), SIGNAL(insertedLineBreak(int,int)), SLOT(insertLineBreak(int,int)));
-    connect( blip()->document(), SIGNAL(deletedText(int,int,QString)), SLOT(deleteText(int,int,QString)));
-    connect( blip()->document(), SIGNAL(insertedText(int,int,QString)), SLOT(insertText(int,int,QString)));
+    connect( blip()->document(), SIGNAL(deletedLineBreak(int)), SLOT(deleteLineBreak(int)));
+    connect( blip()->document(), SIGNAL(insertedLineBreak(int)), SLOT(insertLineBreak(int)));
+    connect( blip()->document(), SIGNAL(deletedText(int,QString)), SLOT(deleteText(int,QString)));
+    connect( blip()->document(), SIGNAL(insertedText(int,QString)), SLOT(insertText(int,QString)));
     connect( blip()->document(), SIGNAL(mutationStart()), SLOT(mutationStart()));
     connect( blip()->document(), SIGNAL(mutationEnd()), SLOT(mutationEnd()));
+    connect( blip()->document(), SIGNAL(setCursor(int,QString)), SLOT(setCursor(int,QString)));
+}
+
+OTAdapter::~OTAdapter()
+{
+    foreach( Cursor* c, m_cursors.values() )
+        delete c;
 }
 
 Blip* OTAdapter::blip() const
@@ -66,8 +72,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     int index = this->mapToBlip(position);
     m.retain(index);
 
-    qDebug("INDEX=%i", index);
-
+    int docRemoved = 0;
     if ( charsRemoved > 0 )
     {
         QString text = "";
@@ -78,6 +83,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
             {
                 case StructuredDocument::Char:
                     text += bdoc->charAt(pos);
+                    docRemoved++;
                     break;
                 case StructuredDocument::Start:
                     {
@@ -87,10 +93,12 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
                             text = "";
                         }
                         m.deleteStart(bdoc->tagAt(pos));
+                        docRemoved++;
                         int stack = 1;
                         while( stack > 0 )
                         {
                             pos++;
+                            docRemoved++;
                             switch ( bdoc->typeAt(pos) )
                             {
                                 case StructuredDocument::Char:
@@ -145,7 +153,8 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
         if ( !text.isEmpty() )
             m.insertChars(text);
     }
-    m.retain( bdoc->count() - index );
+    if ( bdoc->count() - index - docRemoved > 0 )
+        m.retain( bdoc->count() - index - docRemoved );
 
     // Send the mutation to the OTProcessor
     m_blockUpdate = true;
@@ -157,14 +166,6 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     blip()->wavelet()->processor()->handleSend(delta);
     m_blockUpdate = false;
     bdoc->print_();
-
-    // Send the mutation
-    // environment()->networkAdapter()->send(m, blip()->wavelet()->id(), blip()->id());
-
-//    for( int i = 0; i < doc->characterCount(); ++i )
-//    {
-//        qDebug("%i", doc->characterAt(i).unicode());
-//    }
 }
 
 void OTAdapter::setGraphicsText()
@@ -300,6 +301,10 @@ int OTAdapter::mapToBlip(int position)
         QChar ch = qdoc->characterAt(i);
         if ( ch == QChar::ParagraphSeparator )
             blockCount++;
+        else if ( ch == QChar::ObjectReplacementCharacter )
+        {
+             // Do nothing by intention because this is a caret.
+        }
         else
             charIndex++;
     }
@@ -373,81 +378,93 @@ Environment* OTAdapter::environment() const
     return blip()->wavelet()->wave()->environment();
 }
 
-void OTAdapter::update( const DocumentMutation& mutation )
-{
-//    if ( !m_blockUpdate )
-//        setGraphicsText();
-}
-
 void OTAdapter::mutationStart()
 {
     if ( m_blockUpdate )
         return;
     m_suspendContentsChange = true;
+
+    // Delete all cursors from the text as to not interfer with the character counting
+    foreach( Cursor* c, m_cursors.values() )
+    {
+//        qDebug("HIDE CURSOR");
+        c->m_textCursor.deleteChar();
+    }
 }
 
-void OTAdapter::insertText( int lineCount, int inlinePos, const QString& text )
+void OTAdapter::insertText(int inlinePos, const QString& text )
 {
     if ( m_blockUpdate )
         return;
     QTextDocument* doc = textItem()->document();
-    QTextBlock block = doc->findBlockByNumber(lineCount);
-    QTextCursor cursor(block);
-    if ( lineCount == 0 )
-        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
-    else
-        cursor.setPosition(inlinePos);
+    QTextCursor cursor(doc);
+    cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
     cursor.insertText(text);
 }
 
-void OTAdapter::deleteText( int lineCount, int inlinePos, const QString& text )
+void OTAdapter::deleteText(int inlinePos, const QString& text )
 {
     if ( m_blockUpdate )
         return;
     QTextDocument* doc = textItem()->document();
-    QTextBlock block = doc->findBlockByNumber(lineCount);
-    QTextCursor cursor(block);
-    if ( lineCount == 0 )
-        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
-    else
-        cursor.setPosition(inlinePos);
+    QTextCursor cursor(doc);
+    cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
     for( int i = 0; i < text.length(); i++ )
         cursor.deleteChar();
 }
 
-void OTAdapter::deleteLineBreak(int lineCount, int inlinePos)
+void OTAdapter::deleteLineBreak(int inlinePos)
 {
     if ( m_blockUpdate )
         return;
     QTextDocument* doc = textItem()->document();
-    QTextBlock block = doc->findBlockByNumber(lineCount);
-    QTextCursor cursor(block);
-    if ( lineCount == 0 )
-        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
-    else
-        cursor.setPosition(inlinePos);
+    QTextCursor cursor(doc);
+    cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
     cursor.deleteChar();
 }
 
-void OTAdapter::insertLineBreak(int lineCount, int inlinePos)
+void OTAdapter::insertLineBreak(int inlinePos)
 {
     if ( m_blockUpdate )
         return;
     QTextDocument* doc = textItem()->document();
-    QTextBlock block = doc->findBlockByNumber(lineCount);
-    QTextCursor cursor(block);
-    if ( lineCount == 0 )
-        cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
-    else
-        cursor.setPosition(inlinePos);
+    QTextCursor cursor(doc);
+    cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
     cursor.insertBlock();
+}
+
+void OTAdapter::setCursor(int inlinePos, const QString& author)
+{
+    if ( m_blockUpdate )
+        return;
+    if ( author == environment()->localUser()->address() )
+        return;
+
+    qDebug("SET CURSOR %i", inlinePos);
+    Cursor* c = m_cursors[author];
+    if ( !c )
+    {
+        c = new Cursor( environment()->contacts()->addParticipant(author), QDateTime::currentDateTime() );
+        m_cursors[author] = c;
+    }
+    QTextDocument* doc = textItem()->document();
+    c->m_textCursor = QTextCursor(doc);
+    c->m_textCursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
 }
 
 void OTAdapter::mutationEnd()
 {
     if ( m_blockUpdate )
         return;
-    m_suspendContentsChange = false;
+
+    // Show the cursors
+    // Delete all cursors from the text as to not interfer with the character counting
+    foreach( Cursor* c, m_cursors.values() )
+    {
+//        qDebug("SHOW CURSOR");
+        textItem()->insertCaret( &c->m_textCursor, c->m_participant->name(), Qt::red );
+        c->m_textCursor.setPosition( c->m_textCursor.position() - 1 );
+    }
 
     // Did this modify the first block in the first blib? -> change the title
     if ( blip()->isFirstRootBlip()  )
@@ -455,4 +472,6 @@ void OTAdapter::mutationEnd()
         QString title = textItem()->document()->begin().text().mid( textItem()->forbiddenTextRange() );
         emit titleChanged(title);
     }
+
+    m_suspendContentsChange = false;
 }

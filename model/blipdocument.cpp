@@ -13,13 +13,14 @@ BlipDocument::BlipDocument( const StructuredDocument& doc)
 {
 }
 
-void BlipDocument::onMutationStart()
+void BlipDocument::onMutationStart(const QString& author)
 {
+    m_currentAuthor = author;
     m_inBody = false;
     m_afterLine = false;
-    m_inlinePos = 0;
-    m_lineCount = -1;
+    m_pos = -1;
     m_stack.clear();
+    m_cursorpos = -1;
 
     emit mutationStart();
 }
@@ -28,7 +29,7 @@ void BlipDocument::onRetainChar(int index)
 {
     Q_UNUSED(index);
     if ( m_inBody && m_afterLine )
-        m_inlinePos++;
+        m_pos++;
 }
 
 void BlipDocument::onRetainElementStart(int index)
@@ -47,8 +48,7 @@ void BlipDocument::onRetainElementEnd(int index)
         if ( tag == "line" )
         {
             m_afterLine = true;
-            m_lineCount++;
-            m_inlinePos = 0;
+            m_pos++;
         }
         else if ( tag == "body" )
             m_inBody = false;
@@ -59,13 +59,17 @@ void BlipDocument::onDeleteChars(int index, const QString& chars)
 {
     Q_UNUSED(index);
     if ( m_inBody && m_afterLine )
-        emit deletedText( m_lineCount, m_inlinePos, chars );
+        emit deletedText( m_pos, chars );
+    m_cursorpos = m_pos;
 }
 
 void BlipDocument::onDeleteElementStart(int index)
 {
     if ( m_inBody && typeAt(index) == Start && tagAt(index) == "line" )
-        emit deletedLineBreak(m_lineCount, m_inlinePos);
+    {
+        emit deletedLineBreak(m_pos);
+        m_cursorpos = m_pos;
+    }
 }
 
 void BlipDocument::onDeleteElementEnd(int index)
@@ -78,8 +82,9 @@ void BlipDocument::onInsertChars(int index, const QString& chars)
     Q_UNUSED(index);
     if ( m_inBody && m_afterLine )
     {
-        emit insertedText( m_lineCount, m_inlinePos, chars );
-        m_inlinePos += chars.length();
+        emit insertedText( m_pos, chars );
+        m_pos += chars.length();
+        m_cursorpos = m_pos;
     }
 }
 
@@ -104,15 +109,15 @@ void BlipDocument::onInsertElementEnd(int index)
     if ( m_inBody && tag == "line" )
     {
         // Insert right after the body tag?
-        if ( m_lineCount == - 1 )
+        if ( m_pos == - 1 )
         {
             // Do nothing. TODO: This is not always correct. But it catches the insertion of the very first line.... emit insertedLineBreak( 0, 0 );
         }
         else
-            emit insertedLineBreak( m_lineCount, m_inlinePos );
+            emit insertedLineBreak( m_pos );
         m_afterLine = true;
-        m_lineCount++;
-        m_inlinePos = 0;
+        m_pos++;
+        m_cursorpos = m_pos;
     }
 }
 
@@ -123,6 +128,9 @@ void BlipDocument::onAnnotationUpdate(int index, const QHash<QString,QString>& u
 
 void BlipDocument::onMutationEnd()
 {
+    if ( m_cursorpos != -1 )
+        emit setCursor( m_cursorpos, m_currentAuthor );
+
     emit mutationEnd();
 }
 
