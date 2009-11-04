@@ -42,7 +42,7 @@ void GraphicsTextItem::onContentsChange( int position, int charsRemoved, int cha
     m_adapter->onContentsChange( position, charsRemoved, charsAdded );
 }
 
-void GraphicsTextItem::insertCaret( QTextCursor* cursor, const QString& text, const QColor& color )
+void GraphicsTextItem::insertCaret( QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner )
 {
-    m_caretIface->insertCaret(cursor, text, color);
+    m_caretIface->insertCaret(cursor, text, color, owner);
 }

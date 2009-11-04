@@ -12,6 +12,7 @@
 #include "model/waveletdelta.h"
 #include "model/participant.h"
 #include "model/contacts.h"
+#include "caret.h"
 
 #include <QStack>
 #include <QTextDocument>
@@ -65,6 +66,21 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
     {
         QString title = doc->begin().text().mid( textItem()->forbiddenTextRange() );
         emit titleChanged(title);
+    }
+
+    // Check if the user deleted some cursors (i.e carets)
+    if ( charsRemoved > 0 )
+    {
+        foreach( Cursor* c, m_cursors.values() )
+        {
+            QString a = CaretInterface::caretOwner(c->m_textCursor);
+            if ( a != c->m_participant->address() )
+            {
+                charsRemoved--;
+                m_cursors.remove(c->m_participant->address());
+                delete c;
+            }
+        }
     }
 
     // Construct a document mutation which reflects the change made to the QTextDocument.
@@ -170,6 +186,12 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
 
 void OTAdapter::setGraphicsText()
 {
+    foreach( Cursor* c, m_cursors.values() )
+    {
+        delete c;
+    }
+    m_cursors.clear();
+
     // Get user names    
     m_authorNames = "";
     foreach( QString name, blip()->authors() )
@@ -387,8 +409,11 @@ void OTAdapter::mutationStart()
     // Delete all cursors from the text as to not interfer with the character counting
     foreach( Cursor* c, m_cursors.values() )
     {
-//        qDebug("HIDE CURSOR");
-        c->m_textCursor.deleteChar();
+        qDebug("HIDE CURSOR %i", c->m_textCursor.position());
+        Q_ASSERT( CaretInterface::caretOwner(c->m_textCursor) == c->m_participant->address() );
+        // c->m_textCursor.setPosition( c->m_textCursor.position() - 1 );
+        // c->m_textCursor.deleteChar();
+        c->m_textCursor.deletePreviousChar();
     }
 }
 
@@ -461,9 +486,8 @@ void OTAdapter::mutationEnd()
     // Delete all cursors from the text as to not interfer with the character counting
     foreach( Cursor* c, m_cursors.values() )
     {
-//        qDebug("SHOW CURSOR");
-        textItem()->insertCaret( &c->m_textCursor, c->m_participant->name(), Qt::red );
-        c->m_textCursor.setPosition( c->m_textCursor.position() - 1 );
+        qDebug("SHOW CURSOR %i", c->m_textCursor.position());
+        textItem()->insertCaret( &c->m_textCursor, c->m_participant->name(), Qt::red, c->m_participant->address() );
     }
 
     // Did this modify the first block in the first blib? -> change the title

@@ -19,7 +19,8 @@ public:
     {
         Text = 1,
         Size = 2,
-        Color = 3
+        Color = 3,
+        Owner = 4
     };
 
     CaretInterface(QObject* parent = 0);
@@ -27,10 +28,12 @@ public:
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
     void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc, int posInDocument, const QTextFormat &format);
 
-    void insertCaret(QTextCursor* cursor, const QString& text, const QColor& color);
+    void insertCaret(QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner);
     QSizeF size(QString& text);
 
     static CaretInterface* initialize(QTextDocument* doc, QObject* parent = 0);
+    static QString caretText(const QTextCursor& cursor);
+    static QString caretOwner(const QTextCursor& cursor);
 
 private:
     QSizeF textSize(const QString& text);
