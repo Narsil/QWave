@@ -4,6 +4,7 @@
 #include <QGraphicsTextItem>
 
 class OTAdapter;
+class CaretInterface;
 
 class GraphicsTextItem : public QGraphicsTextItem
 {
@@ -13,6 +14,8 @@ public:
 
     void setForbiddenTextRange( int length ) { m_forbiddenTextRange = length; }
     int forbiddenTextRange() const { return m_forbiddenTextRange; }
+
+    void insertCaret( QTextCursor* cursor, const QString& text, const QColor& color );
 
 protected:
     virtual void mousePressEvent ( QGraphicsSceneMouseEvent * event );
@@ -26,6 +29,7 @@ private:
 
     int m_forbiddenTextRange;
     OTAdapter* m_adapter;
+    CaretInterface* m_caretIface;
 };
 
 #endif // GRAPHICSTEXTITEM_H

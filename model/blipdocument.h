@@ -14,7 +14,7 @@ public:
     BlipDocument( const StructuredDocument& doc);
 
 protected:
-    virtual void onMutationStart();
+    virtual void onMutationStart(const QString& author);
     virtual void onRetainChar(int index);
     virtual void onRetainElementStart(int index);
     virtual void onRetainElementEnd(int index);
@@ -29,18 +29,20 @@ protected:
 
 signals:    
     void mutationStart();
-    void insertedText( int lineCount, int inlinePos, const QString& text );
-    void deletedText( int lineCount, int inlinePos, const QString& text );
-    void deletedLineBreak(int lineCount, int inlinePos);
-    void insertedLineBreak(int lineCount, int inlinePos);
+    void insertedText( int pos, const QString& text );
+    void deletedText( int pos, const QString& text );
+    void deletedLineBreak( int pos);
+    void insertedLineBreak(int pos);
+    void setCursor(int pos, const QString& author);
     void mutationEnd();
 
 private:
     bool m_inBody;
     bool m_afterLine;
-    int m_inlinePos;
-    int m_lineCount;
+    int m_pos;
     QStack<QString> m_stack;
+    QString m_currentAuthor;
+    int m_cursorpos;
 };
 
 #endif // BLIPDOCUMENT_H

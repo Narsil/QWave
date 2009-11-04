@@ -9,7 +9,7 @@ StructuredDocument::StructuredDocument(QObject* parent)
 }
 
 StructuredDocument::StructuredDocument(const StructuredDocument& doc)
-        : QObject(), m_items( doc.m_items ), m_annotations( doc.m_annotations ), m_attributes( doc.m_attributes ), m_cursors( doc.m_cursors )
+        : QObject(), m_items( doc.m_items ), m_annotations( doc.m_annotations ), m_attributes( doc.m_attributes )
 {
 }
 
@@ -31,7 +31,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
     if ( !m_authors.contains(author) )
         m_authors.append(author);
 
-    onMutationStart();
+    onMutationStart(author);
 
     int stackCount = 0;
     int pos = 0;
@@ -54,7 +54,10 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                 break;
             case DocumentMutation::ElementEnd:
                 if ( stackCount == 0 )
+                {
+                    qDebug("Oooooops StructuredDocument 1");
                     return false;
+                }
                 m_items.insert(pos, QChar(1));
                 m_annotations.insert(pos, currentAnno);
                 m_attributes.insert(pos, AttributeList() );
@@ -79,7 +82,10 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                     for( int i = 0; i < (*it).count; ++i, ++pos )
                     {
                         if ( pos >= m_items.count() )
+                        {
+                            qDebug("Oooooops StructuredDocument 2");
                             return false;
+                        }
                         Annotation a = m_annotations[pos];
                         if ( a != oldAnno )
                         {
@@ -96,7 +102,10 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                         else if ( ch.unicode() == 1 )
                         {
                             if ( stackCount == 0 )
+                            {
+                                qDebug("Oooooops StructuredDocument 3");
                                 return false;
+                            }
                             stackCount--;
                             onRetainElementEnd(pos);
                         }
@@ -108,7 +117,10 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
             case DocumentMutation::DeleteStart:
                 {
                 if ( pos >= m_items.count() )
+                {
+                    qDebug("Oooooops StructuredDocument 4");
                     return false;
+                }
                 Annotation a = m_annotations[pos];
                 if ( a != oldAnno )
                 {
@@ -125,7 +137,10 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
             case DocumentMutation::DeleteEnd:
                 {
                 if ( pos >= m_items.count() )
+                {
+                    qDebug("Oooooops StructuredDocument 5");
                     return false;
+                }
                 Annotation a = m_annotations[pos];
                 if ( a != oldAnno )
                 {
@@ -133,7 +148,10 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                     currentAnno = oldAnno.merge( annoUpdates );
                 }
                 if ( stackCount == 0 )
+                {
+                    qDebug("Oooooops StructuredDocument 6");
                     return false;
+                }
                 stackCount--;
                 onDeleteElementEnd(pos);
                 m_items.removeAt(pos);
@@ -147,7 +165,10 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                     for( int i = 0; i < (*it).text.length(); ++i )
                     {
                         if ( pos >= m_items.count() )
+                        {
+                            qDebug("Oooooops StructuredDocument 7");
                             return false;
+                        }
                         Annotation a = m_annotations[pos];
                         if ( a != oldAnno )
                         {
@@ -272,8 +293,9 @@ void StructuredDocument::print_()
     qDebug() << result;
 }
 
-void StructuredDocument::onMutationStart()
+void StructuredDocument::onMutationStart(const QString& author)
 {
+    Q_UNUSED(author);
 }
 
 void StructuredDocument::onRetainChar(int index)

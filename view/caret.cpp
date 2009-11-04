@@ -27,9 +27,10 @@ void CaretInterface::drawObject(QPainter *painter, const QRectF &rect, QTextDocu
      // painter->fillRect(rect, QBrush(color));
      painter->setBrush(QBrush(color));
      painter->setPen(QPen(Qt::NoPen));
-     painter->drawRoundedRect(rect, 3, 3);
+     QRectF r2( rect.x(), rect.y() + 2, rect.width(), rect.height() + 2);
+     painter->drawRoundedRect(r2, 3, 3);
      painter->setPen(QPen(Qt::white));
-     QRectF r( rect.x() + 2, rect.y() + 1, rect.width() - 4, rect.height() - 2);
+     QRectF r( rect.x() + 2, rect.y() + 3, rect.width() - 4, rect.height() - 2);
      painter->drawText(r, text);
      painter->setRenderHint(QPainter::Antialiasing, false);
  }

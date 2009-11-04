@@ -2,12 +2,15 @@
 #define OTADAPTER_H
 
 #include <QObject>
+#include <QDateTime>
+#include <QTextCursor>
 
 class BlipGraphicsItem;
 class Blip;
 class GraphicsTextItem;
 class Environment;
 class DocumentMutation;
+class Participant;
 
 /**
   * This adapter connectes QTextDocument with SynchronizedDocument.
@@ -19,6 +22,7 @@ class OTAdapter : public QObject
     Q_OBJECT
 public:
     OTAdapter(BlipGraphicsItem* parent );
+    ~OTAdapter();
 
     Blip* blip() const;
     GraphicsTextItem* textItem() const;
@@ -38,17 +42,27 @@ public:
 
     Environment* environment() const;
 
+private:
+    class Cursor
+    {
+    public:
+        Cursor( Participant* participant, const QDateTime& timestamp ) { m_participant = participant; m_timestamp = timestamp; }
+
+        Participant* m_participant;
+        QDateTime m_timestamp;
+        QTextCursor m_textCursor;
+    };
+
 signals:
     void titleChanged(const QString& title);
 
 private slots:
-    void update( const DocumentMutation& mutation );
-
     void mutationStart();
-    void insertText( int lineCount, int inlinePos, const QString& text );
-    void deleteText( int lineCount, int inlinePos, const QString& text );
-    void deleteLineBreak(int lineCount, int inlinePos);
-    void insertLineBreak(int lineCount, int inlinePos);
+    void insertText( int inlinePos, const QString& text );
+    void deleteText( int inlinePos, const QString& text );
+    void deleteLineBreak(int inlinePos);
+    void insertLineBreak(int inlinePos);
+    void setCursor(int inlinePos, const QString& author);
     void mutationEnd();
 
 private:
@@ -58,6 +72,7 @@ private:
       * This flag avoids that edit actions made by the user come back as DocumentMutation.
       */
     bool m_blockUpdate;
+    QHash<QString,Cursor*> m_cursors;
 };
 
 #endif // OTADAPTER_H

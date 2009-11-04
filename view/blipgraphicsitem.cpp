@@ -36,8 +36,8 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
     // Show the contents of the document
     m_adapter->setGraphicsText();
 
+//    m_caretIface = CaretInterface::initialize(document(), this);
     /*
-    m_caretIface = CaretInterface::initialize(document(), this);
     QTextCursor cursor( document()->lastBlock() );
     cursor.movePosition(QTextCursor::EndOfBlock);
     m_caretIface->insertCaret(&cursor, "ulya", Qt::red);

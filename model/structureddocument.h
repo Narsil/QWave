@@ -7,7 +7,6 @@
 #include <QList>
 #include <QString>
 #include <QSharedData>
-#include <QDateTime>
 
 class DocumentMutation;
 
@@ -83,7 +82,7 @@ public:
     void print_();
 
 protected:
-    virtual void onMutationStart();
+    virtual void onMutationStart(const QString& author);
     virtual void onRetainChar(int index);
     virtual void onRetainElementStart(int index);
     virtual void onRetainElementEnd(int index);
@@ -96,26 +95,12 @@ protected:
     virtual void onAnnotationUpdate(int index, const QHash<QString,QString>& updates);
     virtual void onMutationEnd();
 
-    class Cursor
-    {
-    public:
-        Cursor( const QString& participant, const QDateTime& timestamp );
-
-        QString participantName() const { return m_participant; }
-        const QDateTime& timeStamp() const { return m_timestamp; }
-
-    private:
-        QString m_participant;
-        QDateTime m_timestamp;
-    };
-
 private:
     void insertStart( int index, const QString& tag, const QHash<QString,QString>& map, const Annotation& anno);
 
     QList<QChar> m_items;
     QList<Annotation> m_annotations;
     QList<AttributeList> m_attributes;
-    QHash<QString,Cursor> m_cursors;
     QList<QString> m_authors;
 };
 

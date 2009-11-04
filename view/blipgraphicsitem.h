@@ -12,7 +12,6 @@ class QTextDocument;
 class WaveletView;
 class BlipReplyGraphicsItem;
 class Blip;
-class CaretInterface;
 class OTAdapter;
 
 class BlipGraphicsItem : public QObject, public QGraphicsItem
@@ -48,7 +47,6 @@ private:
     QRectF m_lastTextRect;
     WaveletView* m_view;
     qreal m_lastWidth;
-    CaretInterface* m_caretIface;
     OTAdapter* m_adapter;
 };
 
