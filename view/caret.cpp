@@ -35,11 +35,12 @@ void CaretInterface::drawObject(QPainter *painter, const QRectF &rect, QTextDocu
      painter->setRenderHint(QPainter::Antialiasing, false);
  }
 
-void CaretInterface::insertCaret(QTextCursor* cursor, const QString& text, const QColor& color)
+void CaretInterface::insertCaret(QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner)
  {
      QTextCharFormat charFormat;
      charFormat.setObjectType(CaretFormat);
      charFormat.setProperty(Text, text);
+     charFormat.setProperty(Owner, owner);
      charFormat.setProperty(Size, textSize(text));
      charFormat.setProperty(Color, color.red() + color.green() * 0x100 + color.blue() * 0x10000);
      cursor->insertText(QString(QChar::ObjectReplacementCharacter), charFormat);
@@ -59,4 +60,20 @@ CaretInterface* CaretInterface::initialize(QTextDocument* doc, QObject* parent)
     CaretInterface* iface = new CaretInterface(parent);
     doc->documentLayout()->registerHandler(CaretFormat, iface);
     return iface;
+}
+
+QString CaretInterface::caretText(const QTextCursor& cursor)
+{
+    QTextCharFormat fmt = cursor.charFormat();
+    if ( fmt.objectType() == CaretFormat )
+        return fmt.property(Text).toString();
+    return QString::null;
+}
+
+QString CaretInterface::caretOwner(const QTextCursor& cursor)
+{
+    QTextCharFormat fmt = cursor.charFormat();
+    if ( fmt.objectType() == CaretFormat )
+        return fmt.property(Owner).toString();
+    return QString::null;
 }

@@ -15,7 +15,7 @@ public:
     void setForbiddenTextRange( int length ) { m_forbiddenTextRange = length; }
     int forbiddenTextRange() const { return m_forbiddenTextRange; }
 
-    void insertCaret( QTextCursor* cursor, const QString& text, const QColor& color );
+    void insertCaret( QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner );
 
 protected:
     virtual void mousePressEvent ( QGraphicsSceneMouseEvent * event );

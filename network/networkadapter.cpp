@@ -185,6 +185,14 @@ WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
                     }
                     m.annotationBoundary(endKeys, changes);
                 }
+                else if ( comp.delete_element_end() )
+                {
+                    m.deleteEnd();
+                }
+                else if ( comp.has_delete_element_start() )
+                {
+                    m.deleteStart( QString::fromStdString(comp.delete_element_start().type()) );
+                }
                 else
                 {
                     qDebug("Oooops, yet unsupported operation");
