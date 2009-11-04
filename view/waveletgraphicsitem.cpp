@@ -19,6 +19,11 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
     m_addUserButton = new ButtonGraphicsItem( QPixmap("images/adduser.png"), this );
     connect( m_addUserButton, SIGNAL(clicked()), SLOT(showAddParticipantDialog()));
 
+    m_boldButton = new ButtonGraphicsItem( QPixmap("images/bold.png"), this );
+    m_italicButton = new ButtonGraphicsItem( QPixmap("images/italic.png"), this );
+    m_underlineButton = new ButtonGraphicsItem( QPixmap("images/underline.png"), this );
+    m_strikeoutButton = new ButtonGraphicsItem( QPixmap("images/strikeout.png"), this );
+
     int dy = 42 + 2 * 5 + 1 + 22 + 1;
     m_rect = QRectF( 0, 0, 100, dy);
 
@@ -68,6 +73,10 @@ void WaveletGraphicsItem::updateParticipants()
     }
 
     m_addUserButton->setPos( (42 + 5) * m_participantItems.length() + 5, dy + 16);
+    m_boldButton->setPos( 10, 42 + 2 * 5 + 3 );
+    m_italicButton->setPos( 10 + 20, 42 + 2 * 5 + 3 );
+    m_underlineButton->setPos( 10 + 40, 42 + 2 * 5 + 3 );
+    m_strikeoutButton->setPos( 10 + 60, 42 + 2 * 5 + 3 );
 }
 
 void WaveletGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)

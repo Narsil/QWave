@@ -37,6 +37,10 @@ private:
     QList<ParticipantGraphicsItem*> m_participantItems;
     QRectF m_rect;
     ButtonGraphicsItem* m_addUserButton;
+    ButtonGraphicsItem* m_boldButton;
+    ButtonGraphicsItem* m_italicButton;
+    ButtonGraphicsItem* m_underlineButton;
+    ButtonGraphicsItem* m_strikeoutButton;
 };
 
 #endif // WAVELETGRAPHICSITEM_H
