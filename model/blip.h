@@ -37,7 +37,7 @@ public:
       * Resembles the authors as given by the contributor tags.
       * Enlisting an author here is not mandatory. The list can even be empty.
       */
-    const QList<Participant*>& authors() const;
+    const QList<QString>& authors() const;
     /**
       * The user who created the blip.
       */
@@ -58,7 +58,7 @@ public:
 
     void print_(int indent);
 
-    void receive( const DocumentMutation& mutation );
+    void receive( const DocumentMutation& mutation, const QString& author );
 
     void createFollowUpBlip();
     void createReplyBlip();
@@ -75,11 +75,6 @@ private:
 
     QString m_id;
     BlipDocument* m_doc;
-    /**
-      * Resembles the authors as given by the contributor tags.
-      * Enlisting an author here is not mandatory. The list can even be empty.
-      */
-    QList<Participant*> m_authors;
     /**
       * The user who created the blip.
       */

@@ -26,8 +26,11 @@ void StructuredDocument::insertStart( int index, const QString& tag, const QHash
     m_attributes.insert( index, m );
 }
 
-bool StructuredDocument::apply(const DocumentMutation& mutation)
+bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& author)
 {
+    if ( !m_authors.contains(author) )
+        m_authors.append(author);
+
     onMutationStart();
 
     int stackCount = 0;
@@ -182,16 +185,6 @@ bool StructuredDocument::apply(const DocumentMutation& mutation)
 
     onMutationEnd();
     return true;
-}
-
-void StructuredDocument::setCursor( const QString& name, int position )
-{
-    m_cursors[name] = position;
-}
-
-void StructuredDocument::removeCursor( const QString& name )
-{
-    m_cursors.remove(name);
 }
 
 StructuredDocument::ItemType StructuredDocument::typeAt( int index ) const

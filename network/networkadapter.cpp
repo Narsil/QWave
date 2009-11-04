@@ -340,7 +340,8 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
             // Apply all updates to the wave digest
             for( int i = 0; i < update.applied_delta_size(); ++i )
             {
-                wave->digest()->processor()->handleReceive( convert( update.applied_delta(i) ) );
+                WaveletDelta wd = convert( update.applied_delta(i) );
+                wave->digest()->processor()->handleReceive( wd );
             }
         }
         // Wavelet?
@@ -351,7 +352,7 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
                 return;
 
             for( int i = 0; i < update.applied_delta_size(); ++i )
-            {
+            {                
                 WaveletDelta wd = convert( update.applied_delta(i) );
                 wavelet->processor()->handleReceive( wd );
             }
@@ -366,27 +367,6 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
         waveserver::ProtocolSubmitResponse response;
         response.ParseFromArray(data.constData(), data.length());
         qDebug("msg<< %s", response.DebugString().data());
-    }
-}
-
-void NetworkAdapter::send( const DocumentMutation& mutation, const QString& waveletId, const QString& docId )
-{
-    if ( this == s1 && s2 )
-        s2->receive(mutation, waveletId, docId);
-    else if ( this == s2 && s1 )
-        s1->receive(mutation, waveletId, docId);
-}
-
-void NetworkAdapter::receive( const DocumentMutation& mutation, const QString& waveletId, const QString& docId )
-{
-    Wavelet* wavelet = environment()->wavelet(waveletId);
-    if (wavelet)
-    {
-        Blip* blip = wavelet->blip(docId);
-        if ( blip )
-        {
-            blip->receive(mutation);
-        }
     }
 }
 

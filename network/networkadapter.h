@@ -18,10 +18,6 @@ class NetworkAdapter : public QObject
 public:
     NetworkAdapter(QObject* parent = 0);
 
-    bool openWavelet(Wavelet* wavelet);
-    void send( const DocumentMutation& mutation, const QString& waveletId, const QString& docId );
-    void receive( const DocumentMutation& mutation, const QString& waveletId, const QString& docId );
-
     Environment* environment() const;
 
     void setServer( const QString& serverName, quint32 serverPort );
@@ -29,7 +25,7 @@ public:
     quint32 serverPort() const { return m_serverPort; }
     bool isOnline() const { return m_isOnline; }
 
-    // void sendAddParticipant(Wavelet* wavelet, Participant* participant);
+    bool openWavelet(Wavelet* wavelet);
     void submit(const WaveletDelta& delta, Wavelet* wavelet);
 
 private slots:

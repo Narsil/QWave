@@ -237,7 +237,7 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
 {
     if ( documentId == "conversation" )
     {
-        m_doc->apply(mutation);
+        m_doc->apply(mutation, author);
         this->updateConversation(author);
         emit conversationChanged();
     }
@@ -245,7 +245,7 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
     {
         Blip* b = blip(documentId);
         if ( b )
-            b->receive(mutation);
+            b->receive(mutation, author);
         else
         {
             UnknownDocument* d = m_unknownDocs[documentId];
@@ -254,7 +254,7 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
                 d = new UnknownDocument(documentId);
                 m_unknownDocs[documentId] = d;
             }
-            d->receive(mutation);
+            d->receive(mutation, author);
         }
     }
 }

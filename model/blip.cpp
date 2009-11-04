@@ -82,38 +82,14 @@ bool Blip::isLastBlipInThread() const
     return ( t->blips().last() == this );
 }
 
-const QList<Participant*>& Blip::authors() const
+const QList<QString>& Blip::authors() const
 {
-    return m_authors;
-//
-//    // TODO: Bogus implementation
-//    Environment* en = wavelet()->wave()->environment();
-//    QList<Participant*> result;
-//    result.append( en->localUser() );
-//    return result;
+    return m_doc->authors();
 }
 
-void Blip::receive( const DocumentMutation& mutation )
+void Blip::receive( const DocumentMutation& mutation, const QString& author )
 {
-    m_doc->apply(mutation);
-
-    // Find authors
-    m_authors.clear();
-    for( int i = 0; i < m_doc->count(); ++i )
-    {
-        if ( m_doc->typeAt(i) == StructuredDocument::Start && m_doc->tagAt(i) == "contributor" )
-        {
-            const StructuredDocument::AttributeList& attribs = m_doc->attributesAt(i);
-            QString name = attribs["name"];
-            if ( !name.isEmpty() )
-            {
-                Participant* p = wavelet()->environment()->contacts()->addParticipant(name);
-                if ( !m_authors.contains(p) )
-                    m_authors.append(p);
-            }
-        }
-    }
-
+    m_doc->apply(mutation, author);
     emit update(mutation);
 }
 
