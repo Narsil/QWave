@@ -23,7 +23,7 @@ public:
     /**
       * Applies OT operations.
       */
-    void receive( const DocumentMutation& mutation );
+    void receive( const DocumentMutation& mutation, const QString& author );
 
 private:
     StructuredDocument* m_doc;

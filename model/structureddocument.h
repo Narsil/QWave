@@ -7,6 +7,7 @@
 #include <QList>
 #include <QString>
 #include <QSharedData>
+#include <QDateTime>
 
 class DocumentMutation;
 
@@ -61,7 +62,9 @@ public:
     /**
       * @return false is an error occured. In this case the document is malformed and cannot be used any further.
       */
-    virtual bool apply(const DocumentMutation& mutation);
+    virtual bool apply(const DocumentMutation& mutation, const QString& author);
+
+    const QList<QString>& authors() { return m_authors; }
 
     QList<QChar>::const_iterator begin() const { return m_items.constBegin(); }
     QList<QChar>::const_iterator end() const { return m_items.constEnd(); }
@@ -70,14 +73,10 @@ public:
     const Annotation& annotationAt( int index ) const { return m_annotations[index]; }
     ItemType typeAt( int index ) const;
     const AttributeList& attributesAt( int index ) const { return m_attributes[index]; }
-
     /**
       * Only meaningful if there is a start tag at this position.
       */
     QString tagAt( int index ) const;
-
-    void setCursor( const QString& name, int position );
-    void removeCursor( const QString& name );
 
     QString toPlainText() const;
 
@@ -97,17 +96,27 @@ protected:
     virtual void onAnnotationUpdate(int index, const QHash<QString,QString>& updates);
     virtual void onMutationEnd();
 
+    class Cursor
+    {
+    public:
+        Cursor( const QString& participant, const QDateTime& timestamp );
+
+        QString participantName() const { return m_participant; }
+        const QDateTime& timeStamp() const { return m_timestamp; }
+
+    private:
+        QString m_participant;
+        QDateTime m_timestamp;
+    };
+
 private:
     void insertStart( int index, const QString& tag, const QHash<QString,QString>& map, const Annotation& anno);
 
     QList<QChar> m_items;
     QList<Annotation> m_annotations;
     QList<AttributeList> m_attributes;
-    QHash<QString,int> m_cursors;
-
-
-
-//    void writeAnnotation( int pos, const QHash<QString,QString>& map );
+    QHash<QString,Cursor> m_cursors;
+    QList<QString> m_authors;
 };
 
 #endif // STRUTCUREDOCUMENT_H

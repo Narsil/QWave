@@ -14,8 +14,8 @@ UnknownDocument::~UnknownDocument()
         delete m_doc;
 }
 
-void UnknownDocument::receive( const DocumentMutation& mutation )
+void UnknownDocument::receive( const DocumentMutation& mutation, const QString& author )
 {
     if ( m_doc )
-        m_doc->apply(mutation);
+        m_doc->apply(mutation, author);
 }

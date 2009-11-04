@@ -106,7 +106,7 @@ int main(int argc, char *argv[])
         m0.insertEnd();
         m0.insertEnd();
         m0.insertEnd();
-        bool result = doc->apply(m0);
+        bool result = doc->apply(m0, "torben@localhost");
         Q_ASSERT(result);
         doc->print_();
         wavelet->updateConversation("torben@localhost");
@@ -119,7 +119,7 @@ int main(int argc, char *argv[])
         m8.insertStart("blip", map);
         m8.insertEnd();
         m8.retain(7);
-        result = doc->apply(m8);
+        result = doc->apply(m8, "torben@localhost");
         Q_ASSERT(result);
         doc->print_();
         wavelet->updateConversation("torben@localhost");
@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
         m9.deleteStart("blip");
         m9.deleteEnd();
         m9.retain(5);
-        result = doc->apply(m9);
+        result = doc->apply(m9, "torben@localhost");
         Q_ASSERT(result);
         doc->print_();
         wavelet->updateConversation("torben@localhost");
@@ -163,7 +163,7 @@ int main(int argc, char *argv[])
         m1.insertChars("Here comes a new line");
         m1.insertEnd();
         // bdoc->endDelta();
-        b->receive(m1);
+        b->receive(m1, en->localUser()->address());
         bdoc->print_();
 
         // bdoc->beginDelta();
@@ -179,7 +179,7 @@ int main(int argc, char *argv[])
         end2.append("style/fontStyle");
         m2.annotationBoundary(end2, QHash<QString,QString>());
         m2.retain(49);
-        b->receive(m2);
+        b->receive(m2, en->localUser()->address());
         bdoc->print_();
 
         b = wavelet->blip("b+b3");
@@ -195,7 +195,7 @@ int main(int argc, char *argv[])
         m3.insertEnd();
         m3.insertChars("Oh no, they killed Kenny");
         m3.insertEnd();
-        b->receive(m3);
+        b->receive(m3, "tux@localhost");
         bdoc->print_();
 
         b = wavelet->blip("b+b4");
@@ -211,7 +211,7 @@ int main(int argc, char *argv[])
         m4.insertEnd();
         m4.insertChars("Not dead yet, ... oh wait ... arrrg");
         m4.insertEnd();
-        b->receive(m4);
+        b->receive(m4, "kenny@localhost");
         bdoc->print_();
 
         /*

@@ -11,6 +11,7 @@
 #include "network/networkadapter.h"
 #include "model/waveletdelta.h"
 #include "model/participant.h"
+#include "model/contacts.h"
 
 #include <QStack>
 #include <QTextDocument>
@@ -170,18 +171,18 @@ void OTAdapter::setGraphicsText()
 {
     // Get user names    
     m_authorNames = "";
-    foreach( Participant* p, blip()->authors() )
+    foreach( QString name, blip()->authors() )
     {
         if ( m_authorNames != "" )
             m_authorNames += ",";
-        if ( p == blip()->wavelet()->wave()->environment()->localUser() )
+        if ( name == blip()->wavelet()->wave()->environment()->localUser()->address() )
             m_authorNames += tr("me");
         else
-            m_authorNames += p->name();
+            m_authorNames += name;
     }
     m_authorNames += ": ";
     if ( blip()->authors().length() > 0 )
-        blipItem()->setAuthorPixmap(blip()->authors().first()->pixmap());
+        blipItem()->setAuthorPixmap(blip()->wavelet()->environment()->contacts()->addParticipant( blip()->authors().first() )->pixmap());
     else
     {
         if ( blip()->creator() == blip()->wavelet()->wave()->environment()->localUser() )
