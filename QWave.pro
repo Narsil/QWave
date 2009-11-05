@@ -24,8 +24,6 @@ SOURCES += app/main.cpp \
     view/graphicstextitem.cpp \
     view/otadapter.cpp \
     network/networkadapter.cpp \
-    protocol/waveclient-rpc.pb.cc \
-    protocol/common.pb.cc \
     network/rpc.cpp \
     view/wavelistview.cpp \
     model/wavelist.cpp \
@@ -47,6 +45,10 @@ SOURCES += app/main.cpp \
     app/settings.cpp \
     model/unknowndocument.cpp \
     model/blipdocument.cpp
+unix:SOURCES += protocol/waveclient-rpc.pb.cc \
+    protocol/common.pb.cc
+win32:SOURCES += winprotobuf/protocol/waveclient-rpc.pb.cc \
+    winprotobuf/protocol/common.pb.cc
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -66,8 +68,6 @@ HEADERS += app/mainwindow.h \
     view/graphicstextitem.h \
     view/otadapter.h \
     network/networkadapter.h \
-    protocol/waveclient-rpc.pb.h \
-    protocol/common.pb.h \
     network/rpc.h \
     view/wavelistview.h \
     model/wavelist.h \
@@ -89,6 +89,13 @@ HEADERS += app/mainwindow.h \
     app/settings.h \
     model/unknowndocument.h \
     model/blipdocument.h
+unix:HEADERS += protocol/waveclient-rpc.pb.h \
+    protocol/common.pb.h
+win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \
+    winprotobuf/protocol/common.pb.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf
+win32:LIBS += winprotobuf/lib/debug/libprotobuf.lib
+win32:INCLUDEPATH = winprotobuf/include winprotobuf/protocol
+unix:INCLUDEPATH = protocol
