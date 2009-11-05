@@ -1,29 +1,34 @@
 #include "waveletview.h"
 #include "waveview.h"
 #include "model/wavelet.h"
-#include "waveletgraphicsitem.h"
 #include "blipgraphicsitem.h"
 #include "model/blip.h"
 #include "model/blipthread.h"
 
 #include <QGraphicsScene>
 
-WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet, qreal width )
-        : QObject( parent ), m_wavelet(wavelet)
+WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet )
+        : QGraphicsView( parent ), m_wavelet(wavelet)
 {
-    m_gfx = new WaveletGraphicsItem(this);
-    m_gfx->setPos(0,0);
-    m_gfx->setZValue(1);
-    headScene()->addItem(m_gfx);
+    setFrameShape(QFrame::NoFrame);
+    setFrameShadow(QFrame::Plain);
+    setLineWidth(0);
+    setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+    setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+    setInteractive(true);
+    setAttribute(Qt::WA_Hover, true);
+    setAlignment(Qt::AlignLeft | Qt::AlignTop);
 
-    layoutBlips(width);
+    m_scene = new QGraphicsScene();
+    setScene( m_scene );
+
+    layoutBlips();
 
     connect( wavelet, SIGNAL(conversationChanged()), SLOT(layoutBlips()));
 }
 
 WaveletView::~WaveletView()
 {
-    delete m_gfx;
 }
 
 void WaveletView::setWavelet( Wavelet* wavelet )
@@ -32,25 +37,24 @@ void WaveletView::setWavelet( Wavelet* wavelet )
         disconnect(m_wavelet, SIGNAL(conversationChanged()), this, SLOT(layoutBlips()));
     m_wavelet = wavelet;
     connect( wavelet, SIGNAL(conversationChanged()), this, SLOT(layoutBlips()));
-    m_gfx->setWavelet(wavelet);
     foreach( BlipGraphicsItem* item, m_blipItems.values() )
     {
         delete item;
     }
     m_blipItems.clear();
-    layoutBlips(m_lastWidth);
+    layoutBlips( frameRect().width() );
 }
 
 void WaveletView::layoutBlips()
 {
-    layoutBlips(m_lastWidth);
+    layoutBlips( frameRect().width() );
 }
 
 void WaveletView::layoutBlips(qreal width)
 {
-    QGraphicsItem* focus = scene()->focusItem();
+    QGraphicsItem* focus = m_scene->focusItem();
 
-    m_lastWidth = width;
+//    m_lastWidth = width;
     qreal dy = 0;
     qreal dx = 0;
     foreach( Blip* blip, wavelet()->rootBlips() )
@@ -58,8 +62,10 @@ void WaveletView::layoutBlips(qreal width)
         layoutBlip(blip, dx, dy, width);
     }
 
+    setSceneRect( 0, 0, frameRect().width(), dy );
+
     if ( focus )
-        scene()->setFocusItem(focus);
+        m_scene->setFocusItem(focus);
 }
 
 void WaveletView::layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal width )
@@ -91,23 +97,24 @@ void WaveletView::layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal w
     }
 }
 
-QGraphicsScene* WaveletView::scene()
-{
-    return ((WaveView*)parent())->scene();
-}
+//QGraphicsScene* WaveletView::headScene()
+//{
+//    return ((WaveView*)parent())->headScene();
+//}
 
-QGraphicsScene* WaveletView::headScene()
-{
-    return ((WaveView*)parent())->headScene();
-}
-
-void WaveletView::fitToWidth( qreal headWidth, qreal width )
-{
-    m_gfx->setWidth(headWidth);
-    layoutBlips(width);
-}
+//void WaveletView::fitToWidth( qreal headWidth, qreal width )
+//{
+//    m_gfx->setWidth(headWidth);
+//    layoutBlips(width);
+//}
 
 void WaveletView::setTitle( const QString& title )
 {
     ((WaveView*)parent())->setTitle(title);
+}
+
+void WaveletView::resizeEvent( QResizeEvent* )
+{
+//    setSceneRect( 0, 0, frameRect().width(), sceneRect().height() );
+    layoutBlips();
 }

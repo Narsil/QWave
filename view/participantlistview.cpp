@@ -97,6 +97,8 @@ void ParticipantListView::updateLayout()
         item->setPos(8, dy);
         dy += item->boundingRect().height() + 4;
     }
+
+    setSceneRect( 0, 0, frameRect().width(), dy );
 }
 
 void ParticipantListView::selectParticipant( Participant* participant )
@@ -117,4 +119,6 @@ void ParticipantListView::resizeEvent( QResizeEvent* )
     {
         item->setWidth( frameRect().width() );
     }
+
+    setSceneRect( 0, 0, frameRect().width(), sceneRect().height() );
 }

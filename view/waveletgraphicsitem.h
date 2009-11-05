@@ -6,7 +6,7 @@
 #include <QObject>
 
 class Wavelet;
-class WaveletView;
+class WaveView;
 class Participant;
 class ParticipantGraphicsItem;
 class ButtonGraphicsItem;
@@ -16,7 +16,7 @@ class WaveletGraphicsItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
 public:
-    WaveletGraphicsItem(WaveletView* view);
+    WaveletGraphicsItem(WaveView* view);
 
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     virtual QRectF boundingRect() const;
@@ -33,7 +33,7 @@ private:
     void updateParticipants();
 
     Wavelet* m_wavelet;
-    WaveletView* m_view;
+    WaveView* m_view;
     QList<ParticipantGraphicsItem*> m_participantItems;
     QRectF m_rect;
     ButtonGraphicsItem* m_addUserButton;
