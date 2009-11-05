@@ -7,6 +7,7 @@ class Wave;
 class WaveletView;
 class MainWindow;
 class TitleBar;
+class WaveletGraphicsItem;
 class QGraphicsScene;
 class QVBoxLayout;
 class QGraphicsView;
@@ -18,9 +19,10 @@ public:
     WaveView(Wave* wave, QWidget* parent = 0);
     ~WaveView();
 
-    QGraphicsScene* scene() { return m_scene; }
-    QGraphicsScene* headScene() { return m_headScene; }
+//    QGraphicsScene* scene() { return m_scene; }
+//    QGraphicsScene* headScene() { return m_headScene; }
 
+    Wave* wave() const { return m_wave; }
     void setTitle( const QString& title );
 
 public slots:
@@ -33,11 +35,12 @@ private:
     Wave* m_wave;
     WaveletView* m_waveletView;
     TitleBar* m_titleBar;
-    QGraphicsScene* m_scene;
+//    QGraphicsScene* m_scene;
     QGraphicsScene* m_headScene;
     QVBoxLayout *m_verticalLayout;
     QGraphicsView *m_graphicsViewHead;
-    QGraphicsView *m_graphicsView;
+//    QGraphicsView *m_graphicsView;
+    WaveletGraphicsItem* m_gfx;
 };
 
 #endif

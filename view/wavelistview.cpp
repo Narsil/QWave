@@ -63,6 +63,7 @@ void WaveListView::layout()
         item->setPos(0, y);
         y += item->boundingRect().height();
     }
+    this->setSceneRect( 0, 0, frameRect().width(), y );
 }
 
 void WaveListView::resizeEvent( QResizeEvent* )
@@ -71,6 +72,8 @@ void WaveListView::resizeEvent( QResizeEvent* )
     {
         item->setWidth(frameRect().width() );
     }
+
+    this->setSceneRect( 0, 0, frameRect().width(), sceneRect().height() );
 }
 
 void WaveListView::itemClicked(WaveDigestGraphicsItem* item)

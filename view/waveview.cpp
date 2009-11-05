@@ -4,6 +4,7 @@
 #include "network/networkadapter.h"
 #include "app/environment.h"
 #include "titlebar.h"
+#include "waveletgraphicsitem.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -15,8 +16,13 @@ WaveView::WaveView(Wave* wave, QWidget* parent )
 {
     setMinimumWidth(500);
 
-    m_scene = new QGraphicsScene();
+//    m_scene = new QGraphicsScene();
     m_headScene = new QGraphicsScene();
+    m_gfx = new WaveletGraphicsItem(this);
+    m_gfx->setPos(0,0);
+    m_gfx->setZValue(1);
+    m_headScene->addItem(m_gfx);
+
     m_titleBar = new TitleBar(this);
 
     m_verticalLayout = new QVBoxLayout(this);
@@ -40,35 +46,38 @@ WaveView::WaveView(Wave* wave, QWidget* parent )
     m_graphicsViewHead->setAlignment(Qt::AlignLeft | Qt::AlignTop);
     m_verticalLayout->addWidget(m_graphicsViewHead);
 
-    m_graphicsView = new QGraphicsView(this);
-    m_graphicsView->setObjectName(QString::fromUtf8("graphicsView"));
-    m_graphicsView->setFrameShape(QFrame::NoFrame);
-    m_graphicsView->setFrameShadow(QFrame::Plain);
-    m_graphicsView->setLineWidth(0);
-    m_graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
-    m_graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    m_graphicsView->setInteractive(true);
-    m_graphicsView->setAttribute(Qt::WA_Hover, true);
-    m_graphicsView->setAlignment(Qt::AlignLeft | Qt::AlignTop);
-    m_verticalLayout->addWidget(m_graphicsView);
+    m_waveletView = new WaveletView(this, wave->wavelet());
 
-    m_waveletView = new WaveletView(this, wave->wavelet(), m_graphicsView->frameRect().width());
+//    m_graphicsView = new QGraphicsView(this);
+//    m_graphicsView->setObjectName(QString::fromUtf8("graphicsView"));
+//    m_graphicsView->setFrameShape(QFrame::NoFrame);
+//    m_graphicsView->setFrameShadow(QFrame::Plain);
+//    m_graphicsView->setLineWidth(0);
+//    m_graphicsView->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+//    m_graphicsView->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+//    m_graphicsView->setInteractive(true);
+//    m_graphicsView->setAttribute(Qt::WA_Hover, true);
+//    m_graphicsView->setAlignment(Qt::AlignLeft | Qt::AlignTop);
+    m_verticalLayout->addWidget(m_waveletView);
 
-    m_graphicsView->setScene( m_scene );
+//    m_graphicsView->setScene( m_scene );
     // m_graphicsView->setSceneRect(0,0,1000,2000);
     m_graphicsViewHead->setScene( m_headScene );
-    m_graphicsViewHead->setSceneRect( m_headScene->itemsBoundingRect());
+    // m_graphicsViewHead->setSceneRect( m_headScene->itemsBoundingRect());
+    m_graphicsViewHead->setSceneRect( 0, 0, m_graphicsViewHead->frameRect().width(), m_headScene->itemsBoundingRect().height());
 }
 
 WaveView::~WaveView()
 {
-    delete m_scene;
+//    delete m_scene;
     delete m_headScene;
 }
 
 void WaveView::resizeEvent( QResizeEvent* )
 {
-    m_waveletView->fitToWidth( m_graphicsViewHead->frameRect().width(), m_graphicsView->frameRect().width() );
+    m_gfx->setWidth( m_graphicsViewHead->frameRect().width() );
+    m_graphicsViewHead->setSceneRect( 0, 0, m_graphicsViewHead->frameRect().width(), m_headScene->itemsBoundingRect().height());
+////    m_waveletView->fitToWidth( m_graphicsViewHead->frameRect().width(), m_graphicsView->frameRect().width() );
 }
 
 void WaveView::setWave( Wave* wave )
@@ -77,11 +86,13 @@ void WaveView::setWave( Wave* wave )
     wave->environment()->networkAdapter()->openWavelet( wave->wavelet() );
 
     m_waveletView->setWavelet(wave->wavelet());    
+    m_gfx->setWavelet(wave->wavelet());
 
-    if ( m_graphicsView->verticalScrollBar() )
-        m_graphicsView->verticalScrollBar()->setValue(0);
-    if ( m_graphicsView->horizontalScrollBar() )
-        m_graphicsView->horizontalScrollBar()->setValue(0);
+//
+//    if ( m_graphicsView->verticalScrollBar() )
+//        m_graphicsView->verticalScrollBar()->setValue(0);
+//    if ( m_graphicsView->horizontalScrollBar() )
+//        m_graphicsView->horizontalScrollBar()->setValue(0);
 }
 
 void WaveView::setTitle( const QString& title )

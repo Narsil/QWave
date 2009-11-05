@@ -1,5 +1,6 @@
 #include "waveletgraphicsitem.h"
-#include "waveletview.h"
+#include "waveview.h"
+#include "model/wave.h"
 #include "model/wavelet.h"
 #include "participantgraphicsitem.h"
 #include "buttongraphicsitem.h"
@@ -13,7 +14,7 @@
 #include <QGraphicsScene>
 #include <QApplication>
 
-WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
+WaveletGraphicsItem::WaveletGraphicsItem(WaveView* view)
        : m_wavelet(0), m_view(view)
 {    
     m_addUserButton = new ButtonGraphicsItem( QPixmap("images/adduser.png"), this );
@@ -27,7 +28,7 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveletView* view)
     int dy = 42 + 2 * 5 + 1 + 22 + 1;
     m_rect = QRectF( 0, 0, 100, dy);
 
-    setWavelet(view->wavelet());
+    setWavelet(view->wave()->wavelet());
 }
 
 void WaveletGraphicsItem::setWavelet( Wavelet* wavelet )
