@@ -93,6 +93,7 @@ void RPC::stop()
 void RPC::stopOnError(QAbstractSocket::SocketError)
 {
     emit offline();
+    emit socketError();
     qDebug("SOCKET Error");
 }
 

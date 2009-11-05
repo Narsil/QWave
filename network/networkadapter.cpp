@@ -208,18 +208,9 @@ WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
     return result;
 }
 
-NetworkAdapter* NetworkAdapter::s1 = 0;
-NetworkAdapter* NetworkAdapter::s2 = 0;
-
 NetworkAdapter::NetworkAdapter(QObject* parent)
-        : QObject( parent ), m_isOnline(false)
+        : QObject( parent ), m_rpc(0), m_isOnline(false)
 {
-    if ( !s1 )
-        s1 = this;
-    else
-        s2 = this;
-
-    m_rpc = 0;
 }
 
 void NetworkAdapter::setServer( const QString& serverName, quint32 serverPort )
@@ -227,11 +218,14 @@ void NetworkAdapter::setServer( const QString& serverName, quint32 serverPort )
     if ( m_rpc )
         delete m_rpc;
 
+    emit connectionStatus( tr("Connecting ...") );
+
     m_serverName = serverName;
     m_serverPort = serverPort;
     m_rpc = new RPC(this);
     connect( m_rpc, SIGNAL(online()), SLOT(getOnline()));
     connect( m_rpc, SIGNAL(offline()), SLOT(getOffline()));
+    connect( m_rpc, SIGNAL(socketError()), SLOT(networkError()));
     connect( m_rpc, SIGNAL(messageReceived(QString,QByteArray)), SLOT(messageReceived(QString,QByteArray)));
 
     m_rpc->open(serverName, serverPort);
@@ -298,11 +292,12 @@ void NetworkAdapter::submit(const WaveletDelta& delta, Wavelet* wavelet)
     QString waveId = wavelet->wave()->id();
     QString waveletId = wavelet->id();
     waveserver::ProtocolSubmitRequest req;
-    QUrl url;
-    url.setScheme("wave");
-    url.setHost(m_serverName);
-    url.setPath(waveId + "/" + waveletId);
-    req.set_wavelet_name( url.toString().toStdString() );
+//    QUrl url;
+//    url.setScheme("wave");
+//    url.setHost(m_serverName);
+//    url.setPath(waveId + "/" + waveletId);
+//    req.set_wavelet_name( url.toString().toStdString() );
+    req.set_wavelet_name( wavelet->url().toString().toStdString() );
     protocol::ProtocolWaveletDelta* d = req.mutable_delta();
     convert( d, delta );
 
@@ -337,11 +332,11 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
         // Digest?
         if ( waveid == "!indexwave" )
         {
-            Wave* wave = environment()->wave(waveletid);
+            Wave* wave = environment()->wave(url.host(), waveletid);
             // If the wave does not yet exist, then create it in the inbox
             if ( !wave )
             {
-                wave = environment()->createWave(waveletid);
+                wave = environment()->createWave(url.host(), waveletid);
                 environment()->inbox()->addWave(wave);
             }
 
@@ -385,11 +380,20 @@ Environment* NetworkAdapter::environment() const
 
 void NetworkAdapter::getOnline()
 {
+    emit connectionStatus( tr("Online") );
+
     m_isOnline = true;
     sendOpenWave("!indexwave", "");
 }
 
 void NetworkAdapter::getOffline()
 {
+    emit connectionStatus( tr("Offline") );
+
     m_isOnline = false;
+}
+
+void NetworkAdapter::networkError()
+{
+    emit connectionStatus( tr("Connection to server is broken") );
 }

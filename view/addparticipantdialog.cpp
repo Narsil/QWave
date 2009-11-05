@@ -35,10 +35,18 @@ AddParticipantDialog::AddParticipantDialog(Environment* environment, QWidget* pa
     m_listView->setParticipants(environment->contacts()->participants());
 
     connect( m_listView, SIGNAL(participantSelected(Participant*)), SLOT(accept(Participant*)));
+    connect( m_searchBox, SIGNAL(returnPressed()), SLOT(returnPressed()));
 }
 
 void AddParticipantDialog::accept(Participant* participant)
 {
     m_result = participant;
     QDialog::accept();
+}
+
+void AddParticipantDialog::returnPressed()
+{
+    QString t = m_searchBox->text();
+    if ( t.length() >= 3 && t.indexOf('@') > 0 )
+        accept( m_environment->contacts()->addParticipant( t ) );
 }

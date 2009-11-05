@@ -6,6 +6,7 @@
 #include <QRectF>
 
 class Environment;
+class QLabel;
 
 namespace Ui
 {
@@ -33,6 +34,7 @@ public:
     void setWaveView( WaveView* view ) { m_waveView = view; }
 
 private slots:
+    void setConnectionStatus( const QString& status );
     void showServerSettings();
     void newWave();
 
@@ -41,6 +43,7 @@ private:
     Environment* m_environment;
     InboxView* m_inboxView;
     WaveView* m_waveView;
+    QLabel* m_connectionStatus;
 };
 
 #endif // MAINWINDOW_H

@@ -28,9 +28,13 @@ public:
     bool openWavelet(Wavelet* wavelet);
     void submit(const WaveletDelta& delta, Wavelet* wavelet);
 
+signals:
+    void connectionStatus( const QString& status );
+
 private slots:
     void getOnline();
     void getOffline();
+    void networkError();
     void messageReceived(const QString& methodName, const QByteArray& data);
 
 private:
@@ -41,9 +45,6 @@ private:
     bool m_isOnline;
     QString m_serverName;
     quint32 m_serverPort;
-
-    static NetworkAdapter* s1;
-    static NetworkAdapter* s2;
 };
 
 #endif // NETWORKADAPTER_H

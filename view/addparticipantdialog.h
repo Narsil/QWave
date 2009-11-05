@@ -21,6 +21,7 @@ public:
 
 private slots:
     void accept(Participant* participant);
+    void returnPressed();
 
 private:
     Environment* m_environment;
