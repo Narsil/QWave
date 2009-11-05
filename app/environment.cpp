@@ -42,20 +42,20 @@ void Environment::addWavelet( Wavelet* wavelet )
 
 void Environment::removeWavelet( Wavelet* wavelet )
 {
-    m_wavelets.remove(wavelet->id());
+    m_wavelets.remove(wavelet->url().toString());
 }
 
-Wave* Environment::wave( const QString& id )
+Wave* Environment::wave( const QString& domain, const QString& id )
 {
-    return m_waves[id];
+    return m_waves[domain + "$" + id];
 }
 
-Wave* Environment::createWave( const QString& id )
+Wave* Environment::createWave( const QString& domain, const QString& id )
 {
     Wave* wave = m_waves[id];
     if ( wave )
         return wave;
-    wave = new Wave(this, m_networkAdapter->serverName(), id);
-    m_waves[id] = wave;
+    wave = new Wave(this, domain, id);
+    m_waves[domain + "$" + id] = wave;
     return wave;
 }

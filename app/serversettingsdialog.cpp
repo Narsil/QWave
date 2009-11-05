@@ -14,6 +14,7 @@ ServerSettingsDialog::ServerSettingsDialog(Environment* environment, QWidget *pa
     str.setNum(s->serverPort());
     m_ui->port->setText( str );
     m_ui->userName->setText( s->userName() );
+    m_ui->userAddress->setText( s->userAddress() );
     m_ui->password->setText( s->password() );
 }
 

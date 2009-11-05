@@ -15,11 +15,15 @@
 #include "view/inboxview.h"
 
 #include <QtGlobal>
+#include <QLabel>
 
 MainWindow::MainWindow(Environment* environment, QWidget *parent)
     : QMainWindow(parent), ui(new Ui::MainWindowClass), m_environment(environment), m_inboxView(0), m_waveView(0)
 {
     ui->setupUi(this);
+
+    m_connectionStatus = new QLabel();
+    ui->statusBar->addWidget(m_connectionStatus);
 
     connect( ui->actionServerSettings, SIGNAL(triggered()), SLOT(showServerSettings()));
     connect( ui->actionNewWave, SIGNAL(triggered()), SLOT(newWave()));
@@ -41,7 +45,7 @@ void MainWindow::newWave()
     // TODO: This is a crude way of creating new wave IDs
     QString rand;
     rand.setNum( qrand() );
-    Wave* wave = m_environment->createWave("w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
+    Wave* wave = m_environment->createWave( m_environment->networkAdapter()->serverName(), "w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
     // Add the new wave to the inbox and show it.
     m_environment->inbox()->addWave(wave);
     Wavelet* wavelet = wave->wavelet();
@@ -76,4 +80,9 @@ void MainWindow::newWave()
     wavelet->processor()->handleSend( m2, "b+b1" );
 
     m_inboxView->select(wave);
+}
+
+void MainWindow::setConnectionStatus( const QString& status )
+{
+    m_connectionStatus->setText( status );
 }

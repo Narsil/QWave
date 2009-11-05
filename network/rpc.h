@@ -22,6 +22,7 @@ signals:
     void messageReceived(const QString& methodName, const QByteArray& data);
     void online();
     void offline();
+    void socketError();
 
 private slots:
     void start();

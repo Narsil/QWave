@@ -30,8 +30,8 @@ public:
     Contacts* contacts() const { return m_contacts; }
     Settings* settings() const { return m_settings; }
 
-    Wave* wave( const QString& id );
-    Wave* createWave( const QString& id );
+    Wave* wave( const QString& domain, const QString& id );
+    Wave* createWave( const QString& domain, const QString& id );
 
     void addWavelet( Wavelet* wavelet );
     void removeWavelet( Wavelet* wavelet );

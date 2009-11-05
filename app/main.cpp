@@ -55,7 +55,6 @@ int main(int argc, char *argv[])
             ServerSettingsDialog dlg(en);
             dlg.exec();
         }
-        en->configure();
 
         en->localUser()->setPixmap( QPixmap("images/user1.jpg") );
 
@@ -63,6 +62,9 @@ int main(int argc, char *argv[])
 //        en->networkAdapter()->setServer( serverName, port );
 
         MainWindow* w = new MainWindow(en);
+        w->connect( en->networkAdapter(), SIGNAL(connectionStatus(QString)), SLOT(setConnectionStatus(QString)));
+
+        en->configure();
 
         Participant* p2 = en->contacts()->addParticipant("tux@localhost");
         p2->setName("Tux");
