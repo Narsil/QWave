@@ -14,7 +14,7 @@
 #include <QUrl>
 
 // Includes for protobuf
-#include "protocol/waveclient-rpc.pb.h"
+#include "waveclient-rpc.pb.h"
 #include <sstream>
 #include <string>
 
