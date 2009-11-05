@@ -34,7 +34,7 @@ QUrl Wavelet::url() const
 {
     QUrl url;
     url.setScheme("wave");
-    url.setHost( environment()->networkAdapter()->serverName() );
+    url.setHost( domain() );
     // TODO: This is only true for local wavelets!
     url.setPath( "/" + wave()->id() + "/" + m_id );
     return url;
