@@ -20,6 +20,7 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
 
     m_bigBar = new BigBar(this);
     m_searchBox = new SearchBox(m_bigBar);
+
     QHBoxLayout* l = new QHBoxLayout(m_bigBar);
     l->addWidget(m_searchBox);
 
@@ -34,6 +35,8 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
     m_listView->setParticipants(contacts->participants());
     connect( contacts, SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));
     connect( contacts, SIGNAL(participantRemoved(Participant*)), SLOT(removeParticipant(Participant*)));
+
+    m_listView->connect( m_searchBox, SIGNAL(textChanged(QString)), SLOT(setFilter(QString)));
 }
 
 void ContactsView::addParticipant(Participant* participant)
