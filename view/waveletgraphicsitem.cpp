@@ -1,11 +1,14 @@
 #include "waveletgraphicsitem.h"
 #include "waveview.h"
+#include "waveletview.h"
 #include "model/wave.h"
 #include "model/wavelet.h"
 #include "participantgraphicsitem.h"
 #include "buttongraphicsitem.h"
 #include "addparticipantdialog.h"
 #include "model/otprocessor.h"
+#include "blipgraphicsitem.h"
+#include "graphicstextitem.h"
 
 #include <QPainter>
 #include <QBrush>
@@ -24,6 +27,11 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveView* view)
     m_italicButton = new ButtonGraphicsItem( QPixmap("images/italic.png"), this );
     m_underlineButton = new ButtonGraphicsItem( QPixmap("images/underline.png"), this );
     m_strikeoutButton = new ButtonGraphicsItem( QPixmap("images/strikeout.png"), this );
+
+    connect( m_boldButton, SIGNAL(clicked()), SLOT(boldClicked()));
+    connect( m_italicButton, SIGNAL(clicked()), SLOT(italicCicked()));
+    connect( m_underlineButton, SIGNAL(clicked()), SLOT(underlineClicked()));
+    connect( m_strikeoutButton, SIGNAL(clicked()), SLOT(strikeoutClicked()));
 
     int dy = 42 + 2 * 5 + 1 + 22 + 1;
     m_rect = QRectF( 0, 0, 100, dy);
@@ -73,7 +81,7 @@ void WaveletGraphicsItem::updateParticipants()
         m_participantItems.append( item );
     }
 
-    m_addUserButton->setPos( (42 + 5) * m_participantItems.length() + 5, dy + 16);
+    m_addUserButton->setPos( (42 + 5) * m_participantItems.count() + 5, dy + 16);
     m_boldButton->setPos( 10, 42 + 2 * 5 + 3 );
     m_italicButton->setPos( 10 + 20, 42 + 2 * 5 + 3 );
     m_underlineButton->setPos( 10 + 40, 42 + 2 * 5 + 3 );
@@ -119,3 +127,27 @@ void WaveletGraphicsItem::showAddParticipantDialog()
     if ( dlg.result() )
         m_wavelet->processor()->handleSendAddParticipant(dlg.result());
 }
+
+void WaveletGraphicsItem::boldClicked()
+{
+    BlipGraphicsItem* item = m_view->focusBlipItem();
+    if ( !item )
+        return;
+    item->toggleBold();
+    qDebug("Toggle bold");
+    m_view->waveletView()->setFocus();
+    // item->scene()->setFocusItem( item->textItem() );
+}
+
+void WaveletGraphicsItem::italicCicked()
+{
+}
+
+void WaveletGraphicsItem::underlineClicked()
+{
+}
+
+void WaveletGraphicsItem::strikeoutClicked()
+{
+}
+

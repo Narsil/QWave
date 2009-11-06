@@ -24,7 +24,7 @@ protected:
     virtual void onInsertChars(int index, const QString& chars);
     virtual void onInsertElementStart(int index);
     virtual void onInsertElementEnd(int index);
-    virtual void onAnnotationUpdate(int index, const QHash<QString,QString>& updates);
+    virtual void onAnnotationUpdate(int index, const AnnotationChange& updates);
     virtual void onMutationEnd();
 
 signals:    

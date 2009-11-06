@@ -29,6 +29,11 @@ private slots:
     void removeParticipant(Participant* participant);
     void showAddParticipantDialog();
 
+    void boldClicked();
+    void italicCicked();
+    void underlineClicked();
+    void strikeoutClicked();
+
 private:
     void updateParticipants();
 

@@ -50,13 +50,12 @@ void convert(protocol::ProtocolWaveletDelta* result, const WaveletDelta& delta )
                 {
                     case DocumentMutation::ElementStart:
                         comp->mutable_element_start()->set_type( (*it).text.toStdString() );
-                        if ( (*it).map )
-                            foreach( QString key, (*it).map->keys() )
-                            {
-                                protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
-                                pair->set_key( key.toStdString() );
-                                pair->set_value( ((*it).map)->value(key).toStdString() );
-                            }
+                        foreach( QString key, (*it).attributes.keys() )
+                        {
+                            protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
+                            pair->set_key( key.toStdString() );
+                            pair->set_value( (*it).attributes[key].toStdString() );
+                        }
                         break;
                     case DocumentMutation::ElementEnd:
                         comp->set_element_end(true);
@@ -69,13 +68,12 @@ void convert(protocol::ProtocolWaveletDelta* result, const WaveletDelta& delta )
                         break;
                     case DocumentMutation::DeleteStart:
                         comp->mutable_delete_element_start()->set_type( (*it).text.toStdString() );
-                        if ( (*it).map )
-                            foreach( QString key, (*it).map->keys() )
-                            {
-                                protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
-                                pair->set_key( key.toStdString() );
-                                pair->set_value( ((*it).map)->value(key).toStdString() );
-                            }
+                        foreach( QString key, (*it).attributes.keys() )
+                        {
+                            protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
+                            pair->set_key( key.toStdString() );
+                            pair->set_value( (*it).attributes[key].toStdString() );
+                        }
                         break;
                     case DocumentMutation::DeleteEnd:
                         comp->set_delete_element_end(true);
@@ -84,21 +82,21 @@ void convert(protocol::ProtocolWaveletDelta* result, const WaveletDelta& delta )
                         comp->set_delete_characters( (*it).text.toStdString() );
                         break;
                     case DocumentMutation::AnnotationBoundary:                        
-                        if ( (*it).map )
-                            foreach( QString key, (*it).map->keys() )
+                            foreach( QString key, (*it).annotations.keys() )
                             {
                                 protocol::ProtocolDocumentOperation_Component_KeyValueUpdate* pair = comp->mutable_annotation_boundary()->add_change();
                                 pair->set_key( key.toStdString() );
-                                pair->set_new_value( ((*it).map)->value(key).toStdString() );
-                                // TODO: Set old value ...
+                                QString oldvalue = (*it).annotations[key].first;
+                                if ( !oldvalue.isNull() )
+                                    pair->set_old_value( oldvalue.toStdString() );
+                                QString newvalue = (*it).annotations[key].second;
+                                if ( !newvalue.isNull() )
+                                    pair->set_new_value( newvalue.toStdString() );
                             }
-                        if ( (*it).endKeys )
-                        {
-                            foreach( QString ek, *((*it).endKeys) )
+                            foreach( QString ek, (*it).endKeys)
                             {
                                 comp->mutable_annotation_boundary()->add_end( ek.toStdString() );
                             }
-                        }
                         break;
                     case DocumentMutation::NoItem:
                         // Do nothing by intention
@@ -165,7 +163,7 @@ WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
                 else if ( comp.has_element_start() )
                 {
                     QString type = QString::fromStdString(comp.element_start().type());
-                    QHash<QString,QString> attribs;
+                    StructuredDocument::AttributeList attribs;
                     for( int a = 0; a < comp.element_start().attribute_size(); ++a )
                         attribs[ QString::fromStdString(comp.element_start().attribute(a).key()) ] = QString::fromStdString(comp.element_start().attribute(a).value() );
                     m.insertStart(type, attribs );
@@ -173,15 +171,19 @@ WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
                 else if ( comp.has_annotation_boundary() )
                 {
                     QList<QString> endKeys;
-                    QHash<QString,QString> changes;
+                    StructuredDocument::AnnotationChange changes;
                     for( int e = 0; e < comp.annotation_boundary().end_size(); ++e )
                         endKeys.append( QString::fromStdString( comp.annotation_boundary().end(e) ) );
                     for( int a = 0; a < comp.annotation_boundary().change_size(); ++a )
                     {
-                        if ( comp.annotation_boundary().change(a).has_new_value() )
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ] = QString::fromStdString(comp.annotation_boundary().change(c).new_value() );
+                        if ( comp.annotation_boundary().change(a).has_old_value() )
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].first = QString::fromStdString(comp.annotation_boundary().change(c).old_value() );
                         else
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ] = QString::null;
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].first = QString::null;
+                        if ( comp.annotation_boundary().change(a).has_new_value() )
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].second = QString::fromStdString(comp.annotation_boundary().change(c).new_value() );
+                        else
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].second = QString::null;
                     }
                     m.annotationBoundary(endKeys, changes);
                 }

@@ -17,9 +17,15 @@ public:
 
     void insertCaret( QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner );
 
+    static GraphicsTextItem* cast( QGraphicsItem* item );
+
 protected:
     virtual void mousePressEvent ( QGraphicsSceneMouseEvent * event );
     virtual void keyPressEvent ( QKeyEvent * event );
+    virtual void focusInEvent( QFocusEvent* event );
+
+signals:
+    void focusIn();
 
 private slots:
     void onContentsChange( int position, int charsRemoved, int charsAdded );

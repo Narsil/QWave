@@ -1,6 +1,7 @@
 #ifndef OTADAPTER_H
 #define OTADAPTER_H
 
+#include <QHash>
 #include <QObject>
 #include <QDateTime>
 #include <QTextCursor>
@@ -11,6 +12,7 @@ class GraphicsTextItem;
 class Environment;
 class DocumentMutation;
 class Participant;
+class QTimer;
 
 /**
   * This adapter connectes QTextDocument with SynchronizedDocument.
@@ -29,6 +31,9 @@ public:
     BlipGraphicsItem* blipItem() const;
 
     void onContentsChange( int position, int charsRemoved, int charsAdded );
+    void onStyleChange( int position, int charsFormatted, const QString& style, const QString& value );
+    void suspendContentsChange( bool suspend ) { m_suspendContentsChange = suspend; }
+
     /**
       * Puts the text stored in the Blip into the GraphicsTextItem.
       */
@@ -64,8 +69,11 @@ private slots:
     void insertLineBreak(int inlinePos);
     void setCursor(int inlinePos, const QString& author);
     void mutationEnd();
+    void removeOldCursors();
 
 private:
+    void startOldCursorsTimer();
+
     bool m_suspendContentsChange;
     QString m_authorNames;
     /**
@@ -73,6 +81,7 @@ private:
       */
     bool m_blockUpdate;
     QHash<QString,Cursor*> m_cursors;
+    QTimer* m_timer;
 };
 
 #endif // OTADAPTER_H
