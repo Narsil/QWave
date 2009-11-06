@@ -56,7 +56,7 @@ int main(int argc, char *argv[])
             dlg.exec();
         }
 
-        en->localUser()->setPixmap( QPixmap("images/user1.jpg") );
+        en->localUser()->setPixmap( QPixmap("images/user1.png") );
 
 //        // Configure the server connection
 //        en->networkAdapter()->setServer( serverName, port );
@@ -68,10 +68,10 @@ int main(int argc, char *argv[])
 
         Participant* p2 = en->contacts()->addParticipant("tux@localhost");
         p2->setName("Tux");
-        p2->setPixmap( QPixmap("images/user2.jpg") );
+        p2->setPixmap( QPixmap("images/user2.png") );
         Participant* p3 = en->contacts()->addParticipant("kenny@localhost");
         p3->setName("Kenny");
-        p3->setPixmap( QPixmap("images/user3.jpg") );
+        p3->setPixmap( QPixmap("images/user3.png") );
 
         Wave* wave = new Wave(en, "localhost", "w+12345");
         // Wavelet* wavelet = new Wavelet(wave, "localhost", "conv+root");

@@ -1,6 +1,7 @@
 # -------------------------------------------------
 # Project created by QtCreator 2009-10-11T22:32:00
 # -------------------------------------------------
+CONFIG += release
 TARGET = QWave
 QT += network
 TEMPLATE = app
@@ -96,6 +97,11 @@ win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf
-win32:LIBS += winprotobuf/lib/debug/libprotobuf.lib
 win32:INCLUDEPATH = winprotobuf/include winprotobuf/protocol
 unix:INCLUDEPATH = protocol
+debug {
+}
+release {
+	win32:LIBS += MSVCPRT.LIB msvcrt.lib
+	win32:LIBS += winprotobuf/lib/release/libprotobuf.lib
+}

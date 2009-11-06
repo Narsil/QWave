@@ -8,7 +8,7 @@ Participant::Participant(const QString& address)
         : m_name(address), m_address(address)
 {
     if ( !s_defaultPixmap )
-        s_defaultPixmap = new QPixmap("images/unknown.gif");
+        s_defaultPixmap = new QPixmap("images/unknown.png");
     m_pixmap = *s_defaultPixmap;
 }
 
