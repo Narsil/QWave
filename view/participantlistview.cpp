@@ -43,63 +43,71 @@ void ParticipantListView::setSelectable(bool selectable)
 
 void ParticipantListView::setParticipants( const QList<Participant*>& participants )
 {
-    foreach( ParticipantGraphicsItem* item, m_items.values() )
-    {
-        delete item;
-    }
-    m_items.clear();
+//    foreach( ParticipantGraphicsItem* item, m_items.values() )
+//    {
+//        delete item;
+//    }
+//    m_items.clear();
 
-    foreach( Participant* p, participants )
-    {
-        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 28, true);
-        item->setWidth( frameRect().width() );
-        item->setSelectable(m_selectable);
-        connect( item, SIGNAL(clicked(Participant*)), SLOT(selectParticipant(Participant*)));
-        m_scene->addItem(item);
-        m_items[p] = item;
-    }
+    m_participants = participants;
+//    foreach( Participant* p, participants )
+//    {
+//        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 28, true);
+//        item->setWidth( frameRect().width() );
+//        item->setSelectable(m_selectable);
+//        connect( item, SIGNAL(clicked(Participant*)), SLOT(selectParticipant(Participant*)));
+//        m_scene->addItem(item);
+//        m_items[p] = item;
+//    }
     m_selectedItem = 0;
     updateLayout();
 }
 
 void ParticipantListView::addParticipant(Participant* participant)
 {
-    if ( !m_items.contains(participant) )
-    {
-        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(participant, 28, true);
-        item->setWidth( frameRect().width() );
-        item->setSelectable(m_selectable);
-        connect( item, SIGNAL(clicked(Participant*)), SLOT(selectParticipant(Participant*)));
-        m_scene->addItem(item);
-        m_items[participant] = item;
-    }
+    if ( !m_participants.contains(participant) )
+        m_participants.append( participant );
+
+//    if ( !m_items.contains(participant) )
+//    {
+//        ParticipantGraphicsItem* item = new ParticipantGraphicsItem(participant, 28, true);
+//        item->setWidth( frameRect().width() );
+//        item->setSelectable(m_selectable);
+//        connect( item, SIGNAL(clicked(Participant*)), SLOT(selectParticipant(Participant*)));
+//        m_scene->addItem(item);
+//        m_items[participant] = item;
+//    }
     updateLayout();
 }
 
 void ParticipantListView::removeParticipant(Participant* participant)
 {
-    ParticipantGraphicsItem* item = m_items[participant];
-    if ( item )
-    {
-        if ( item == m_selectedItem )
-            m_selectedItem = 0;
-        delete item;
-        m_items.remove(participant);
-        updateLayout();
-    }
+    m_participants.removeAll(participant);
+
+//    ParticipantGraphicsItem* item = m_items[participant];
+//    if ( item )
+//    {
+//        if ( item == m_selectedItem )
+//            m_selectedItem = 0;
+//        delete item;
+//        m_items.remove(participant);
+//        updateLayout();
+//    }
+
+    updateLayout();
 }
 
-void ParticipantListView::updateLayout()
-{
-    int dy = 4;
-    foreach(ParticipantGraphicsItem* item, m_items.values() )
-    {
-        item->setPos(8, dy);
-        dy += item->boundingRect().height() + 4;
-    }
-
-    setSceneRect( 0, 0, frameRect().width(), dy );
-}
+//void ParticipantListView::updateLayout()
+//{
+//    int dy = 4;
+//    foreach(ParticipantGraphicsItem* item, m_items.values() )
+//    {
+//        item->setPos(8, dy);
+//        dy += item->boundingRect().height() + 4;
+//    }
+//
+//    setSceneRect( 0, 0, frameRect().width(), dy );
+//}
 
 void ParticipantListView::selectParticipant( Participant* participant )
 {
@@ -121,4 +129,49 @@ void ParticipantListView::resizeEvent( QResizeEvent* )
     }
 
     setSceneRect( 0, 0, frameRect().width(), sceneRect().height() );
+}
+
+void ParticipantListView::setFilter( const QString& filter )
+{
+    m_filter = filter;
+    updateLayout();
+}
+
+void ParticipantListView::updateLayout()
+{
+    QHash<Participant*,ParticipantGraphicsItem*> map;
+
+    int dy = 4;
+    foreach( Participant* p, m_participants )
+    {
+        if ( m_filter.length() == 0 || ( p->name().length() >= m_filter.length() && p->name().left(m_filter.length()).toLower() == m_filter.toLower() ) )
+        {
+            ParticipantGraphicsItem* item = m_items[p];
+            if ( !item )
+            {
+                item = new ParticipantGraphicsItem(p, 28, true);
+                item->setWidth( frameRect().width() );
+                item->setSelectable(m_selectable);
+                connect( item, SIGNAL(clicked(Participant*)), SLOT(selectParticipant(Participant*)));
+                m_scene->addItem(item);
+            }            
+            map[p] = item;
+            item->setPos(8, dy);
+            dy += item->boundingRect().height() + 4;
+        }
+    }
+
+    foreach( Participant* a, m_items.keys() )
+    {
+        if ( !map.contains(a) )
+        {
+            ParticipantGraphicsItem* item = m_items[a];
+            if ( item == m_selectedItem )
+                m_selectedItem = 0;
+            delete item;
+        }
+    }
+    m_items = map;
+
+    setSceneRect( 0, 0, frameRect().width(), dy );
 }

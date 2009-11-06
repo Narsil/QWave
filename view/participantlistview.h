@@ -4,6 +4,7 @@
 #include <QGraphicsView>
 #include <QList>
 #include <QHash>
+#include <QString>
 
 class QGraphicsScene;
 class Participant;
@@ -24,6 +25,7 @@ public:
 
 public slots:
     void selectParticipant(Participant* participant);
+    void setFilter( const QString& filter );
 
 signals:
     void participantSelected(Participant* participant);
@@ -35,9 +37,11 @@ private:
     void updateLayout();
 
     QGraphicsScene* m_scene;
+    QList<Participant*> m_participants;
     QHash<Participant*,ParticipantGraphicsItem*> m_items;
     ParticipantGraphicsItem* m_selectedItem;
     bool m_selectable;
+    QString m_filter;
 };
 
 #endif // PARTICIPANTLISTVIEW_H
