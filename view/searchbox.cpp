@@ -16,7 +16,11 @@ SearchBox::SearchBox(QWidget* parent)
         s_pixmapRight = new QPixmap("images/searchbox_right.png");
 
     setFrame(false);
-    this->setTextMargins(11, 3, 22, 3);
+#ifdef WIN32
+	this->setTextMargins(11, 2, 22, 2);
+#else
+	this->setTextMargins(11, 3, 22, 3);
+#endif
 }
 
 void SearchBox::paintEvent(QPaintEvent* event)
