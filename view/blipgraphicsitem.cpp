@@ -19,6 +19,7 @@
 #include <QPixmap>
 #include <QTextBlock>
 #include <QCursor>
+#include <QTextCursor>
 
 BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
         : m_blip(blip), m_replyItem( 0 ), m_view(view), m_lastWidth(width)
@@ -31,6 +32,7 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
     m_text->setTextInteractionFlags( Qt::TextEditorInteraction);
     m_text->setPos(40,2);
     m_text->setTextWidth(width - m_text->x());
+    connect( m_text, SIGNAL(focusIn()), SLOT(focusInEvent()));
 
     QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SLOT(titleChanged(const QString&)));
     // Show the contents of the document
@@ -175,6 +177,38 @@ void BlipGraphicsItem::hoverMoveEvent ( QGraphicsSceneHoverEvent* )
 void BlipGraphicsItem::titleChanged(const QString& title)
 {
     m_view->setTitle(title);
+}
+
+void BlipGraphicsItem::toggleBold()
+{
+    QTextCursor cursor = m_text->textCursor();
+    QTextCharFormat format = cursor.charFormat();
+    QString value;
+    if ( format.fontWeight() == QFont::Normal )
+    {
+        format.setFontWeight( QFont::Bold );
+        value = "bold";
+    }
+    else
+    {
+        format.setFontWeight( QFont::Normal );
+        value = QString::null;
+    }
+
+    // Tell the wave server that something has been formatted (if there is a selection).
+    if ( cursor.selectionEnd() != cursor.selectionStart() )
+    {
+        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/fontWeight", value );
+    }
+
+    m_adapter->suspendContentsChange(true);
+    cursor.mergeCharFormat( format );
+    m_adapter->suspendContentsChange(false);
+}
+
+void BlipGraphicsItem::focusInEvent()
+{
+    m_view->focusInEvent( this );
 }
 
 /****************************************************************************

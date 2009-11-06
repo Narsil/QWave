@@ -19,9 +19,10 @@
 #include <QTextCursor>
 #include <QTextCharFormat>
 #include <QTextBlock>
+#include <QTimer>
 
 OTAdapter::OTAdapter(BlipGraphicsItem* parent )
-        : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false)
+        : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false), m_timer(0)
 {
     connect( blip()->document(), SIGNAL(deletedLineBreak(int)), SLOT(deleteLineBreak(int)));
     connect( blip()->document(), SIGNAL(insertedLineBreak(int)), SLOT(insertLineBreak(int)));
@@ -34,6 +35,8 @@ OTAdapter::OTAdapter(BlipGraphicsItem* parent )
 
 OTAdapter::~OTAdapter()
 {
+    if ( m_timer )
+        delete m_timer;
     foreach( Cursor* c, m_cursors.values() )
         delete c;
 }
@@ -51,6 +54,100 @@ GraphicsTextItem* OTAdapter::textItem() const
 BlipGraphicsItem* OTAdapter::blipItem() const
 {
     return (BlipGraphicsItem*)parent();
+}
+
+void OTAdapter::onStyleChange( int position, int charsFormatted, const QString& style, const QString& value )
+{
+    if ( m_suspendContentsChange )
+        return;
+
+    StructuredDocument* bdoc = blip()->document();
+
+    // Check if the user formatted some cursors (i.e carets)
+    foreach( Cursor* c, m_cursors.values() )
+    {
+        QString a = CaretInterface::caretOwner(c->m_textCursor);
+        if ( a != c->m_participant->address() )
+            charsFormatted--;
+    }
+
+    if ( charsFormatted == 0 )
+        return;
+
+    // Construct a document mutation which reflects the change made to the QTextDocument.
+    DocumentMutation m;
+    int index = this->mapToBlip(position);
+    m.retain(index);
+
+    // Choose some impossible value here to trigger an annotation change in the loop below
+    QString oldvalue = "$$$$$";
+    int docFormatted = 0;
+    int changeStart = 0;
+    QString text = "";
+    int pos = index;
+    for( int i = 0; i < charsFormatted; ++i, pos++ )
+    {
+        switch ( bdoc->typeAt(pos) )
+        {
+            case StructuredDocument::Char:
+            {
+                StructuredDocument::Annotation anno = bdoc->annotationAt(i);
+                if ( anno.value(style) != oldvalue )
+                {
+                    m.retain(docFormatted - changeStart);
+                    changeStart = docFormatted;
+                    oldvalue = anno.value(style);
+                    StructuredDocument::AnnotationChange change;
+                    change[style].first = oldvalue;
+                    change[style].second = value;
+                    m.annotationBoundary( QList<QString>(), change );
+                }
+                docFormatted++;
+                break;
+            }
+            case StructuredDocument::Start:
+                {
+                    docFormatted++;
+                    int stack = 1;
+                    while( stack > 0 )
+                    {
+                        pos++;
+                        docFormatted++;
+                        switch ( bdoc->typeAt(pos) )
+                        {
+                        case StructuredDocument::Char:
+                            break;
+                        case StructuredDocument::Start:
+                            stack++;
+                            break;
+                        case StructuredDocument::End:
+                            stack--;
+                            break;
+                        }
+                    }
+                }
+                break;
+            case StructuredDocument::End:
+                qDebug("OOOoooops, should not have encountered the end tag.");
+                break;
+        }
+    }
+    QList<QString> endKeys;
+    endKeys.append(style);
+    m.retain(docFormatted - changeStart);
+    m.annotationBoundary( endKeys, StructuredDocument::AnnotationChange() );
+    m.retain( bdoc->count() - index - docFormatted );
+
+    // Send the mutation to the OTProcessor
+    m_blockUpdate = true;
+    WaveletDelta delta;
+    WaveletDeltaOperation op;
+    op.setMutation(m);
+    op.setDocumentId(blip()->id());
+    delta.addOperation(op);
+    blip()->wavelet()->processor()->handleSend(delta);
+    m_blockUpdate = false;
+    bdoc->print_();
 }
 
 void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded )
@@ -204,7 +301,7 @@ void OTAdapter::setGraphicsText()
             m_authorNames += name;
     }
     m_authorNames += ": ";
-    if ( blip()->authors().length() > 0 )
+    if ( blip()->authors().count() > 0 )
         blipItem()->setAuthorPixmap(blip()->wavelet()->environment()->contacts()->addParticipant( blip()->authors().first() )->pixmap());
     else
     {
@@ -222,7 +319,7 @@ void OTAdapter::setGraphicsText()
     QTextCharFormat format;
 
     textItem()->textCursor().insertText(m_authorNames);
-    textItem()->setForbiddenTextRange(m_authorNames.length());
+    textItem()->setForbiddenTextRange(m_authorNames.count());
 
     QStack<int> stack;
     stack.push(0);
@@ -470,8 +567,11 @@ void OTAdapter::setCursor(int inlinePos, const QString& author)
     if ( !c )
     {
         c = new Cursor( environment()->contacts()->addParticipant(author), QDateTime::currentDateTime() );
+        Q_ASSERT( c->m_participant != 0 );
         m_cursors[author] = c;
     }
+    else
+        c->m_timestamp = QDateTime::currentDateTime();
     QTextDocument* doc = textItem()->document();
     c->m_textCursor = QTextCursor(doc);
     c->m_textCursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
@@ -489,6 +589,8 @@ void OTAdapter::mutationEnd()
         qDebug("SHOW CURSOR %i", c->m_textCursor.position());
         textItem()->insertCaret( &c->m_textCursor, c->m_participant->name(), Qt::red, c->m_participant->address() );
     }
+    if ( m_cursors.count() > 0 )
+        startOldCursorsTimer();
 
     // Did this modify the first block in the first blib? -> change the title
     if ( blip()->isFirstRootBlip()  )
@@ -498,4 +600,42 @@ void OTAdapter::mutationEnd()
     }
 
     m_suspendContentsChange = false;
+}
+
+void OTAdapter::startOldCursorsTimer()
+{
+    if ( m_timer )
+        return;
+    m_timer = new QTimer();
+    connect( m_timer, SIGNAL(timeout()), SLOT(removeOldCursors()));
+    m_timer->start(2000);
+}
+
+void OTAdapter::removeOldCursors()
+{
+    QDateTime now = QDateTime::currentDateTime();
+
+    // Delete all cursors from the text as to not interfer with the character counting
+    foreach( Cursor* c, m_cursors.values() )
+    {
+        if ( c->m_timestamp.secsTo( now ) >= 2 )
+        {
+            if ( !c->m_textCursor.isNull() )
+            {
+                qDebug("DEL cursor at %i", c->m_textCursor.position() );
+                Q_ASSERT( CaretInterface::caretOwner(c->m_textCursor) == c->m_participant->address() );
+                m_suspendContentsChange = true;
+                c->m_textCursor.deletePreviousChar();
+                m_suspendContentsChange = false;
+            }
+            m_cursors.remove(c->m_participant->address());
+            delete c;
+        }
+    }
+
+    if ( m_timer && m_cursors.count() == 0 )
+    {
+        delete m_timer;
+        m_timer = 0;
+    }
 }

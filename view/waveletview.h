@@ -26,8 +26,10 @@ public:
 //    void fitToWidth( qreal headWidth, qreal width );
 
     void setTitle( const QString& title );
-
     void setWavelet( Wavelet* wavelet );
+    BlipGraphicsItem* focusBlipItem() const;
+
+    void focusInEvent( BlipGraphicsItem* item );
 
 public slots:
     void layoutBlips();
@@ -42,6 +44,7 @@ private:
     Wavelet* m_wavelet;
     QHash<QString,BlipGraphicsItem*> m_blipItems;
     QGraphicsScene* m_scene;
+    BlipGraphicsItem* m_focusItem;
 };
 
 #endif

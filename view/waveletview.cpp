@@ -4,11 +4,12 @@
 #include "blipgraphicsitem.h"
 #include "model/blip.h"
 #include "model/blipthread.h"
+#include "graphicstextitem.h"
 
 #include <QGraphicsScene>
 
 WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet )
-        : QGraphicsView( parent ), m_wavelet(wavelet)
+        : QGraphicsView( parent ), m_wavelet(wavelet), m_focusItem(0)
 {
     setFrameShape(QFrame::NoFrame);
     setFrameShadow(QFrame::Plain);
@@ -33,6 +34,7 @@ WaveletView::~WaveletView()
 
 void WaveletView::setWavelet( Wavelet* wavelet )
 {
+    m_focusItem = 0;
     if ( m_wavelet )
         disconnect(m_wavelet, SIGNAL(conversationChanged()), this, SLOT(layoutBlips()));
     m_wavelet = wavelet;
@@ -62,7 +64,7 @@ void WaveletView::layoutBlips(qreal width)
         layoutBlip(blip, dx, dy, width);
     }
 
-    setSceneRect( 0, 0, frameRect().width(), dy );
+    setSceneRect( 0, 0, frameRect().width(), dy + 10 );
 
     if ( focus )
         m_scene->setFocusItem(focus);
@@ -117,4 +119,21 @@ void WaveletView::resizeEvent( QResizeEvent* )
 {
 //    setSceneRect( 0, 0, frameRect().width(), sceneRect().height() );
     layoutBlips();
+}
+
+BlipGraphicsItem* WaveletView::focusBlipItem() const
+{
+//    QGraphicsItem* item = m_scene->focusItem();
+//    if ( item == 0 )
+//        return 0;
+//    GraphicsTextItem* t = GraphicsTextItem::cast(item);
+//    if ( t == 0 )
+//        return 0;
+//    return static_cast<BlipGraphicsItem*>( t->parentItem() );
+    return m_focusItem;
+}
+
+void WaveletView::focusInEvent( BlipGraphicsItem* item )
+{
+    m_focusItem = item;
 }

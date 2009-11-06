@@ -4,6 +4,8 @@
 #include <QHash>
 #include <QString>
 #include <QList>
+#include <QPair>
+#include "structureddocument.h"
 
 class DocumentMutation
 {
@@ -31,15 +33,16 @@ public:
     struct Item
     {
         ItemType type;
-        QList<QString>* endKeys;
-        QHash<QString,QString>* map;
+        QList<QString> endKeys;
+        StructuredDocument::AnnotationChange annotations;
+        StructuredDocument::AttributeList attributes;
         QString text;
         int count;
 
-        Item deepCopy();
+//        Item deepCopy();
     };
 
-    void insertStart(const QString& tag, const QHash<QString,QString>& map);
+    void insertStart(const QString& tag, const StructuredDocument::AttributeList& attributes);
     void insertStart(const QString& tag);
     void insertEnd();
     void retain(int count);
@@ -47,7 +50,7 @@ public:
     void deleteStart(const QString& tag);
     void deleteEnd();
     void deleteChars(const QString& chars);
-    void annotationBoundary(const QList<QString>& endKeys, const QHash<QString,QString>& changes);
+    void annotationBoundary(const QList<QString>& endKeys, const StructuredDocument::AnnotationChange& changes);
 
     void clear();
     bool isEmpty() const { return m_items.count() == 0; }
@@ -73,9 +76,9 @@ public:
     void print_();
 
 private:
-    void freeItems();
     void shorten( Item& item, int len ) const;
-    QString mapToString(const QHash<QString,QString>* map);
+    QString mapToString(const StructuredDocument::AttributeList& map);
+    QString mapToString(const StructuredDocument::AnnotationChange& map);
 
     QList<Item> m_items;
 };

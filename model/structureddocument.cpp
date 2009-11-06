@@ -17,11 +17,11 @@ StructuredDocument::~StructuredDocument()
 {
 }
 
-void StructuredDocument::insertStart( int index, const QString& tag, const QHash<QString,QString>& map, const Annotation& anno)
+void StructuredDocument::insertStart( int index, const QString& tag, const AttributeList& attributes, const Annotation& anno)
 {
     m_items.insert(index, QChar(0) );
     m_annotations.insert( index, anno );
-    QHash<QString,QString> m( map );
+    AttributeList m( attributes );
     m["**t"] = tag;
     m_attributes.insert( index, m );
 }
@@ -36,7 +36,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
     int stackCount = 0;
     int pos = 0;
 
-    QHash<QString, QString> annoUpdates;
+    AnnotationChange annoUpdates;
     Annotation oldAnno;
     Annotation currentAnno;
 
@@ -45,10 +45,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
         switch( (*it).type )
         {
             case DocumentMutation::ElementStart:
-                if ( (*it).map )
-                    insertStart(pos++, (*it).text, *((*it).map), currentAnno);
-                else
-                    insertStart(pos++, (*it).text, QHash<QString,QString>(), currentAnno);
+                insertStart(pos++, (*it).text, (*it).attributes, currentAnno);
                 onInsertElementStart(pos - 1 );
                 stackCount++;
                 break;
@@ -182,20 +179,14 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                 }
                 break;
             case DocumentMutation::AnnotationBoundary:                
-                if ( (*it).map && (*it).endKeys )
-                {
-                    foreach( QString key, *((*it).endKeys) )
+                    foreach( QString key, (*it).endKeys )
                     {
                         annoUpdates.remove(key);
                     }
-                }
-                if ( (*it).map )
-                {
-                    foreach( QString key, (*it).map->keys() )
+                    foreach( QString key, (*it).annotations.keys() )
                     {
-                        annoUpdates[key] = (*it).map->value(key);
+                        annoUpdates[key] = (*it).annotations[key];
                     }
-                }
                 onAnnotationUpdate(pos, annoUpdates);
                 currentAnno = oldAnno.merge(annoUpdates);
                 break;
@@ -241,7 +232,7 @@ void StructuredDocument::print_()
 
     Annotation anno;
     QStack<QString> stack;
-    for( int i = 0; i < m_items.length(); ++i )
+    for( int i = 0; i < m_items.count(); ++i )
     {
         if ( m_annotations[i] != anno )
         {
@@ -345,7 +336,7 @@ void StructuredDocument::onInsertElementEnd(int index)
     Q_UNUSED(index);
 }
 
-void StructuredDocument::onAnnotationUpdate(int index, const QHash<QString,QString>& updates)
+void StructuredDocument::onAnnotationUpdate(int index, const AnnotationChange& updates)
 {
     Q_UNUSED(index);
     Q_UNUSED(updates);
@@ -362,14 +353,23 @@ void StructuredDocument::onMutationEnd()
   ******************************************************************************/
 
 
-StructuredDocument::Annotation StructuredDocument::Annotation::merge(const QHash<QString,QString>& update) const
+StructuredDocument::Annotation StructuredDocument::Annotation::merge(const AnnotationChange& update) const
 {
     if ( isNull() )
-        return Annotation( update );
-    QHash<QString,QString> result(d->map);
+    {
+        AnnotationList result;
+        foreach(QString key, update.keys())
+        {
+            QString val = update[key].second;
+            result[key] = val;
+        }
+        return Annotation( result );
+    }
+
+    AnnotationList result(d->map);
     foreach(QString key, update.keys())
     {
-        QString val = update[key];
+        QString val = update[key].second;
         if ( val.isEmpty() )
             result.remove(key);
         else

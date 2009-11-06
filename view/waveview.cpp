@@ -99,3 +99,8 @@ void WaveView::setTitle( const QString& title )
 {
     m_titleBar->setText(title);
 }
+
+BlipGraphicsItem* WaveView::focusBlipItem() const
+{
+    return m_waveletView->focusBlipItem();
+}

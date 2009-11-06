@@ -8,6 +8,7 @@ class WaveletView;
 class MainWindow;
 class TitleBar;
 class WaveletGraphicsItem;
+class BlipGraphicsItem;
 class QGraphicsScene;
 class QVBoxLayout;
 class QGraphicsView;
@@ -23,6 +24,8 @@ public:
 //    QGraphicsScene* headScene() { return m_headScene; }
 
     Wave* wave() const { return m_wave; }
+    WaveletView* waveletView() const { return m_waveletView; }
+    BlipGraphicsItem* focusBlipItem() const;
     void setTitle( const QString& title );
 
 public slots:

@@ -121,7 +121,7 @@ void BlipDocument::onInsertElementEnd(int index)
     }
 }
 
-void BlipDocument::onAnnotationUpdate(int index, const QHash<QString,QString>& updates)
+void BlipDocument::onAnnotationUpdate(int index, const AnnotationChange& updates)
 {
     // TODO
 }
