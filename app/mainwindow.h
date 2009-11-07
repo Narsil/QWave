@@ -6,6 +6,7 @@
 #include <QRectF>
 
 class Environment;
+class Participant;
 class QLabel;
 
 namespace Ui
@@ -37,6 +38,7 @@ private slots:
     void setConnectionStatus( const QString& status );
     void showServerSettings();
     void newWave();
+    void newWave(Participant* p);
 
 private:
     Ui::MainWindowClass *ui;

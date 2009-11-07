@@ -82,6 +82,44 @@ void MainWindow::newWave()
     m_inboxView->select(wave);
 }
 
+void MainWindow::newWave(Participant* p)
+{
+    // TODO: This is a crude way of creating new wave IDs
+    QString rand;
+    rand.setNum( qrand() );
+    Wave* wave = m_environment->createWave( m_environment->networkAdapter()->serverName(), "w+" + rand);
+    // Add the new wave to the inbox and show it.
+    m_environment->inbox()->addWave(wave);
+    Wavelet* wavelet = wave->wavelet();
+
+    // Tell the server about the new wave
+    wavelet->processor()->handleSendAddParticipant(m_environment->localUser());
+    wavelet->processor()->handleSendAddParticipant(p);
+
+    DocumentMutation m1;
+    m1.insertStart("conversation");
+    QHash<QString,QString> map;
+    map["id"] = "b+b1";
+    m1.insertStart("blip", map);
+    m1.insertEnd();
+    m1.insertEnd();
+    wavelet->processor()->handleSend( m1, "conversation" );
+
+    DocumentMutation m2;
+    map.clear();
+    map["name"] = m_environment->localUser()->address();
+    m2.insertStart("contributor", map);
+    m2.insertEnd();
+    map.clear();
+    m2.insertStart("body", map);
+    m2.insertStart("line", map);
+    m2.insertEnd();
+    m2.insertEnd();
+    wavelet->processor()->handleSend( m2, "b+b1" );
+
+    m_inboxView->select(wave);
+}
+
 void MainWindow::setConnectionStatus( const QString& status )
 {
     m_connectionStatus->setText( status );
