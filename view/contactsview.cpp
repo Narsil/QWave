@@ -4,6 +4,7 @@
 #include "participantlistview.h"
 #include "titlebar.h"
 #include "bigbar.h"
+#include "participantinfodialog.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -25,6 +26,7 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
     l->addWidget(m_searchBox);
 
     m_listView = new ParticipantListView(this);
+    m_listView->setSelectable(true);
     m_titleBar = new TitleBar(this);
     m_verticalLayout->addWidget(m_titleBar);
     m_verticalLayout->addWidget(m_bigBar);
@@ -35,6 +37,7 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
     m_listView->setParticipants(contacts->participants());
     connect( contacts, SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));
     connect( contacts, SIGNAL(participantRemoved(Participant*)), SLOT(removeParticipant(Participant*)));
+    connect( m_listView, SIGNAL(participantSelected(Participant*)), SLOT(showParticipantInfo(Participant*)));
 
     m_listView->connect( m_searchBox, SIGNAL(textChanged(QString)), SLOT(setFilter(QString)));
 }
@@ -47,4 +50,11 @@ void ContactsView::addParticipant(Participant* participant)
 void ContactsView::removeParticipant(Participant* participant)
 {
     m_listView->removeParticipant(participant);
+}
+
+void ContactsView::showParticipantInfo(Participant* participant)
+{
+    ParticipantInfoDialog dlg(participant, this);
+    connect( &dlg, SIGNAL(newWave(Participant*)), SIGNAL(newWave(Participant*)));
+    dlg.exec();
 }

@@ -1,7 +1,7 @@
 # -------------------------------------------------
 # Project created by QtCreator 2009-10-11T22:32:00
 # -------------------------------------------------
-CONFIG += release
+# CONFIG += release
 TARGET = QWave
 QT += network
 TEMPLATE = app
@@ -45,7 +45,9 @@ SOURCES += app/main.cpp \
     view/buttongraphicsitem.cpp \
     app/settings.cpp \
     model/unknowndocument.cpp \
-    model/blipdocument.cpp
+    model/blipdocument.cpp \
+    view/popupdialog.cpp \
+    view/participantinfodialog.cpp
 unix:SOURCES += protocol/waveclient-rpc.pb.cc \
     protocol/common.pb.cc
 win32:SOURCES += winprotobuf/protocol/waveclient-rpc.pb.cc \
@@ -89,7 +91,9 @@ HEADERS += app/mainwindow.h \
     view/buttongraphicsitem.h \
     app/settings.h \
     model/unknowndocument.h \
-    model/blipdocument.h
+    model/blipdocument.h \
+    view/popupdialog.h \
+    view/participantinfodialog.h
 unix:HEADERS += protocol/waveclient-rpc.pb.h \
     protocol/common.pb.h
 win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \
@@ -97,11 +101,12 @@ win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf
-win32:INCLUDEPATH = winprotobuf/include winprotobuf/protocol
+win32:INCLUDEPATH = winprotobuf/include \
+    winprotobuf/protocol
 unix:INCLUDEPATH = protocol
-debug {
-}
-release {
-	win32:LIBS += MSVCPRT.LIB msvcrt.lib
-	win32:LIBS += winprotobuf/lib/release/libprotobuf.lib
+debug:
+release { 
+    win32:LIBS += MSVCPRT.LIB \
+        msvcrt.lib
+    win32:LIBS += winprotobuf/lib/release/libprotobuf.lib
 }

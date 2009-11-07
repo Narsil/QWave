@@ -22,6 +22,10 @@ public:
 private slots:
     void addParticipant(Participant* participant);
     void removeParticipant(Participant* participant);
+    void showParticipantInfo(Participant* participant);
+
+signals:
+    void newWave(Participant* participant);
 
 private:
     Contacts* m_contacts;
