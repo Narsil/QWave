@@ -12,6 +12,9 @@
 #include "unknowndocument.h"
 #include <QStack>
 #include <QtDebug>
+#include <QImage>
+#include <QByteArray>
+#include <QBuffer>
 
 Wavelet::Wavelet(Wave* wave, const QString& domain, const QString &id)
         : QObject(wave), m_id(id), m_domain(domain), m_wave(wave)
@@ -257,4 +260,37 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
             d->receive(mutation, author);
         }
     }
+}
+
+QString Wavelet::insertImageAttachment(const QUrl& url, int width, int height, const QImage& thumbnail)
+{
+    QString rand;
+    rand.setNum( qrand() );
+    rand = "a+" + rand;
+
+    QByteArray ba;
+    QBuffer buffer(&ba);
+    buffer.open(QIODevice::WriteOnly);
+    thumbnail.save(&buffer, "PNG");
+
+    DocumentMutation m1;
+    StructuredDocument::AttributeList attribs;
+    attribs["attachmentId"] = rand;
+    attribs["src"] = url.toString();
+    m1.insertStart("attachment", attribs);
+    attribs.clear();
+    attribs["width"] = QString::number(thumbnail.width());
+    attribs["height"] = QString::number(thumbnail.height());
+    m1.insertStart("thumbnail");
+    m1.insertChars( QString( ba.toBase64() ) );
+    m1.insertEnd();
+    attribs.clear();
+    attribs["width"] = width;
+    attribs["height"] = height;
+    m1.insertStart("image", attribs);
+    m1.insertEnd();
+    m1.insertEnd();
+    processor()->handleSend( m1, rand );
+
+    return rand;
 }

@@ -15,6 +15,7 @@ class Environment;
 class OTProcessor;
 class DocumentMutation;
 class UnknownDocument;
+class QImage;
 
 class Wavelet : public QObject
 {
@@ -42,6 +43,13 @@ public:
 
     // TODO: This should become private
     void updateConversation(const QString& author);
+
+    /**
+      * Adds an attachment document to the wavelet.
+      *
+      * @return the generated attachment ID.
+      */
+    QString insertImageAttachment(const QUrl& url, int width, int height, const QImage& thumbnail);
 
 signals:
     /**

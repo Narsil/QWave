@@ -211,7 +211,7 @@ WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
 }
 
 NetworkAdapter::NetworkAdapter(QObject* parent)
-        : QObject( parent ), m_rpc(0), m_isOnline(false)
+        : QNetworkAccessManager( parent ), m_rpc(0), m_isOnline(false)
 {
 }
 

@@ -3,12 +3,14 @@
 #include "waveletview.h"
 #include "model/wave.h"
 #include "model/wavelet.h"
+#include "model/blip.h"
 #include "participantgraphicsitem.h"
 #include "buttongraphicsitem.h"
 #include "addparticipantdialog.h"
 #include "model/otprocessor.h"
 #include "blipgraphicsitem.h"
 #include "graphicstextitem.h"
+#include "insertimagedialog.h"
 
 #include <QPainter>
 #include <QBrush>
@@ -27,11 +29,13 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveView* view)
     m_italicButton = new ButtonGraphicsItem( QPixmap("images/italic.png"), this );
     m_underlineButton = new ButtonGraphicsItem( QPixmap("images/underline.png"), this );
     m_strikeoutButton = new ButtonGraphicsItem( QPixmap("images/strikeout.png"), this );
+    m_imageButton = new ButtonGraphicsItem( QPixmap("images/image.png"), this );
 
     connect( m_boldButton, SIGNAL(clicked()), SLOT(boldClicked()));
     connect( m_italicButton, SIGNAL(clicked()), SLOT(italicCicked()));
     connect( m_underlineButton, SIGNAL(clicked()), SLOT(underlineClicked()));
     connect( m_strikeoutButton, SIGNAL(clicked()), SLOT(strikeoutClicked()));
+    connect( m_imageButton, SIGNAL(clicked()), SLOT(imageClicked()));
 
     int dy = 42 + 2 * 5 + 1 + 22 + 1;
     m_rect = QRectF( 0, 0, 100, dy);
@@ -86,6 +90,7 @@ void WaveletGraphicsItem::updateParticipants()
     m_italicButton->setPos( 10 + 20, 42 + 2 * 5 + 3 );
     m_underlineButton->setPos( 10 + 40, 42 + 2 * 5 + 3 );
     m_strikeoutButton->setPos( 10 + 60, 42 + 2 * 5 + 3 );
+    m_imageButton->setPos( 10 + 80, 42 + 2 * 5 + 3 );
 }
 
 void WaveletGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)
@@ -151,3 +156,20 @@ void WaveletGraphicsItem::strikeoutClicked()
 {
 }
 
+void WaveletGraphicsItem::imageClicked()
+{
+    BlipGraphicsItem* item = m_view->focusBlipItem();
+    if ( !item )
+        return;
+
+    InsertImageDialog dlg( m_wavelet->environment(), m_view->topLevelWidget() );
+    if ( dlg.exec() == QDialog::Accepted )
+    {
+        item->insertImage( dlg.url(), dlg.thumbnail(), dlg.caption() );
+//        // TODO
+//        int index = 0;
+//
+//        QString id = m_wavelet->insertImageAttachment( dlg.url(), dlg.image().width(), dlg.image().height(), dlg.thumbnail() );
+//        item->blip()->insertImage( index, id, dlg.caption() );
+    }
+}

@@ -2,6 +2,7 @@
 #include "blipgraphicsitem.h"
 #include "otadapter.h"
 #include "caret.h"
+#include "imagehandler.h"
 
 #include <QTextDocument>
 #include <QTextCursor>
@@ -18,6 +19,7 @@ GraphicsTextItem::GraphicsTextItem(OTAdapter* adapter, QGraphicsItem* parent)
     connect(document(), SIGNAL(contentsChange(int,int,int)), SLOT(onContentsChange(int,int,int)));
 
     m_caretIface = CaretInterface::initialize(this->document(), this);
+    m_imageHandler = ImageHandler::initialize(this->document(), this);
 }
 
 GraphicsTextItem* GraphicsTextItem::cast( QGraphicsItem* item )
@@ -58,6 +60,11 @@ void GraphicsTextItem::onContentsChange( int position, int charsRemoved, int cha
 void GraphicsTextItem::insertCaret( QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner )
 {
     m_caretIface->insertCaret(cursor, text, color, owner);
+}
+
+void GraphicsTextItem::insertImage( QTextCursor* cursor, const QString& id, const QImage& image, const QString& caption )
+{
+    m_imageHandler->insertImage( cursor, id, image, caption );
 }
 
 void GraphicsTextItem::focusInEvent( QFocusEvent* event )
