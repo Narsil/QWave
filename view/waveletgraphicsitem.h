@@ -33,6 +33,7 @@ private slots:
     void italicCicked();
     void underlineClicked();
     void strikeoutClicked();
+    void imageClicked();
 
 private:
     void updateParticipants();
@@ -46,6 +47,7 @@ private:
     ButtonGraphicsItem* m_italicButton;
     ButtonGraphicsItem* m_underlineButton;
     ButtonGraphicsItem* m_strikeoutButton;
+    ButtonGraphicsItem* m_imageButton;
 };
 
 #endif // WAVELETGRAPHICSITEM_H

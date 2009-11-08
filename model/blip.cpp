@@ -175,3 +175,18 @@ void Blip::createReplyBlip()
     wavelet()->processor()->handleSend( m1, "conversation" );
 }
 
+void Blip::insertImage(int index, const QString& attachmentId, const QString& caption)
+{
+    DocumentMutation m1;
+    m1.retain( index );
+    int remain = m_doc->count() - index;
+    StructuredDocument::AttributeList attribs;
+    attribs[ "attachment" ] = attachmentId;
+    m1.insertStart( "image", attribs );
+    m1.insertStart( "caption", StructuredDocument::AttributeList() );
+    m1.insertChars( caption );
+    m1.insertEnd();
+    m1.insertEnd();
+    m1.retain( remain );
+    wavelet()->processor()->handleSend( m1, id() );
+}

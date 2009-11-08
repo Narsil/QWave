@@ -8,6 +8,8 @@
 class GraphicsTextItem;
 class QGraphicsView;
 class QTextDocument;
+class QImage;
+class QUrl;
 
 class WaveletView;
 class BlipReplyGraphicsItem;
@@ -32,6 +34,7 @@ public:
     void setAuthorPixmap(const QPixmap& pixmap);
 
     void toggleBold();
+    void insertImage( const QUrl& url, const QImage& image, const QString& caption );
 
 protected:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * event );

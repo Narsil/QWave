@@ -62,6 +62,7 @@ public:
 
     void createFollowUpBlip();
     void createReplyBlip();
+    void insertImage(int index, const QString& attachmentId, const QString& caption);
 
 signals:
     /**

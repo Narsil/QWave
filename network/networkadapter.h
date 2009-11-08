@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QNetworkAccessManager>
 
 class QByteArray;
 class DocumentMutation;
@@ -12,7 +13,7 @@ class Wavelet;
 class WaveletDelta;
 class Participant;
 
-class NetworkAdapter : public QObject
+class NetworkAdapter : public QNetworkAccessManager
 {
     Q_OBJECT
 public:

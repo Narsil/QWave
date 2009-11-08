@@ -47,7 +47,9 @@ SOURCES += app/main.cpp \
     model/unknowndocument.cpp \
     model/blipdocument.cpp \
     view/popupdialog.cpp \
-    view/participantinfodialog.cpp
+    view/participantinfodialog.cpp \
+    view/insertimagedialog.cpp \
+    view/imagehandler.cpp
 unix:SOURCES += protocol/waveclient-rpc.pb.cc \
     protocol/common.pb.cc
 win32:SOURCES += winprotobuf/protocol/waveclient-rpc.pb.cc \
@@ -93,7 +95,9 @@ HEADERS += app/mainwindow.h \
     model/unknowndocument.h \
     model/blipdocument.h \
     view/popupdialog.h \
-    view/participantinfodialog.h
+    view/participantinfodialog.h \
+    view/insertimagedialog.h \
+    view/imagehandler.h
 unix:HEADERS += protocol/waveclient-rpc.pb.h \
     protocol/common.pb.h
 win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \

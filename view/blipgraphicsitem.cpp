@@ -20,6 +20,8 @@
 #include <QTextBlock>
 #include <QCursor>
 #include <QTextCursor>
+#include <QImage>
+#include <QUrl>
 
 BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
         : m_blip(blip), m_replyItem( 0 ), m_view(view), m_lastWidth(width)
@@ -38,18 +40,8 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
     // Show the contents of the document
     m_adapter->setGraphicsText();
 
-//    m_caretIface = CaretInterface::initialize(document(), this);
-    /*
-    QTextCursor cursor( document()->lastBlock() );
-    cursor.movePosition(QTextCursor::EndOfBlock);
-    m_caretIface->insertCaret(&cursor, "ulya", Qt::red);
-    */
-
     m_lastTextRect = m_text->boundingRect();
     QObject::connect(m_text->document(), SIGNAL(contentsChanged()), SLOT(onContentsChanged()));
-
-//    if ( blip->isRootBlip() )
-//        titleChanged( m_text->document()->begin().text().mid( m_text->forbiddenTextRange() ) );
 }
 
 QTextDocument* BlipGraphicsItem::document()
@@ -211,6 +203,12 @@ void BlipGraphicsItem::focusInEvent()
     m_view->focusInEvent( this );
 }
 
+void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const QString& caption )
+{
+    QTextCursor cursor( m_text->textCursor() );
+    m_text->insertImage( &cursor, "TODO", image, caption );
+}
+
 /****************************************************************************
  *
  * BlipReplyGraphicsItem
@@ -268,15 +266,8 @@ QPixmap* BlipReplyGraphicsItem::pixmap()
 
 void BlipReplyGraphicsItem::mousePressEvent ( QGraphicsSceneMouseEvent* )
 {
-
     if ( ((BlipGraphicsItem*)parentItem())->blip()->isLastBlipInThread() )
-    {
-        qDebug("FOLLOWUP");
         ((BlipGraphicsItem*)parentItem())->blip()->createFollowUpBlip();
-    }
     else
-    {
-        qDebug("REPLY");
         ((BlipGraphicsItem*)parentItem())->blip()->createReplyBlip();
-    }
 }

@@ -5,6 +5,8 @@
 
 class OTAdapter;
 class CaretInterface;
+class ImageHandler;
+class QImage;
 
 class GraphicsTextItem : public QGraphicsTextItem
 {
@@ -16,6 +18,7 @@ public:
     int forbiddenTextRange() const { return m_forbiddenTextRange; }
 
     void insertCaret( QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner );
+    void insertImage( QTextCursor* cursor, const QString& id, const QImage& image, const QString& caption );
 
     static GraphicsTextItem* cast( QGraphicsItem* item );
 
@@ -36,6 +39,7 @@ private:
     int m_forbiddenTextRange;
     OTAdapter* m_adapter;
     CaretInterface* m_caretIface;
+    ImageHandler* m_imageHandler;
 };
 
 #endif // GRAPHICSTEXTITEM_H
