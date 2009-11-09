@@ -50,7 +50,7 @@ void ImageHandler::insertImage(QTextCursor* cursor, const QString& id, const QIm
         painter.drawPixmap( 6 + image.width(), 0, m_rightPixmap, 0, 0, 15, size.height() );
         painter.drawImage( 6, 6, image );
         painter.setFont(m_font);
-        painter.drawText( 6, size.height() - 4, caption );
+        painter.drawText( 6 + (image.width() - s.width()) / 2, size.height() - 4, caption );
         painter.setPen( QPen( QColor(221,221,221)) );
         painter.drawLine( 0, size.height() - 1, 6 + image.width() + 6, size.height() - 1);
     }

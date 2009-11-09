@@ -34,6 +34,7 @@ public:
     Environment* environment() const;
     OTProcessor* processor() const { return m_processor; }
     QUrl url() const;
+    Attachment* attachment( const QString& id ) const;
 
     void addParticipant( Participant* participant);
     void removeParticipant( Participant* participant);

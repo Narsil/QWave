@@ -12,6 +12,7 @@
 #include "model/waveletdelta.h"
 #include "model/participant.h"
 #include "model/contacts.h"
+#include "model/attachment.h"
 #include "caret.h"
 
 #include <QStack>
@@ -30,6 +31,7 @@ OTAdapter::OTAdapter(BlipGraphicsItem* parent )
     connect( blip()->document(), SIGNAL(insertedText(int,QString)), SLOT(insertText(int,QString)));
     connect( blip()->document(), SIGNAL(mutationStart()), SLOT(mutationStart()));
     connect( blip()->document(), SIGNAL(mutationEnd()), SLOT(mutationEnd()));
+    connect( blip()->document(), SIGNAL(insertImage(int,QString,QImage,QString)), SLOT(insertImage(int,QString,QImage,QString)));
     connect( blip()->document(), SIGNAL(setCursor(int,QString)), SLOT(setCursor(int,QString)));
 }
 
@@ -324,6 +326,7 @@ void OTAdapter::setGraphicsText()
     QStack<int> stack;
     stack.push(0);
     bool isFirstLine = true;
+    QString attachmentId;
 
     StructuredDocument* doc = blip()->document();
     doc->print_();
@@ -352,7 +355,7 @@ void OTAdapter::setGraphicsText()
         switch( doc->typeAt(i) )
         {
             case StructuredDocument::Char:
-                if ( stack.top() == 1 )
+                if ( stack.top() == 1 || stack.top() == 5 )
                     text += doc->charAt(i);
                 break;
             case StructuredDocument::Start:
@@ -375,9 +378,23 @@ void OTAdapter::setGraphicsText()
                         isFirstLine = false;
                     }
                     else if ( key == "image" )
+                    {
+                        if ( text != "" )
+                        {
+                            cursor.insertText(text, format);
+                            text = "";
+                        }
+                        StructuredDocument::AttributeList attribs = doc->attributesAt(i);
+                        attachmentId = attribs["attachment"];
                         stack.push(4);
-                    else
+                    }
+                    else if ( key == "caption" )
+                    {
+                        text = "";
                         stack.push(5);
+                    }
+                    else
+                        stack.push(6);
                 }
                 break;
             case StructuredDocument::End:
@@ -391,6 +408,15 @@ void OTAdapter::setGraphicsText()
                 if ( t == 1 && text != "" )
                 {
                     cursor.insertText(text, format);
+                    text = "";
+                }
+                else if ( t == 4 )
+                {
+                    Attachment* attachment = blipItem()->blip()->wavelet()->attachment(attachmentId);
+                    if ( attachment )
+                        textItem()->insertImage( &cursor, attachmentId, attachment->thumbnail(), text );
+                    else
+                        textItem()->insertImage( &cursor, attachmentId, QImage(), text );
                     text = "";
                 }
                 break;
@@ -575,6 +601,17 @@ void OTAdapter::setCursor(int inlinePos, const QString& author)
     QTextDocument* doc = textItem()->document();
     c->m_textCursor = QTextCursor(doc);
     c->m_textCursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
+}
+
+void OTAdapter::insertImage( int inlinePos, const QString& attachmentId, const QImage& image, const QString& caption )
+{
+    if ( m_blockUpdate )
+        return;
+
+    QTextDocument* doc = textItem()->document();
+    QTextCursor cursor(doc);
+    cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
+    textItem()->insertImage( &cursor, attachmentId, image, caption);
 }
 
 void OTAdapter::mutationEnd()

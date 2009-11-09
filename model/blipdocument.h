@@ -5,13 +5,17 @@
 #include <QStack>
 
 class DocumentMutation;
+class Blip;
+class QImage;
 
 class BlipDocument : public StructuredDocument
 {
     Q_OBJECT
 public:
-    BlipDocument(QObject* parent = 0);
+    BlipDocument(Blip* parent);
     BlipDocument( const StructuredDocument& doc);
+
+    Blip* blip() const { return (Blip*)parent(); }
 
 protected:
     virtual void onMutationStart(const QString& author);
@@ -33,6 +37,7 @@ signals:
     void deletedText( int pos, const QString& text );
     void deletedLineBreak( int pos);
     void insertedLineBreak(int pos);
+    void insertImage( int pos, const QString& attachmentId, const QImage& image, const QString& caption );
     void setCursor(int pos, const QString& author);
     void mutationEnd();
 
@@ -43,6 +48,10 @@ private:
     QStack<QString> m_stack;
     QString m_currentAuthor;
     int m_cursorpos;
+    bool m_inCaption;
+    // bool m_captionChanged;
+    QString m_caption;
+    QString m_attachmentId;
 };
 
 #endif // BLIPDOCUMENT_H

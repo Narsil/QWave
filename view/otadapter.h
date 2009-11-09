@@ -68,6 +68,7 @@ private slots:
     void deleteLineBreak(int inlinePos);
     void insertLineBreak(int inlinePos);
     void setCursor(int inlinePos, const QString& author);
+    void insertImage( int inlinePos, const QString& attachmentId, const QImage& image, const QString& caption );
     void mutationEnd();
     void removeOldCursors();
 

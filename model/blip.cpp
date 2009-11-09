@@ -39,6 +39,8 @@ void Blip::setup()
      setObjectName(m_id);
      if ( !m_doc )
         m_doc = new BlipDocument(this);
+     else
+        m_doc->setParent(this);
 }
 
 BlipThread* Blip::parentThread() const
