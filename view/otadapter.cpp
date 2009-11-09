@@ -448,7 +448,19 @@ int OTAdapter::mapToBlip(int position)
             blockCount++;
         else if ( ch == QChar::ObjectReplacementCharacter )
         {
-             // Do nothing by intention because this is a caret.
+            bool iscaret = false;
+            foreach( Cursor* cursor, m_cursors.values() )
+            {
+                if ( cursor->m_textCursor.position() == i )
+                {
+                    // Do nothing by intention because this is a caret.
+                    iscaret = true;
+                    break;
+                }
+            }
+
+            if ( !iscaret )
+                charIndex++;
         }
         else
             charIndex++;
@@ -489,7 +501,11 @@ int OTAdapter::mapToBlip(int position)
                         stack.push(3);
                     }
                     else if ( key == "image" )
+                    {
+                        if ( linesSeen - 1 == blockCount && charsSeen == charIndex )
+                            return i;
                         stack.push(4);
+                    }
                     else
                         stack.push(5);
                 }
