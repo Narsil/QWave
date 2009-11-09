@@ -25,6 +25,7 @@ public:
     QString serverName() const { return m_serverName; }
     quint32 serverPort() const { return m_serverPort; }
     bool isOnline() const { return m_isOnline; }
+    bool hasConnectionError() const { return m_hasConnectionError; }
 
     bool openWavelet(Wavelet* wavelet);
     void submit(const WaveletDelta& delta, Wavelet* wavelet);
@@ -44,6 +45,7 @@ private:
     RPC* m_rpc;
     QList<QString> m_openWaves;
     bool m_isOnline;
+    bool m_hasConnectionError;
     QString m_serverName;
     quint32 m_serverPort;
 };

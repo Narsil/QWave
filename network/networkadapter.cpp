@@ -211,7 +211,7 @@ WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
 }
 
 NetworkAdapter::NetworkAdapter(QObject* parent)
-        : QNetworkAccessManager( parent ), m_rpc(0), m_isOnline(false)
+        : QNetworkAccessManager( parent ), m_rpc(0), m_isOnline(false), m_hasConnectionError(false)
 {
 }
 
@@ -385,6 +385,7 @@ void NetworkAdapter::getOnline()
     emit connectionStatus( tr("Online") );
 
     m_isOnline = true;
+    m_hasConnectionError = false;
     sendOpenWave("!indexwave", "");
 }
 
@@ -398,4 +399,5 @@ void NetworkAdapter::getOffline()
 void NetworkAdapter::networkError()
 {
     emit connectionStatus( tr("Connection to server is broken") );
+    m_hasConnectionError = true;
 }
