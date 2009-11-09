@@ -165,7 +165,7 @@ void WaveletGraphicsItem::imageClicked()
     InsertImageDialog dlg( m_wavelet->environment(), m_view->topLevelWidget() );
     if ( dlg.exec() == QDialog::Accepted )
     {
-        item->insertImage( dlg.url(), dlg.thumbnail(), dlg.caption() );
+        item->insertImage( dlg.url(), dlg.image(), dlg.thumbnail(), dlg.caption() );
 //        // TODO
 //        int index = 0;
 //

@@ -34,7 +34,7 @@ public:
     void setAuthorPixmap(const QPixmap& pixmap);
 
     void toggleBold();
-    void insertImage( const QUrl& url, const QImage& image, const QString& caption );
+    void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
 
 protected:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * event );
