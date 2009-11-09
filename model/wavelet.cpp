@@ -10,6 +10,7 @@
 #include "app/environment.h"
 #include "network/networkadapter.h"
 #include "unknowndocument.h"
+#include "attachment.h"
 #include <QStack>
 #include <QtDebug>
 #include <QImage>
@@ -249,6 +250,16 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
         Blip* b = blip(documentId);
         if ( b )
             b->receive(mutation, author);
+        else if ( documentId.left(2) == "a+" )
+        {
+            Attachment* a = m_attachments[documentId];
+            if ( !a )
+            {
+                a = new Attachment(this);
+                m_attachments[documentId] = a;
+            }
+            a->apply(mutation, author);
+        }
         else
         {
             UnknownDocument* d = m_unknownDocs[documentId];
@@ -262,7 +273,7 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
     }
 }
 
-QString Wavelet::insertImageAttachment(const QUrl& url, int width, int height, const QImage& thumbnail)
+QString Wavelet::insertImageAttachment(const QUrl& url, const QImage& image, const QImage& thumbnail)
 {
     QString rand;
     rand.setNum( qrand() );
@@ -281,12 +292,12 @@ QString Wavelet::insertImageAttachment(const QUrl& url, int width, int height, c
     attribs.clear();
     attribs["width"] = QString::number(thumbnail.width());
     attribs["height"] = QString::number(thumbnail.height());
-    m1.insertStart("thumbnail");
+    m1.insertStart("thumbnail", attribs);
     m1.insertChars( QString( ba.toBase64() ) );
     m1.insertEnd();
     attribs.clear();
-    attribs["width"] = width;
-    attribs["height"] = height;
+    attribs["width"] = QString::number(image.width());
+    attribs["height"] = QString::number(image.height());
     m1.insertStart("image", attribs);
     m1.insertEnd();
     m1.insertEnd();

@@ -15,6 +15,7 @@ class Environment;
 class OTProcessor;
 class DocumentMutation;
 class UnknownDocument;
+class Attachment;
 class QImage;
 
 class Wavelet : public QObject
@@ -49,7 +50,7 @@ public:
       *
       * @return the generated attachment ID.
       */
-    QString insertImageAttachment(const QUrl& url, int width, int height, const QImage& thumbnail);
+    QString insertImageAttachment(const QUrl& url, const QImage& image, const QImage& thumbnail);
 
 signals:
     /**
@@ -102,6 +103,7 @@ private:
     QList<Participant*> m_participants;
     OTProcessor* m_processor;
     QHash<QString, UnknownDocument*> m_unknownDocs;
+    QHash<QString, Attachment*> m_attachments;
     QList<Blip*> m_rootBlips;
 };
 

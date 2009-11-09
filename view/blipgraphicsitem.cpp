@@ -203,10 +203,19 @@ void BlipGraphicsItem::focusInEvent()
     m_view->focusInEvent( this );
 }
 
-void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const QString& caption )
+void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption )
 {
+    // Create an attachment
+    QString id = blip()->wavelet()->insertImageAttachment( url, image, thumbnail );
+    // Insert the image tag
+    int index = m_adapter->mapToBlip( m_text->textCursor().position() );
+    blip()->insertImage( index, id, caption );
+
+    // Display the image in the QTextDocument
+    m_adapter->suspendContentsChange(true);
     QTextCursor cursor( m_text->textCursor() );
-    m_text->insertImage( &cursor, "TODO", image, caption );
+    m_text->insertImage( &cursor, id, thumbnail, caption );
+    m_adapter->suspendContentsChange(false);
 }
 
 /****************************************************************************
