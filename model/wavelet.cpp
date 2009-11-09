@@ -305,3 +305,8 @@ QString Wavelet::insertImageAttachment(const QUrl& url, const QImage& image, con
 
     return rand;
 }
+
+Attachment* Wavelet::attachment( const QString& id ) const
+{
+    return m_attachments[id];
+}

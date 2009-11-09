@@ -1,8 +1,11 @@
 #include "blipdocument.h"
+#include "blip.h"
 #include "documentmutation.h"
+#include "attachment.h"
+#include "wavelet.h"
 #include <QStack>
 
-BlipDocument::BlipDocument(QObject* parent)
+BlipDocument::BlipDocument(Blip* parent)
         : StructuredDocument( parent )
 
 {
@@ -21,6 +24,7 @@ void BlipDocument::onMutationStart(const QString& author)
     m_pos = -1;
     m_stack.clear();
     m_cursorpos = -1;
+    m_inCaption = false;
 
     emit mutationStart();
 }
@@ -28,7 +32,11 @@ void BlipDocument::onMutationStart(const QString& author)
 void BlipDocument::onRetainChar(int index)
 {
     Q_UNUSED(index);
-    if ( m_inBody && m_afterLine )
+    if ( m_inCaption )
+    {
+        m_caption += charAt(index);
+    }
+    else if ( m_inBody && m_afterLine )
         m_pos++;
 }
 
@@ -42,6 +50,7 @@ void BlipDocument::onRetainElementStart(int index)
 
 void BlipDocument::onRetainElementEnd(int index)
 {
+    Q_UNUSED(index);
     QString tag = m_stack.pop();
     if ( m_inBody )
     {
@@ -80,7 +89,11 @@ void BlipDocument::onDeleteElementEnd(int index)
 void BlipDocument::onInsertChars(int index, const QString& chars)
 {
     Q_UNUSED(index);
-    if ( m_inBody && m_afterLine )
+    if ( m_inCaption )
+    {
+        m_caption += chars;
+    }
+    else if ( m_inBody && m_afterLine )
     {
         emit insertedText( m_pos, chars );
         m_pos += chars.length();
@@ -101,10 +114,21 @@ void BlipDocument::onInsertElementStart(int index)
     {
         m_inBody = true;
     }
+    else if ( tag == "image" )
+    {
+        AttributeList attribs = attributesAt(index);
+        m_attachmentId = attribs["attachment"];
+    }
+    else if ( tag == "caption" )
+    {
+        m_inCaption = true;
+        m_caption = "";
+    }
 }
 
 void BlipDocument::onInsertElementEnd(int index)
 {
+    Q_UNUSED(index);
     QString tag = m_stack.pop();
     if ( m_inBody && tag == "line" )
     {
@@ -118,6 +142,18 @@ void BlipDocument::onInsertElementEnd(int index)
         m_afterLine = true;
         m_pos++;
         m_cursorpos = m_pos;
+    }
+    else if ( tag == "caption" )
+    {
+        m_inCaption = false;
+    }
+    else if ( tag == "image" )
+    {
+        Attachment* attachment = blip()->wavelet()->attachment( m_attachmentId );
+        if ( attachment )
+            emit insertImage( m_pos, m_attachmentId, attachment->thumbnail(), m_caption );
+        else
+            emit insertImage( m_pos, m_attachmentId, QImage(), m_caption );
     }
 }
 
