@@ -50,10 +50,11 @@ int main(int argc, char *argv[])
     Environment* en = new Environment(profile);
         // Configure the local user
         Settings* settings = en->settings();
-        while( !settings->isConfigured() )
+        if( !settings->isConfigured() )
         {
             ServerSettingsDialog dlg(en);
-            dlg.exec();
+            if ( dlg.exec() == QDialog::Rejected )
+                return 0;
         }
 
         en->localUser()->setPixmap( QPixmap("images/user1.png") );
