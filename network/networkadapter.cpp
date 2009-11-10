@@ -39,11 +39,11 @@ void convert(protocol::ProtocolWaveletDelta* result, const WaveletDelta& delta )
             o->set_remove_participant( op.removeParticipant().toStdString() );
         if ( op.hasMutation() )
         {
-            const DocumentMutation* mutation = op.mutation();
+            const DocumentMutation& mutation = op.mutation();
             protocol::ProtocolWaveletOperation_MutateDocument* m = o->mutable_mutate_document();
             m->set_document_id( op.documentId().toStdString() );
             protocol::ProtocolDocumentOperation* mo = m->mutable_document_operation();
-            for( QList<DocumentMutation::Item>::const_iterator it = mutation->begin(); it != mutation->end(); ++it )
+            for( QList<DocumentMutation::Item>::const_iterator it = mutation.begin(); it != mutation.end(); ++it )
             {
                 protocol::ProtocolDocumentOperation_Component* comp = mo->add_component();
                 switch( (*it).type )

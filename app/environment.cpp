@@ -45,7 +45,7 @@ void Environment::removeWavelet( Wavelet* wavelet )
     m_wavelets.remove(wavelet->url().toString());
 }
 
-Wave* Environment::wave( const QString& domain, const QString& id )
+Wave* Environment::wave( const QString& domain, const QString& id ) const
 {
     return m_waves[domain + "$" + id];
 }

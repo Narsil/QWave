@@ -8,32 +8,11 @@ DocumentMutation::DocumentMutation()
 DocumentMutation::DocumentMutation(const DocumentMutation& mutation)
         : m_items( mutation.m_items )
 {
-//    // Make deep copies of the items
-//    foreach( Item item, mutation.m_items )
-//    {
-//        if ( item.endKeys )
-//            item.endKeys = new QList<QString>(*(item.endKeys));
-//        if ( item.map )
-//            item.map = new QHash<QString,QString>(*(item.map));
-//        m_items.append(item);
-//    }
 }
 
 DocumentMutation::~DocumentMutation()
 {
-//    freeItems();
 }
-
-//void DocumentMutation::freeItems()
-//{
-//    foreach( Item item, m_items )
-//    {
-//        if ( item.endKeys )
-//            delete item.endKeys;
-//        if ( item.map )
-//            delete item.map;
-//    }
-//}
 
 void DocumentMutation::insertStart(const QString& tag, const StructuredDocument::AttributeList& attributes)
 {
@@ -140,32 +119,6 @@ void DocumentMutation::clear()
 int DocumentMutation::count() const
 {
     return m_items.count();
-}
-
-void DocumentMutation::shorten( Item& item, int len ) const
-{
-    if ( len == 0 )
-        return;
-    switch( item.type )
-    {
-        case NoItem:
-        case AnnotationBoundary:
-            break;
-        case ElementStart:
-        case ElementEnd:
-        case DeleteStart:
-        case DeleteEnd:
-            item.count = 0;
-            break;
-        case InsertChars:
-        case DeleteChars:
-            item.count -= len;
-            item.text = item.text.right( item.text.length() - len );
-            break;
-        case Retain:
-           item.count -= len;
-           break;
-    }
 }
 
 DocumentMutation DocumentMutation::translate( const DocumentMutation& mutation ) const
@@ -583,18 +536,229 @@ QString DocumentMutation::mapToString(const StructuredDocument::AnnotationChange
     return result;
 }
 
-/*********************************************************************
-  *
-  * MutationDocument::Item
-  *
-  ********************************************************************/
+QPair<DocumentMutation,DocumentMutation> DocumentMutation::xform( const DocumentMutation& m1, const DocumentMutation& m2, bool* ok )
+{
+    if ( m1.isEmpty() || m2.isEmpty() )
+        return QPair<DocumentMutation,DocumentMutation>(m1,m2);
 
-//DocumentMutation::Item DocumentMutation::Item::deepCopy()
-//{
-//    Item result = *this;
-//    if ( result.endKeys )
-//        result.endKeys = new QList<QString>(*(endKeys));
-//    if ( result.map )
-//        result.map = new QHash<QString,QString>(*(map));
-//    return result;
-//}
+    DocumentMutation r1;
+    DocumentMutation r2;
+
+    QList<Item>::const_iterator it1 = m1.begin();
+    QList<Item>::const_iterator it2 = m2.begin();
+    Item item1 = *it1;
+    Item item2 = *it2;
+    while( it1 != m1.end() || it2 != m2.end() )
+    {
+        if ( it1 == m1.end() )
+        {
+            r2.m_items.append( item2 );
+            it2++;
+            item2 = *it2;
+            continue;
+        }
+        if ( it2 == m2.end() )
+        {
+            r1.m_items.append( item2 );
+            it1++;
+            item1 = *it1;
+            continue;
+        }
+
+        bool next1 = false;
+        bool next2 = false;
+        switch( item1.type )
+        {
+            case ElementStart:
+                r1.m_items.append(item1);
+                r2.retain( 1 );
+                next1 = true;
+                break;
+            case ElementEnd:
+                r1.m_items.append(item1);
+                r2.retain( 1 );
+                next1 = true;
+                break;
+            case InsertChars:
+                r1.m_items.append(item1);
+                r2.retain( item1.text.length() );
+                next1 = true;
+                break;
+            case Retain:
+                switch( item2.type )
+                {
+                    case ElementStart:
+                    case ElementEnd:
+                        r1.retain(1);
+                        r2.m_items.append(item2);
+                        next2 = true;
+                        break;
+                    case InsertChars:
+                        r1.retain( item2.text.length() );
+                        r2.m_items.append(item2);
+                        next2 = true;
+                        break;
+                    case Retain:
+                        {
+                            int len = qMin(item1.count, item2.count );
+                            r1.retain(len);
+                            r2.retain(len);
+                            if ( !shorten( item1, len ) )
+                                next1 = true;
+                            if ( !shorten( item2, len ) )
+                                next2 = true;
+                        }
+                        break;
+                    case DeleteStart:
+                    case DeleteEnd:
+                        if ( !shorten( item1, 1 ) )
+                                next1++;
+                        r2.m_items.append(item2);
+                        break;
+                    case DeleteChars:
+                        {
+                            int len = qMin(item1.count, item2.text.length() );
+                            if ( !shorten( item1, len ) )
+                                next1 = true;
+                            r2.deleteChars( item2.text.left(len) );
+                            if ( !shorten( item2, len ) )
+                                next2 = true;
+                        }
+                    case AnnotationBoundary:
+                        r2.m_items.append(item2);
+                        next2 = true;
+                }
+                break;
+            case DeleteStart:
+            case DeleteEnd:
+                switch( item2.type )
+                {
+                    case ElementStart:
+                    case ElementEnd:
+                        r1.retain(1);
+                        r2.m_items.append(item2);
+                        next2 = true;
+                        break;
+                    case InsertChars:
+                        r1.retain(item2.text.length());
+                        r2.m_items.append(item2);
+                        next2 = true;
+                        break;
+                    case DeleteStart:
+                    case DeleteEnd:
+                    case DeleteChars:
+                        if ( item1.type != item2.type )
+                        {
+                            qDebug("The two mutations are not compatible");
+                            *ok = false;
+                            return QPair<DocumentMutation,DocumentMutation>(m1,m2);
+                        }
+                        next1 = true;
+                        next2 = true;
+                        break;
+                    case Retain:
+                        r1.m_items.append(item1);
+                        next1 = true;
+                        if ( !shorten( item2, 1 ) )
+                            next2 = true;
+                        break;
+                    case AnnotationBoundary:
+                        r1.m_items.append(item1);
+                        next1 = true;
+                        break;
+                }
+                break;
+            case DeleteChars:
+                switch( item2.type )
+                {
+                    case ElementStart:
+                    case ElementEnd:
+                        r1.retain(1);
+                        r2.m_items.append(item2);
+                        next2 = true;
+                        break;
+                    case InsertChars:
+                        r1.retain(item2.text.length());
+                        r2.m_items.append(item2);
+                        next2 = true;
+                        break;
+                    case DeleteStart:
+                    case DeleteEnd:
+                        qDebug("The two mutations are not compatible");
+                        *ok = false;
+                        return QPair<DocumentMutation,DocumentMutation>(m1,m2);
+                    case DeleteChars:
+                        {
+                            int len = qMin( item1.text.length(), item2.text.length() );
+                            if ( !shorten( item1, len ) )
+                                next1 = true;
+                            if ( !shorten( item2, len ) )
+                                next2 = true;
+                        }
+                        break;
+                    case Retain:
+                        {
+                            int len = qMin( item1.text.length(), item2.count );
+                            r1.deleteChars( item1.text.left(len) );
+                            if ( !shorten( item1, len ) )
+                                next1 = true;
+                            if ( !shorten( item2, len ) )
+                                next2 = true;
+                        }
+                        break;
+                    case AnnotationBoundary:
+                        r1.m_items.append(item1);
+                        next1 = true;
+                        break;
+                }
+                break;
+            case AnnotationBoundary:
+                // TODO
+                break;
+        }
+
+        if ( next1 )
+        {
+            it1++;
+            if ( it1 != m1.end() )
+                item1 = *it1;
+        }
+        if ( next2 )
+        {
+            it2++;
+            if ( it2 != m2.end() )
+                item2 = *it2;
+        }
+    }
+
+    *ok = true;
+    return QPair<DocumentMutation,DocumentMutation>(r1, r2);
+}
+
+bool DocumentMutation::shorten( Item& item, int len )
+{
+    if ( len == 0 )
+        return false;
+    switch( item.type )
+    {
+        case NoItem:
+        case AnnotationBoundary:            
+        case ElementStart:
+        case ElementEnd:
+        case DeleteStart:
+        case DeleteEnd:
+        case InsertChars:
+            Q_ASSERT(false);
+            return false;
+        case DeleteChars:
+            item.count -= len;
+            item.text = item.text.right( item.text.length() - len );
+            return item.count > 0;
+        case Retain:
+            item.count -= len;
+            return item.count > 0;
+    }
+
+    Q_ASSERT(false);
+    return true;
+}

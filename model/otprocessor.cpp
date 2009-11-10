@@ -18,6 +18,7 @@ OTProcessor::OTProcessor(Wavelet* wavelet)
 
 void OTProcessor::setup()
 {
+    m_suspendSending = false;
     m_submitPending = false;
     m_serverMsgCount = 0;
     m_clientMsgCount = 0;
@@ -47,6 +48,8 @@ void OTProcessor::submitNext()
         return;
     Q_ASSERT( !m_submitPending );
     if (m_outgoingDeltas.length() == 0)
+        return;
+    if (m_suspendSending )
         return;
 
     m_submitPending = true;
@@ -85,7 +88,7 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     foreach( WaveletDeltaOperation op, outgoing.operations() )
     {
         if ( op.hasMutation() )
-            emit documentMutation(op.documentId(), *(op.mutation()), outgoing.author());
+            emit documentMutation(op.documentId(), op.mutation(), outgoing.author());
         if ( op.hasAddParticipant() )
             emit participantAdd( op.addParticipant() );
         if ( op.hasRemoveParticipant() )
@@ -96,7 +99,6 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     m_clientMsgCount++;
 
     // Send it to the server via the network
-    // m_environment->networkAdapter()->sendDelta(outgoing, m_wavelet);
     if ( !m_submitPending )
         submitNext();
 }
@@ -133,9 +135,17 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming )
         {
             for( int s = 0; s < msg.operations().count(); ++s )
             {
-                WaveletDeltaOperation sop = msg.operations()[s].translate(m.operations()[c]);
-                m.operations()[c] = m.operations()[c].translate(msg.operations()[s]);
-                msg.operations()[s] = sop;
+                bool ok;
+                QPair<WaveletDeltaOperation,WaveletDeltaOperation> pair = WaveletDeltaOperation::xform(msg.operations()[s], m.operations()[c], &ok);
+                if ( !ok )
+                {
+                    qDebug("This wave is blown up");
+                    // TODO: Good error handling
+                    Q_ASSERT(false);
+                    return;
+                }
+                msg.operations()[s] = pair.first;
+                m.operations()[c] = pair.second;
             }
         }
     }
@@ -145,11 +155,20 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming )
     {
         const WaveletDeltaOperation sop = msg.operations()[s];
         if ( sop.hasMutation() )
-            emit documentMutation(sop.documentId(), *(sop.mutation()), msg.author());
+            emit documentMutation(sop.documentId(), sop.mutation(), msg.author());
         if ( sop.hasAddParticipant() )
             emit participantAdd( sop.addParticipant() );
         if ( sop.hasRemoveParticipant() )
             emit participantRemove( sop.removeParticipant() );
     }
     m_serverMsgCount++;
+}
+
+void OTProcessor::setSuspendSending(bool suspend)
+{
+    if ( m_suspendSending == suspend )
+        return;
+    m_suspendSending = suspend;
+    if ( !m_suspendSending && !m_submitPending )
+        submitNext();
 }

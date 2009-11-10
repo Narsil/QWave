@@ -1,62 +1,86 @@
 #include "waveletdeltaoperation.h"
-#include "documentmutation.h"
 
 WaveletDeltaOperation::WaveletDeltaOperation()
-        : m_mutation(0)
 {
 }
 
 WaveletDeltaOperation::WaveletDeltaOperation(const WaveletDeltaOperation& delta)
         : m_documentId(delta.m_documentId),
-          m_mutation(delta.m_mutation ? new DocumentMutation(*(delta.m_mutation)) : 0),
+          m_mutation(delta.m_mutation),
           m_addParticipant(delta.m_addParticipant),
           m_removeParticipant(delta.m_removeParticipant)
 {
 }
 
-WaveletDeltaOperation::~WaveletDeltaOperation()
-{
-    if ( m_mutation != 0 )
-        delete m_mutation;
-}
-
-DocumentMutation* WaveletDeltaOperation::createMutation()
-{
-    if ( m_mutation != 0 )
-        delete m_mutation;
-    m_mutation = new DocumentMutation;
-    return m_mutation;
-}
-
 void WaveletDeltaOperation::setMutation( const DocumentMutation& mutation )
 {
-    if ( m_mutation != 0 )
-        delete m_mutation;
-    m_mutation = new DocumentMutation(mutation);
+    m_mutation = mutation;
 }
 
 bool WaveletDeltaOperation::isNull() const
 {
-    return m_mutation == 0 && m_addParticipant.isEmpty() && m_removeParticipant.isEmpty();
+    return m_mutation.isEmpty() && m_addParticipant.isEmpty() && m_removeParticipant.isEmpty();
 }
 
-WaveletDeltaOperation WaveletDeltaOperation::translate(const WaveletDeltaOperation& delta) const
+//WaveletDeltaOperation WaveletDeltaOperation::translate(const WaveletDeltaOperation& delta) const
+//{
+//    WaveletDeltaOperation result(*this);
+//    if ( hasAddParticipant() )
+//    {
+//        if ( delta.hasAddParticipant() && delta.addParticipant() == m_addParticipant )
+//            result.clearAddParticipant();
+//    }
+//    if ( hasRemoveParticipant() )
+//    {
+//        if ( delta.hasRemoveParticipant() && delta.removeParticipant() == m_removeParticipant )
+//            result.clearRemoveParticipant();
+//    }
+//    if ( !m_mutation.isEmpty() )
+//    {
+//        if ( !delta.mutation().isEmpty() )
+//            result.setMutation( m_mutation.translate(delta.mutation()));
+//    }
+//    return result;
+//}
+
+QPair<WaveletDeltaOperation,WaveletDeltaOperation> WaveletDeltaOperation::xform( const WaveletDeltaOperation& o1, const WaveletDeltaOperation& o2, bool* ok )
 {
-    WaveletDeltaOperation result(*this);
-    if ( hasAddParticipant() )
+    WaveletDeltaOperation r1;
+    r1.setDocumentId( o1.documentId() );
+    WaveletDeltaOperation r2;
+    r2.setDocumentId( o2.documentId() );
+    *ok = true;
+
+    if ( o1.hasAddParticipant() )
     {
-        if ( delta.hasAddParticipant() && delta.addParticipant() == m_addParticipant )
-            result.clearAddParticipant();
+        if ( !o2.hasAddParticipant() || o2.addParticipant() != o1.addParticipant() )
+            r1.setAddParticipant( o1.addParticipant() );
     }
-    if ( hasRemoveParticipant() )
+    if ( o2.hasAddParticipant() )
     {
-        if ( delta.hasRemoveParticipant() && delta.removeParticipant() == m_removeParticipant )
-            result.clearRemoveParticipant();
+        if ( !o1.hasAddParticipant() || o1.addParticipant() != o2.addParticipant() )
+            r2.setAddParticipant( o2.addParticipant() );
     }
-    if ( mutation() != 0 )
+    if ( o1.hasRemoveParticipant() )
     {
-        if ( delta.mutation() != 0 )
-            result.setMutation( mutation()->translate(*(delta.mutation())) );
+        if ( !o2.hasRemoveParticipant() || o2.removeParticipant() != o1.removeParticipant() )
+            r1.setRemoveParticipant( o1.removeParticipant() );
     }
-    return result;
+    if ( o2.hasRemoveParticipant() )
+    {
+        if ( !o1.hasRemoveParticipant() || o1.removeParticipant() != o2.removeParticipant() )
+            r2.setRemoveParticipant( o2.removeParticipant() );
+    }
+    if ( o1.hasMutation() && !o2.hasMutation() )
+        r1.setMutation(o1.mutation());
+    else if ( o2.hasMutation() && !o1.hasMutation() )
+        r2.setMutation(o2.mutation());
+    else
+    {
+        QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( o1.mutation(), o2.mutation(), ok );
+        r1.setMutation(pair.first);
+        r2.setMutation(pair.second);
+    }
+
+    return QPair<WaveletDeltaOperation,WaveletDeltaOperation>(r1,r2);
 }

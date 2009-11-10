@@ -226,7 +226,12 @@ QString StructuredDocument::toPlainText() const
     return result;
 }    
 
-void StructuredDocument::print_()
+void StructuredDocument::print_() const
+{
+    qDebug() << toString();
+}
+
+QString StructuredDocument::toString() const
 {
     QString result = "";
 
@@ -269,7 +274,7 @@ void StructuredDocument::print_()
                 {
                     result += "**** Too many closing tags";
                     qDebug() << result;
-                    return;
+                    return result;
                 }
                 QString tag = stack.pop();
                 result += "</" + tag + ">";
@@ -281,7 +286,7 @@ void StructuredDocument::print_()
         }
     }
 
-    qDebug() << result;
+    return result;
 }
 
 void StructuredDocument::onMutationStart(const QString& author)
