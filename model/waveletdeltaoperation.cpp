@@ -22,27 +22,6 @@ bool WaveletDeltaOperation::isNull() const
     return m_mutation.isEmpty() && m_addParticipant.isEmpty() && m_removeParticipant.isEmpty();
 }
 
-//WaveletDeltaOperation WaveletDeltaOperation::translate(const WaveletDeltaOperation& delta) const
-//{
-//    WaveletDeltaOperation result(*this);
-//    if ( hasAddParticipant() )
-//    {
-//        if ( delta.hasAddParticipant() && delta.addParticipant() == m_addParticipant )
-//            result.clearAddParticipant();
-//    }
-//    if ( hasRemoveParticipant() )
-//    {
-//        if ( delta.hasRemoveParticipant() && delta.removeParticipant() == m_removeParticipant )
-//            result.clearRemoveParticipant();
-//    }
-//    if ( !m_mutation.isEmpty() )
-//    {
-//        if ( !delta.mutation().isEmpty() )
-//            result.setMutation( m_mutation.translate(delta.mutation()));
-//    }
-//    return result;
-//}
-
 QPair<WaveletDeltaOperation,WaveletDeltaOperation> WaveletDeltaOperation::xform( const WaveletDeltaOperation& o1, const WaveletDeltaOperation& o2, bool* ok )
 {
     WaveletDeltaOperation r1;
