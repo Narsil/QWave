@@ -121,354 +121,170 @@ int DocumentMutation::count() const
     return m_items.count();
 }
 
-DocumentMutation DocumentMutation::translate( const DocumentMutation& mutation ) const
-{
-    DocumentMutation result;
-
-    if ( mutation.count() == 0 )
-        return *this;
-    if ( count() == 0 )
-        return mutation;
-
-    QList<Item>::const_iterator it1 = begin();
-    QList<Item>::const_iterator it2 = mutation.begin();
-    Item item1 = *it1;
-    Item item2 = *it2;
-    bool inDeleteChars = false;
-    int inDeleteTag = 0;
-    while( it1 != end() || it2 != mutation.end() )
-    {
-        bool next1 = false;
-        bool next2 = false;
-        switch( item1.type )
-        {
-            case ElementStart:
-            case ElementEnd:
-                result.retain(1);
-                next1 = true;
-                break;
-            case InsertChars:
-                result.retain(item1.count);
-                next1 = true;
-                break;
-            case AnnotationBoundary:
-                next1 = true;
-                break;
-            case NoItem:
-                result.m_items.append(item2);
-                next2 = true;
-                break;
-            case DeleteStart:
-                if ( item2.type == DeleteStart )
-                {
-                    next1 = true;
-                    next2 = true;
-                }
-                if ( item2.type == Retain )
-                {
-                    next1 = true;
-                    shorten(item2, 1);
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else if ( inDeleteTag > 0 && ( item2.type == ElementStart || item2.type == ElementEnd || item2.type == InsertChars ) )
-                {
-                    next2 = true;
-                }
-                else if ( item2.type == ElementStart || item2.type == ElementEnd || item2.type == InsertChars || item2.type == AnnotationBoundary )
-                {
-                    result.m_items.append(item2);
-                    next2 = true;
-                    break;
-                }
-                else if ( item2.type == NoItem )
-                    next1 = true;
-                else
-                    qDebug("Ooooops");
-                inDeleteTag++;
-                break;
-            case DeleteEnd:
-                if ( item2.type == DeleteEnd )
-                {
-                    next1 = true;
-                    next2 = true;
-                }
-                else if ( item2.type == Retain )
-                {
-                    next1 = true;
-                    shorten(item2, 1);
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else if ( item2.type == AnnotationBoundary )
-                {
-                    result.m_items.append(item2);
-                    next2 = true;
-                    break;
-                }
-                else
-                    next2 = true;
-                inDeleteTag--;
-                break;
-            case DeleteChars:
-                if ( item2.type == Retain || item2.type == DeleteChars )
-                {
-                    int len = qMin(item1.count, item2.count);
-                    shorten(item2, len);
-                    shorten(item1, len);
-                    if ( item1.count == 0 )
-                    {
-                        next1 = true;
-                        inDeleteChars = false;
-                    }
-                    else
-                        inDeleteChars = true;
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else if ( inDeleteChars && ( item2.type == ElementStart || item2.type == ElementEnd || item2.type == InsertChars ) )
-                {
-                    next2 = true;
-                }
-                else if ( item2.type == ElementStart || item2.type == ElementEnd || item2.type == InsertChars || item2.type == AnnotationBoundary )
-                {
-                    result.m_items.append(item2);
-                    next2 = true;
-                }
-                else if ( item2.type == NoItem )
-                    next1 = true;
-                else
-                    qDebug("Ooooops");
-                break;
-            case Retain:
-                if ( item2.type == Retain )
-                {
-                    int len = qMin(item1.count, item2.count);
-                    result.retain(len);
-                    shorten(item2, len);
-                    shorten(item1, len);
-                    if ( item1.count == 0 )
-                        next1 = true;
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else if ( item2.type == DeleteChars )
-                {
-                    int len = qMin(item1.count, item2.count);
-                    result.deleteChars(item2.text.left(len));
-                    shorten(item2, len);
-                    shorten(item1, len);
-                    if ( item1.count == 0 )
-                        next1 = true;
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else if ( item2.type == DeleteEnd || item2.type == DeleteStart )
-                {
-                    result.m_items.append(item2);
-                    next2 = true;
-                    shorten(item1, 1);
-                    if ( item1.count == 0 )
-                        next1 = true;
-                }
-                else
-                {
-                    result.m_items.append(item2);
-                    next2 = true;
-                }
-                break;
-        }
-
-        if ( next1 )
-        {
-            it1++;
-            if ( it1 == end() )
-               item1.type = NoItem;
-            else
-               item1 = *it1;
-        }
-        if ( next2 )
-        {
-            it2++;
-            if ( it2 == mutation.end() )
-               item2.type = NoItem;
-            else
-               item2 = *it2;
-        }
-    }
-    return result;
-}
-
-DocumentMutation DocumentMutation::concat( const DocumentMutation& mutation ) const
-{
-    DocumentMutation result;
-
-    if ( mutation.count() == 0 )
-        return *this;
-    if ( count() == 0 )
-        return mutation;
-
-    QList<Item>::const_iterator it1 = begin();
-    QList<Item>::const_iterator it2 = mutation.begin();
-    Item item1 = *it1;
-    Item item2 = *it2;
-    while( it1 != end() || it2 != mutation.end() )
-    {
-        if ( item1.type == AnnotationBoundary || item2.type == NoItem )
-        {
-            result.m_items.append(item1);
-            it1++;
-            if ( it1 == end() )
-               item1.type = NoItem;
-            else
-               item1 = *it1;
-            continue;
-        }
-        if ( item2.type == AnnotationBoundary || item2.type == ElementStart || item2.type == ElementEnd || item2.type == InsertChars || item1.type == NoItem )
-        {
-            result.m_items.append(item2);
-            it2++;
-            if ( it2 == mutation.end() )
-               item2.type = NoItem;
-            else
-               item1 = *it2;
-            continue;
-        }
-
-        bool next1 = false;
-        bool next2 = false;
-        switch( item1.type )
-        {
-            case AnnotationBoundary:
-                qDebug("Oooops");
-                break;
-            case ElementStart:
-                if ( item2.type == DeleteStart )
-                {
-                    next1 = true;
-                    next2 = true;
-                }
-                else if ( item2.type == Retain )
-                {
-                    result.m_items.append(item1);
-                    shorten(item2,1);
-                    if ( item2.count == 0 )
-                        next2 = true;
-                    next1 = true;
-                }
-                else
-                    qDebug("Oooops");
-                break;
-            case ElementEnd:
-                if ( item2.type == DeleteEnd )
-                {
-                    next1 = true;
-                    next2 = true;
-                }
-                else if ( item2.type == Retain )
-                {
-                    result.m_items.append(item1);
-                    shorten(item2,1);
-                    if ( item2.count == 0 )
-                        next2 = true;
-                    next1 = true;
-                }
-                else
-                    qDebug("Oooops");
-                break;
-            case InsertChars:
-                if ( item2.type == DeleteChars )
-                {
-                    int len = qMin(item1.count, item2.count);
-                    shorten(item1, len);
-                    shorten(item2, len);
-                    if ( item1.count == 0 )
-                        next1 = true;
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else if ( item2.type == Retain )
-                {
-                    int len = qMin(item1.count, item2.count);
-                    result.insertChars(item1.text.left(len));
-                    shorten(item1, len);
-                    shorten(item2, len);
-                    if ( item1.count == 0 )
-                        next1 = true;
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else
-                    qDebug("Oooops");
-                break;
-            case NoItem:
-                result.m_items.append(item2);
-                next2 = true;
-                break;
-            case DeleteStart:
-            case DeleteEnd:
-            case DeleteChars:
-                result.m_items.append(item1);
-                next1 = true;
-                break;
-            case Retain:
-                if ( item2.type == DeleteStart || item2.type == DeleteEnd )
-                {
-                    result.m_items.append(item2);
-                    shorten(item1,1);
-                }
-                if ( item2.type == DeleteChars )
-                {
-                    int len = qMin(item1.count, item2.count);
-                    result.deleteChars(item2.text.left(len));
-                    shorten(item1, len);
-                    shorten(item2, len);
-                    if ( item1.count == 0 )
-                        next1 = true;
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else if ( item2.type == Retain )
-                {
-                    int len = qMin(item1.count, item2.count);
-                    result.retain(len);
-                    shorten(item1, len);
-                    shorten(item2, len);
-                    if ( item1.count == 0 )
-                        next1 = true;
-                    if ( item2.count == 0 )
-                        next2 = true;
-                }
-                else
-                    qDebug("Oooops");
-                break;
-        }
-
-        if ( next1 )
-        {
-            it1++;
-            if ( it1 == end() )
-               item1.type = NoItem;
-            else
-               item1 = *it1;
-        }
-        if ( next2 )
-        {
-            it2++;
-            if ( it2 == mutation.end() )
-               item2.type = NoItem;
-            else
-               item2 = *it2;
-        }
-    }
-    return result;
-}
-
-DocumentMutation DocumentMutation::compose( const DocumentMutation& mutation ) const
-{
-    DocumentMutation m = translate(mutation);
-    return concat(m);
-}
+//DocumentMutation DocumentMutation::concat( const DocumentMutation& mutation ) const
+//{
+//    DocumentMutation result;
+//
+//    if ( mutation.count() == 0 )
+//        return *this;
+//    if ( count() == 0 )
+//        return mutation;
+//
+//    QList<Item>::const_iterator it1 = begin();
+//    QList<Item>::const_iterator it2 = mutation.begin();
+//    Item item1 = *it1;
+//    Item item2 = *it2;
+//    while( it1 != end() || it2 != mutation.end() )
+//    {
+//        if ( item1.type == AnnotationBoundary || item2.type == NoItem )
+//        {
+//            result.m_items.append(item1);
+//            it1++;
+//            if ( it1 == end() )
+//               item1.type = NoItem;
+//            else
+//               item1 = *it1;
+//            continue;
+//        }
+//        if ( item2.type == AnnotationBoundary || item2.type == ElementStart || item2.type == ElementEnd || item2.type == InsertChars || item1.type == NoItem )
+//        {
+//            result.m_items.append(item2);
+//            it2++;
+//            if ( it2 == mutation.end() )
+//               item2.type = NoItem;
+//            else
+//               item1 = *it2;
+//            continue;
+//        }
+//
+//        bool next1 = false;
+//        bool next2 = false;
+//        switch( item1.type )
+//        {
+//            case AnnotationBoundary:
+//                qDebug("Oooops");
+//                break;
+//            case ElementStart:
+//                if ( item2.type == DeleteStart )
+//                {
+//                    next1 = true;
+//                    next2 = true;
+//                }
+//                else if ( item2.type == Retain )
+//                {
+//                    result.m_items.append(item1);
+//                    shorten(item2,1);
+//                    if ( item2.count == 0 )
+//                        next2 = true;
+//                    next1 = true;
+//                }
+//                else
+//                    qDebug("Oooops");
+//                break;
+//            case ElementEnd:
+//                if ( item2.type == DeleteEnd )
+//                {
+//                    next1 = true;
+//                    next2 = true;
+//                }
+//                else if ( item2.type == Retain )
+//                {
+//                    result.m_items.append(item1);
+//                    shorten(item2,1);
+//                    if ( item2.count == 0 )
+//                        next2 = true;
+//                    next1 = true;
+//                }
+//                else
+//                    qDebug("Oooops");
+//                break;
+//            case InsertChars:
+//                if ( item2.type == DeleteChars )
+//                {
+//                    int len = qMin(item1.count, item2.count);
+//                    shorten(item1, len);
+//                    shorten(item2, len);
+//                    if ( item1.count == 0 )
+//                        next1 = true;
+//                    if ( item2.count == 0 )
+//                        next2 = true;
+//                }
+//                else if ( item2.type == Retain )
+//                {
+//                    int len = qMin(item1.count, item2.count);
+//                    result.insertChars(item1.text.left(len));
+//                    shorten(item1, len);
+//                    shorten(item2, len);
+//                    if ( item1.count == 0 )
+//                        next1 = true;
+//                    if ( item2.count == 0 )
+//                        next2 = true;
+//                }
+//                else
+//                    qDebug("Oooops");
+//                break;
+//            case NoItem:
+//                result.m_items.append(item2);
+//                next2 = true;
+//                break;
+//            case DeleteStart:
+//            case DeleteEnd:
+//            case DeleteChars:
+//                result.m_items.append(item1);
+//                next1 = true;
+//                break;
+//            case Retain:
+//                if ( item2.type == DeleteStart || item2.type == DeleteEnd )
+//                {
+//                    result.m_items.append(item2);
+//                    shorten(item1,1);
+//                }
+//                if ( item2.type == DeleteChars )
+//                {
+//                    int len = qMin(item1.count, item2.count);
+//                    result.deleteChars(item2.text.left(len));
+//                    shorten(item1, len);
+//                    shorten(item2, len);
+//                    if ( item1.count == 0 )
+//                        next1 = true;
+//                    if ( item2.count == 0 )
+//                        next2 = true;
+//                }
+//                else if ( item2.type == Retain )
+//                {
+//                    int len = qMin(item1.count, item2.count);
+//                    result.retain(len);
+//                    shorten(item1, len);
+//                    shorten(item2, len);
+//                    if ( item1.count == 0 )
+//                        next1 = true;
+//                    if ( item2.count == 0 )
+//                        next2 = true;
+//                }
+//                else
+//                    qDebug("Oooops");
+//                break;
+//        }
+//
+//        if ( next1 )
+//        {
+//            it1++;
+//            if ( it1 == end() )
+//               item1.type = NoItem;
+//            else
+//               item1 = *it1;
+//        }
+//        if ( next2 )
+//        {
+//            it2++;
+//            if ( it2 == mutation.end() )
+//               item2.type = NoItem;
+//            else
+//               item2 = *it2;
+//        }
+//    }
+//    return result;
+//}
 
 void DocumentMutation::print_()
 {
@@ -507,8 +323,6 @@ void DocumentMutation::print_()
                     }
                     result += "Annotation  endKeys={" + s + "} map={" + mapToString( (*it).annotations ) + "}\n";
                 }
-                break;
-            case NoItem:
                 break;
         }
     }
@@ -741,7 +555,6 @@ bool DocumentMutation::shorten( Item& item, int len )
         return false;
     switch( item.type )
     {
-        case NoItem:
         case AnnotationBoundary:            
         case ElementStart:
         case ElementEnd:
