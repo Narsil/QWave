@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QString>
+#include <QDateTime>
 
 class Wavelet;
 class Environment;
@@ -26,10 +27,14 @@ public:
     Wavelet* wavelet(const QString& id) const;
     Environment* environment() const;
 
+    QDateTime lastChange() const { return m_lastChange; }
+    void setLastChange();
+
 private:
     QString m_id;
     QString m_domain;
     WaveDigest* m_digest;
+    QDateTime m_lastChange;
 };
 
 #endif // WAVE_H

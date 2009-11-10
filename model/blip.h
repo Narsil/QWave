@@ -56,25 +56,43 @@ public:
       */
     void addThread(BlipThread* thread);
 
+    int childBlipCount() const;
+    bool isUnread() const { return m_unread; }
+    void setUnread( bool unread );
+
     void print_(int indent);
 
     void receive( const DocumentMutation& mutation, const QString& author );
 
     void createFollowUpBlip();
     void createReplyBlip();
+    /**
+      * Inserts an image into the blip. Before calling this function you must add the image itself
+      * as an attachmen to the wavelet.
+      */
     void insertImage(int index, const QString& attachmentId, const QString& caption);
 
 signals:
     /**
       * Emitted when a mutation has been applied to the blip.
       * This signal is therefore connected to the GUI to show the update.
+      *
+      * A more fine granular way of receiving these updates is to hook into the
+      * signals emitted by the blip's BlipDocument.
       */
     void update( const DocumentMutation& mutation );
+    void unreadChanged();
 
 private:
     void setup();
 
+    /**
+      * Usually of the form b+XYZ
+      */
     QString m_id;
+    /**
+      * The contents of the blip.
+      */
     BlipDocument* m_doc;
     /**
       * The user who created the blip.
@@ -84,8 +102,15 @@ private:
       * A ordered list of all thread belonging to the blip.
       */
     QList<BlipThread*> m_threads;
+    /**
+     * The position in the wavelet's conversation document where the blip start element is located.
+     */
     int m_convStartIndex;
+    /**
+     * The position in the wavelet's conversation document where the blip end element is located.
+     */
     int m_convEndIndex;
+    bool m_unread;
 };
 
 #endif // BLIP_H

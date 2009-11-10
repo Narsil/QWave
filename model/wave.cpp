@@ -37,3 +37,8 @@ Environment* Wave::environment() const
 {
     return (Environment*)parent();
 }
+
+void Wave::setLastChange()
+{
+    m_lastChange = QDateTime::currentDateTime();
+}

@@ -39,3 +39,14 @@ void BlipThread::clearBlipList()
 {
     m_blips.clear();
 }
+
+int BlipThread::blipCount() const
+{
+    int result = 0;
+
+    foreach( Blip* b, blips() )
+    {
+        result += b->childBlipCount();
+    }
+    return result;
+}

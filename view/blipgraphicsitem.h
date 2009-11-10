@@ -45,6 +45,7 @@ private slots:
     void onContentsChanged();
     void titleChanged(const QString& title);
     void focusInEvent();
+    void repaint();
 
 private:
     Blip* m_blip;

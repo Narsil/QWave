@@ -18,6 +18,8 @@ public:
     Wavelet* wavelet() const;
     const QList<Blip*>& blips() const { return m_blips; }
 
+    int blipCount() const;
+
     /**
       * @internal
       */

@@ -36,11 +36,12 @@ Blip::Blip(BlipThread* thread, const QString& id, Participant* creator, const St
 
 void Blip::setup()
 {
-     setObjectName(m_id);
-     if ( !m_doc )
-        m_doc = new BlipDocument(this);
-     else
-        m_doc->setParent(this);
+    m_unread = true;
+    setObjectName(m_id);
+    if ( !m_doc )
+       m_doc = new BlipDocument(this);
+    else
+       m_doc->setParent(this);
 }
 
 BlipThread* Blip::parentThread() const
@@ -191,4 +192,22 @@ void Blip::insertImage(int index, const QString& attachmentId, const QString& ca
     m1.insertEnd();
     m1.retain( remain );
     wavelet()->processor()->handleSend( m1, id() );
+}
+
+int Blip::childBlipCount() const
+{
+    int result = 0;
+    foreach( BlipThread* t, m_threads )
+    {
+        result += t->blipCount();
+    }
+    return result;
+}
+
+void Blip::setUnread( bool unread )
+{
+    if ( unread == m_unread )
+        return;
+    m_unread = unread;
+    emit unreadChanged();
 }

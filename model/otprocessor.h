@@ -57,8 +57,17 @@ public:
     bool isSuspendSending() const { return m_suspendSending; }
 
 signals:
+    /**
+      * Connected to the wavelet.
+      */
     void participantAdd( const QString& address );
+    /**
+      * Connected to the wavelet.
+      */
     void participantRemove( const QString& address );
+    /**
+      * Connected to the wavelet.
+      */
     void documentMutation( const QString& documentId, const DocumentMutation& mutation, const QString& author );
 
 private:
