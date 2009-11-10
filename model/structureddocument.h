@@ -83,7 +83,8 @@ public:
 
     QString toPlainText() const;
 
-    void print_();
+    void print_() const;
+    QString toString() const;
 
 protected:
     virtual void onMutationStart(const QString& author);

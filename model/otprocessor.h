@@ -23,10 +23,38 @@ public:
 
     void handleSendAddParticipant( Participant* p );
     void handleSend( const DocumentMutation& mutation, const QString& documentId );
+    /**
+      * Called when the local client creates a delta.
+      * This function will apply the delta locally and queue it for sending to the server.
+      */
     void handleSend( WaveletDelta& outgoing );
+    /**
+      * Called upon receipt of a delta from the server.
+      */
     void handleReceive( const WaveletDelta& incoming );
-
+    /**
+      * After a sequence of handleReceive calls, this method is called to submit the resulting version and hash.
+      */
     void setResultingHash(int version, const QByteArray& hash);
+
+    /**
+      * The number of deltas which have been applied locally but not applied by the server yet.
+      * This can include at most one delta which has been submitted to the server but has not yet been applied.
+      */
+    int queuedDeltaCount() const { return m_outgoingDeltas.count(); }
+    /**
+      * @return true if a delta has been sent to the server but has not yet been applied by the server.
+      */
+    bool isSubmitPending() const { return m_submitPending; }
+
+    /**
+      * The latest version reported by the server. Note that the local copy of the document may have some deltas applied already which
+      * are not applied by the server yet.
+      */
+    int serverVersion() const { return m_serverVersion; }
+
+    void setSuspendSending(bool suspend);
+    bool isSuspendSending() const { return m_suspendSending; }
 
 signals:
     void participantAdd( const QString& address );
@@ -48,6 +76,7 @@ private:
     bool m_submitPending;
     int m_serverVersion;
     QByteArray m_serverHash;
+    bool m_suspendSending;
 };
 
 #endif // OTPROCESSOR_H

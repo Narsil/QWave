@@ -1,7 +1,7 @@
 # -------------------------------------------------
 # Project created by QtCreator 2009-10-11T22:32:00
 # -------------------------------------------------
-# CONFIG += release
+CONFIG += debug
 TARGET = remoteot
 QT += network testlib
 TEMPLATE = app

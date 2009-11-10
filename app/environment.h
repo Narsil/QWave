@@ -30,7 +30,17 @@ public:
     Contacts* contacts() const { return m_contacts; }
     Settings* settings() const { return m_settings; }
 
-    Wave* wave( const QString& domain, const QString& id );
+    /**
+      * Looksup a wave.
+      *
+      * @return the wave or 0 if the wave has not yet been created.
+      */
+    Wave* wave( const QString& domain, const QString& id ) const;
+    /**
+      * Creates a new wave and registers it. Thus, it can be lookedup later on by
+      * querying for its id and domain.
+      * @see wave
+      */
     Wave* createWave( const QString& domain, const QString& id );
 
     void addWavelet( Wavelet* wavelet );

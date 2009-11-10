@@ -12,6 +12,9 @@ class Wave : public QObject
 {
     Q_OBJECT
 public:    
+    /**
+      * Do not create a wave directly. Instead use Environment::createWave.
+      */
     Wave(Environment* environment, const QString& domain, const QString &id);
 
     QString id() const { return this->m_id; }
