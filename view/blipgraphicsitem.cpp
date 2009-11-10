@@ -32,7 +32,10 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
 
     m_text = new GraphicsTextItem(m_adapter, this);
     m_text->setTextInteractionFlags( Qt::TextEditorInteraction);
-    m_text->setPos(40,2);
+    if ( m_blip->isRootBlip() )
+        m_text->setPos(40,2);
+    else
+        m_text->setPos(44,2);
     m_text->setTextWidth(width - m_text->x());
     connect( m_text, SIGNAL(focusIn()), SLOT(focusInEvent()));
 
@@ -42,6 +45,8 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
 
     m_lastTextRect = m_text->boundingRect();
     QObject::connect(m_text->document(), SIGNAL(contentsChanged()), SLOT(onContentsChanged()));
+
+    connect( blip, SIGNAL(unreadChanged()), SLOT(repaint()));
 }
 
 QTextDocument* BlipGraphicsItem::document()
@@ -57,11 +62,19 @@ void BlipGraphicsItem::setWidth(qreal width)
     m_text->setTextWidth(width - m_text->x());
 }
 
+void BlipGraphicsItem::repaint()
+{
+    update();
+}
+
 void BlipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)
 {
     QRectF rect = boundingRect();
 
-    painter->drawPixmap(12, 6, m_userPixmap);
+    if ( m_blip->isRootBlip() )
+        painter->drawPixmap(12, 6, m_userPixmap);
+    else
+        painter->drawPixmap(16, 6, m_userPixmap);
 
     if ( m_blip->isLastBlipInThread() && !m_blip->isRootBlip() )
     {
@@ -108,6 +121,15 @@ void BlipGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*,
         painter->setPen(pen2);
         painter->drawLine(12, 0, rect.width(), 0);
     }
+
+    if ( m_blip->isUnread() )
+    {
+        QBrush b(QColor(0x99,0xbb,0));
+        if ( m_blip->isRootBlip() )
+            painter->fillRect(4, 3, 3, 38, b);
+        else
+            painter->fillRect(9, 3, 3, 38, b);
+    }
 }
 
 void BlipGraphicsItem::onContentsChanged()
@@ -130,7 +152,9 @@ void BlipGraphicsItem::onContentsChanged()
 QRectF BlipGraphicsItem::boundingRect() const
 {
     QRectF rect = m_text->boundingRect();
-    return QRectF( 0, 0, rect.width() + 40, qMax( 34.0, rect.height() ) + 12 );
+    if ( m_blip->isRootBlip() )
+        return QRectF( 0, 0, rect.width() + 40, qMax( 38.0, rect.height() ) + 12 );
+    return QRectF( 0, 0, rect.width() + 44, qMax( 38.0, rect.height() ) + 12 );
 }
 
 void BlipGraphicsItem::setAuthorPixmap(const QPixmap& pixmap)

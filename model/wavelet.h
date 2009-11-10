@@ -41,6 +41,8 @@ public:
     QList<Participant*> participants() const { return m_participants; }
     Participant* participant( const QString& address );
 
+    int blipCount() const;
+
     void print_();
 
     // TODO: This should become private
@@ -50,6 +52,8 @@ public:
       * Adds an attachment document to the wavelet.
       *
       * @return the generated attachment ID.
+      *
+      * Note that in addition you may want to add the image to a blip.
       */
     QString insertImageAttachment(const QUrl& url, const QImage& image, const QImage& thumbnail);
 
@@ -66,6 +70,10 @@ signals:
       * Consumed by the GUI.
       */
     void conversationChanged();
+    /**
+      * Consumed by the GUI.
+      */
+    void unreadBlipCountChanged();
 
 private slots:
     /**

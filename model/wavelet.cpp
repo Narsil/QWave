@@ -108,6 +108,9 @@ void Wavelet::updateConversation(const QString& author)
                                 return;
                             }
                         }
+                        if ( author == m_wave->environment()->localUser()->address() )
+                            blip->setUnread(false);
+                        connect( blip, SIGNAL(unreadChanged()), SIGNAL(unreadBlipCountChanged()));
                     }
                     // The blip already exists
                     else
@@ -239,6 +242,8 @@ void Wavelet::removeParticipant( const QString& address )
 
 void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation& mutation, const QString& author )
 {
+    m_wave->setLastChange();
+
     if ( documentId == "conversation" )
     {
         m_doc->apply(mutation, author);
@@ -249,7 +254,14 @@ void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation&
     {
         Blip* b = blip(documentId);
         if ( b )
+        {
             b->receive(mutation, author);
+            // If the blip is authored by the local user, it can be considered being read
+            if ( author == m_wave->environment()->localUser()->address() )
+                b->setUnread(false);
+            else
+                b->setUnread(true);
+        }
         else if ( documentId.left(2) == "a+" )
         {
             Attachment* a = m_attachments[documentId];
@@ -309,4 +321,17 @@ QString Wavelet::insertImageAttachment(const QUrl& url, const QImage& image, con
 Attachment* Wavelet::attachment( const QString& id ) const
 {
     return m_attachments[id];
+}
+
+int Wavelet::blipCount() const
+{
+    int result = 0;
+
+    foreach( Blip* blip, rootBlips() )
+    {
+        result++;
+        result += blip->childBlipCount();
+    }
+
+    return result;
 }
