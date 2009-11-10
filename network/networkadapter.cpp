@@ -98,9 +98,6 @@ void convert(protocol::ProtocolWaveletDelta* result, const WaveletDelta& delta )
                                 comp->mutable_annotation_boundary()->add_end( ek.toStdString() );
                             }
                         break;
-                    case DocumentMutation::NoItem:
-                        // Do nothing by intention
-                        break;
                 }
             }
         }

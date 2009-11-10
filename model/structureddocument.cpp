@@ -190,8 +190,6 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                 onAnnotationUpdate(pos, annoUpdates);
                 currentAnno = oldAnno.merge(annoUpdates);
                 break;
-            case DocumentMutation::NoItem:
-                break;
         }
     }
 
