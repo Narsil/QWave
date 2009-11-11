@@ -96,7 +96,7 @@ void WaveDigestGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphics
         msgs = QString(tr("of %1")).arg(m_blipCount);
         painter->drawText( m_rect.width() - 70 + rect.width() + 15, 32, msgs );
     }
-    else
+    else if ( m_blipCount > 0 )
     {
         painter->setPen( QColor(0x7f,0x7f,0x7f) );
         QFont font2( "Arial", 10, QFont::Normal );

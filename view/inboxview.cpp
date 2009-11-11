@@ -18,6 +18,7 @@ InboxView::InboxView(Environment* environment, QWidget* parent)
 
     m_bigBar = new BigBar(this);
     m_searchBox = new SearchBox(m_bigBar);
+    m_searchBox->setText("in:inbox");
     QHBoxLayout* l = new QHBoxLayout(m_bigBar);
     l->addWidget(m_searchBox);
 
