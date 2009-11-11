@@ -42,6 +42,7 @@ public:
     Participant* participant( const QString& address );
 
     int blipCount() const;
+    int unreadBlipCount() const;
 
     void print_();
 
@@ -71,9 +72,11 @@ signals:
       */
     void conversationChanged();
     /**
-      * Consumed by the GUI.
+      * Emitted when the number of blips or the number of read/unread blip changed.
+      *
+      * Consumed by the wave.
       */
-    void unreadBlipCountChanged();
+    void blipCountChanged();
 
 private slots:
     /**

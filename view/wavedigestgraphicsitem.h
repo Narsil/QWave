@@ -29,6 +29,7 @@ protected:
     virtual void mousePressEvent ( QGraphicsSceneMouseEvent * event );
 
 private slots:
+    void repaint();
     void updateDigest();
     void addParticipant(Participant* participant);
     void removeParticipant(Participant* participant);
@@ -41,7 +42,9 @@ private:
     QRectF m_rect;
     QList<ParticipantGraphicsItem*> m_participants;
     QGraphicsTextItem* m_textItem;
-    bool m_hover;
+    bool m_hover;       
+    int m_blipCount;
+    int m_unreadBlipCount;
 };
 
 #endif // WAVEDIGESTGRAPHICSITEM_H

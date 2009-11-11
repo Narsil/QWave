@@ -110,7 +110,7 @@ void Wavelet::updateConversation(const QString& author)
                         }
                         if ( author == m_wave->environment()->localUser()->address() )
                             blip->setUnread(false);
-                        connect( blip, SIGNAL(unreadChanged()), SIGNAL(unreadBlipCountChanged()));
+                        connect( blip, SIGNAL(unreadChanged()), SIGNAL(blipCountChanged()));
                     }
                     // The blip already exists
                     else
@@ -179,6 +179,8 @@ void Wavelet::updateConversation(const QString& author)
         if ( !m_blipThreads.contains(key) )
             delete blipThreads[key];
     }
+
+    emit blipCountChanged();
 }
 
 void Wavelet::print_()
@@ -331,6 +333,20 @@ int Wavelet::blipCount() const
     {
         result++;
         result += blip->childBlipCount();
+    }
+
+    return result;
+}
+
+int Wavelet::unreadBlipCount() const
+{
+    int result = 0;
+
+    foreach( Blip* blip, rootBlips() )
+    {
+        if ( blip->isUnread() )
+            result++;
+        result += blip->unreadChildBlipCount();
     }
 
     return result;

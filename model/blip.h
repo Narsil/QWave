@@ -57,6 +57,7 @@ public:
     void addThread(BlipThread* thread);
 
     int childBlipCount() const;
+    int unreadChildBlipCount() const;
     bool isUnread() const { return m_unread; }
     void setUnread( bool unread );
 
