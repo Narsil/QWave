@@ -29,6 +29,20 @@ public:
 
     QDateTime lastChange() const { return m_lastChange; }
     void setLastChange();
+    int blipCount() const;
+    int unreadBlipCount() const;
+
+signals:
+    /**
+      * The number of blips or the number or read/unread blips changed
+      *
+      * Consumed by the UI.
+      */
+    void blipCountChanged();
+    /**
+      * Consumed by the UI.
+      */
+    void dateChanged();
 
 private:
     QString m_id;

@@ -19,6 +19,7 @@ public:
     const QList<Blip*>& blips() const { return m_blips; }
 
     int blipCount() const;
+    int unreadBlipCount() const;
 
     /**
       * @internal

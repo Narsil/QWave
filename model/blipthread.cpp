@@ -46,7 +46,21 @@ int BlipThread::blipCount() const
 
     foreach( Blip* b, blips() )
     {
+        result++;
         result += b->childBlipCount();
+    }
+    return result;
+}
+
+int BlipThread::unreadBlipCount() const
+{
+    int result = 0;
+
+    foreach( Blip* b, blips() )
+    {
+        if ( b->isUnread() )
+            result++;
+        result += b->unreadChildBlipCount();
     }
     return result;
 }

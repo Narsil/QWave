@@ -8,7 +8,8 @@ Wave::Wave(Environment* environment, const QString& domain, const QString &id)
 {
     m_digest = new WaveDigest(this);
 
-    new Wavelet(this, domain, "conv+root");
+    Wavelet* wavelet = new Wavelet(this, domain, "conv+root");
+    connect( wavelet, SIGNAL(blipCountChanged()), SIGNAL(blipCountChanged()));
 }
 
 Wavelet* Wave::wavelet() const
@@ -41,4 +42,16 @@ Environment* Wave::environment() const
 void Wave::setLastChange()
 {
     m_lastChange = QDateTime::currentDateTime();
+    emit dateChanged();
 }
+
+int Wave::blipCount() const
+{
+    return wavelet()->blipCount();
+}
+
+int Wave::unreadBlipCount() const
+{
+    return wavelet()->unreadBlipCount();
+}
+
