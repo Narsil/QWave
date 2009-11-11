@@ -7,8 +7,11 @@ class Wave;
 class WaveletView;
 class MainWindow;
 class TitleBar;
+class ToolBar;
+class BigBar;
 class WaveletGraphicsItem;
 class BlipGraphicsItem;
+class ButtonGraphicsItem;
 class QGraphicsScene;
 class QVBoxLayout;
 class QGraphicsView;
@@ -31,6 +34,12 @@ public:
 public slots:
     void setWave( Wave* wave );
 
+    void boldClicked();
+    void italicCicked();
+    void underlineClicked();
+    void strikeoutClicked();
+    void imageClicked();
+
 protected:
     virtual void resizeEvent( QResizeEvent* event );
 
@@ -38,12 +47,19 @@ private:
     Wave* m_wave;
     WaveletView* m_waveletView;
     TitleBar* m_titleBar;
-//    QGraphicsScene* m_scene;
-    QGraphicsScene* m_headScene;
+    BigBar* m_bigBar;
+    ToolBar* m_toolBar;
+//    QGraphicsScene* m_headScene;
     QVBoxLayout *m_verticalLayout;
-    QGraphicsView *m_graphicsViewHead;
-//    QGraphicsView *m_graphicsView;
+//    QGraphicsView *m_graphicsViewHead;
     WaveletGraphicsItem* m_gfx;
+
+    ButtonGraphicsItem* m_addUserButton;
+    ButtonGraphicsItem* m_boldButton;
+    ButtonGraphicsItem* m_italicButton;
+    ButtonGraphicsItem* m_underlineButton;
+    ButtonGraphicsItem* m_strikeoutButton;
+    ButtonGraphicsItem* m_imageButton;
 };
 
 #endif

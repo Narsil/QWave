@@ -29,12 +29,6 @@ private slots:
     void removeParticipant(Participant* participant);
     void showAddParticipantDialog();
 
-    void boldClicked();
-    void italicCicked();
-    void underlineClicked();
-    void strikeoutClicked();
-    void imageClicked();
-
 private:
     void updateParticipants();
 
@@ -43,11 +37,6 @@ private:
     QList<ParticipantGraphicsItem*> m_participantItems;
     QRectF m_rect;
     ButtonGraphicsItem* m_addUserButton;
-    ButtonGraphicsItem* m_boldButton;
-    ButtonGraphicsItem* m_italicButton;
-    ButtonGraphicsItem* m_underlineButton;
-    ButtonGraphicsItem* m_strikeoutButton;
-    ButtonGraphicsItem* m_imageButton;
 };
 
 #endif // WAVELETGRAPHICSITEM_H

@@ -19,8 +19,8 @@ ParticipantListView::ParticipantListView(QWidget* parent)
     m_scene = new QGraphicsScene(this);
     setScene( m_scene );
 
-    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
-    this->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
+//    this->setHorizontalScrollBarPolicy(Qt::ScrollBarAlwaysOff);
+//    this->setVerticalScrollBarPolicy(Qt::ScrollBarAsNeeded);
 }
 
 void ParticipantListView::setSelectable(bool selectable)

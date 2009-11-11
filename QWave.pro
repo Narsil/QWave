@@ -50,7 +50,8 @@ SOURCES += app/main.cpp \
     view/participantinfodialog.cpp \
     view/insertimagedialog.cpp \
     view/imagehandler.cpp \
-    model/attachment.cpp
+    model/attachment.cpp \
+    view/toolbar.cpp
 unix:SOURCES += protocol/waveclient-rpc.pb.cc \
     protocol/common.pb.cc
 win32:SOURCES += winprotobuf/protocol/waveclient-rpc.pb.cc \
@@ -99,7 +100,8 @@ HEADERS += app/mainwindow.h \
     view/participantinfodialog.h \
     view/insertimagedialog.h \
     view/imagehandler.h \
-    model/attachment.h
+    model/attachment.h \
+    view/toolbar.h
 unix:HEADERS += protocol/waveclient-rpc.pb.h \
     protocol/common.pb.h
 win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \

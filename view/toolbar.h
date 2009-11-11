@@ -1,22 +1,23 @@
-#ifndef BIGBAR_H
-#define BIGBAR_H
+#ifndef TOOLBAR_H
+#define TOOLBAR_H
 
 #include <QGraphicsView>
 
-class QGraphicsScene;
-
-class BigBar : public QGraphicsView
+class ToolBar : public QGraphicsView
 {
 public:
-    BigBar(QWidget* parent = 0);
+    ToolBar(QWidget* parent = 0);
 
     QGraphicsScene* scene() const { return m_scene; }
+
+    void addItem( QGraphicsItem* item );
 
 protected:
     virtual void drawBackground( QPainter* painter, const QRectF& rect );
 
 private:
     QGraphicsScene* m_scene;
+    int m_usedWidth;
 };
 
-#endif // BIGBAR_H
+#endif // TOOLBAR_H
