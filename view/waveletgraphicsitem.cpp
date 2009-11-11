@@ -25,19 +25,7 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveView* view)
     m_addUserButton = new ButtonGraphicsItem( QPixmap("images/adduser.png"), this );
     connect( m_addUserButton, SIGNAL(clicked()), SLOT(showAddParticipantDialog()));
 
-    m_boldButton = new ButtonGraphicsItem( QPixmap("images/bold.png"), this );
-    m_italicButton = new ButtonGraphicsItem( QPixmap("images/italic.png"), this );
-    m_underlineButton = new ButtonGraphicsItem( QPixmap("images/underline.png"), this );
-    m_strikeoutButton = new ButtonGraphicsItem( QPixmap("images/strikeout.png"), this );
-    m_imageButton = new ButtonGraphicsItem( QPixmap("images/image.png"), this );
-
-    connect( m_boldButton, SIGNAL(clicked()), SLOT(boldClicked()));
-    connect( m_italicButton, SIGNAL(clicked()), SLOT(italicCicked()));
-    connect( m_underlineButton, SIGNAL(clicked()), SLOT(underlineClicked()));
-    connect( m_strikeoutButton, SIGNAL(clicked()), SLOT(strikeoutClicked()));
-    connect( m_imageButton, SIGNAL(clicked()), SLOT(imageClicked()));
-
-    int dy = 42 + 2 * 5 + 1 + 22 + 1;
+    int dy = 42 + 2 * 5;
     m_rect = QRectF( 0, 0, 100, dy);
 
     setWavelet(view->wave()->wavelet());
@@ -86,31 +74,18 @@ void WaveletGraphicsItem::updateParticipants()
     }
 
     m_addUserButton->setPos( (42 + 5) * m_participantItems.count() + 5, dy + 16);
-    m_boldButton->setPos( 10, 42 + 2 * 5 + 3 );
-    m_italicButton->setPos( 10 + 20, 42 + 2 * 5 + 3 );
-    m_underlineButton->setPos( 10 + 40, 42 + 2 * 5 + 3 );
-    m_strikeoutButton->setPos( 10 + 60, 42 + 2 * 5 + 3 );
-    m_imageButton->setPos( 10 + 80, 42 + 2 * 5 + 3 );
 }
 
 void WaveletGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)
 {
-    qreal dy = 0;
-
-    QBrush brush2(QColor(0xc9,0xe2,0xfc));
-    painter->fillRect(0, dy, m_rect.width(), 42 + 2 * 5, brush2);
-    dy += 42 + 2 * 5;
-
-    painter->setPen(QPen(QColor(0xaa,0xaa,0xaa)));
-    painter->drawLine(0, dy, m_rect.width(), dy);
-    painter->drawLine(0, dy + 23, m_rect.width(), dy + 23);
-
-    QLinearGradient g(0, dy+1, 0, dy+23);
-    g.setColorAt(0, QColor(255,255,255));
-    g.setColorAt(1, QColor(0xdd,0xdd,0xdd));
-    QBrush brush3(g);
-    painter->fillRect(0, dy + 1, m_rect.width(), 22, brush3);
-    dy += 1 + 22 + 1;
+//    qreal dy = 0;
+//
+//    QBrush brush2(QColor(0xc9,0xe2,0xfc));
+//    painter->fillRect(0, dy, m_rect.width(), 42 + 2 * 5, brush2);
+//    dy += 42 + 2 * 5;
+//
+//    painter->setPen(QPen(QColor(0xaa,0xaa,0xaa)));
+//    painter->drawLine(0, dy, m_rect.width(), dy);
 }
 
 QRectF WaveletGraphicsItem::boundingRect() const
@@ -131,45 +106,4 @@ void WaveletGraphicsItem::showAddParticipantDialog()
 
     if ( dlg.result() )
         m_wavelet->processor()->handleSendAddParticipant(dlg.result());
-}
-
-void WaveletGraphicsItem::boldClicked()
-{
-    BlipGraphicsItem* item = m_view->focusBlipItem();
-    if ( !item )
-        return;
-    item->toggleBold();
-    qDebug("Toggle bold");
-    m_view->waveletView()->setFocus();
-    // item->scene()->setFocusItem( item->textItem() );
-}
-
-void WaveletGraphicsItem::italicCicked()
-{
-}
-
-void WaveletGraphicsItem::underlineClicked()
-{
-}
-
-void WaveletGraphicsItem::strikeoutClicked()
-{
-}
-
-void WaveletGraphicsItem::imageClicked()
-{
-    BlipGraphicsItem* item = m_view->focusBlipItem();
-    if ( !item )
-        return;
-
-    InsertImageDialog dlg( m_wavelet->environment(), m_view->topLevelWidget() );
-    if ( dlg.exec() == QDialog::Accepted )
-    {
-        item->insertImage( dlg.url(), dlg.image(), dlg.thumbnail(), dlg.caption() );
-//        // TODO
-//        int index = 0;
-//
-//        QString id = m_wavelet->insertImageAttachment( dlg.url(), dlg.image().width(), dlg.image().height(), dlg.thumbnail() );
-//        item->blip()->insertImage( index, id, dlg.caption() );
-    }
 }
