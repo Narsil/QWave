@@ -10,6 +10,7 @@
 #include "model/otprocessor.h"
 #include "model/wavedigest.h"
 #include "rpc.h"
+#include "converter.h"
 
 #include <QUrl>
 
@@ -17,195 +18,6 @@
 #include "waveclient-rpc.pb.h"
 #include <sstream>
 #include <string>
-
-/**
-  * Convert the Qt-ified representation to the protocol buffer representation.
-  */
-void convert(protocol::ProtocolWaveletDelta* result, const WaveletDelta& delta )
-{
-    // Author
-    result->set_author(delta.author().toStdString());
-    // HashedVersion
-    result->mutable_hashed_version()->set_version( delta.version().version );
-    result->mutable_hashed_version()->set_history_hash( std::string( delta.version().hash.constData(), delta.version().hash.length() ) );
-
-    for( int i = 0; i < delta.operations().length(); ++i )
-    {
-        const WaveletDeltaOperation& op = delta.operations()[i];
-        protocol::ProtocolWaveletOperation* o = result->add_operation();
-        if ( op.hasAddParticipant() )
-            o->set_add_participant( op.addParticipant().toStdString() );
-        if ( op.hasRemoveParticipant() )
-            o->set_remove_participant( op.removeParticipant().toStdString() );
-        if ( op.hasMutation() )
-        {
-            const DocumentMutation& mutation = op.mutation();
-            protocol::ProtocolWaveletOperation_MutateDocument* m = o->mutable_mutate_document();
-            m->set_document_id( op.documentId().toStdString() );
-            protocol::ProtocolDocumentOperation* mo = m->mutable_document_operation();
-            for( QList<DocumentMutation::Item>::const_iterator it = mutation.begin(); it != mutation.end(); ++it )
-            {
-                protocol::ProtocolDocumentOperation_Component* comp = mo->add_component();
-                switch( (*it).type )
-                {
-                    case DocumentMutation::ElementStart:
-                        comp->mutable_element_start()->set_type( (*it).text.toStdString() );
-                        foreach( QString key, (*it).attributes.keys() )
-                        {
-                            protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
-                            pair->set_key( key.toStdString() );
-                            pair->set_value( (*it).attributes[key].toStdString() );
-                        }
-                        break;
-                    case DocumentMutation::ElementEnd:
-                        comp->set_element_end(true);
-                        break;
-                    case DocumentMutation::Retain:
-                        comp->set_retain_item_count((*it).count);
-                        break;
-                    case DocumentMutation::InsertChars:
-                        comp->set_characters( (*it).text.toStdString() );
-                        break;
-                    case DocumentMutation::DeleteStart:
-                        comp->mutable_delete_element_start()->set_type( (*it).text.toStdString() );
-                        foreach( QString key, (*it).attributes.keys() )
-                        {
-                            protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
-                            pair->set_key( key.toStdString() );
-                            pair->set_value( (*it).attributes[key].toStdString() );
-                        }
-                        break;
-                    case DocumentMutation::DeleteEnd:
-                        comp->set_delete_element_end(true);
-                        break;
-                    case DocumentMutation::DeleteChars:
-                        comp->set_delete_characters( (*it).text.toStdString() );
-                        break;
-                    case DocumentMutation::AnnotationBoundary:                        
-                            foreach( QString key, (*it).annotations.keys() )
-                            {
-                                protocol::ProtocolDocumentOperation_Component_KeyValueUpdate* pair = comp->mutable_annotation_boundary()->add_change();
-                                pair->set_key( key.toStdString() );
-                                QString oldvalue = (*it).annotations[key].first;
-                                if ( !oldvalue.isNull() )
-                                    pair->set_old_value( oldvalue.toStdString() );
-                                QString newvalue = (*it).annotations[key].second;
-                                if ( !newvalue.isNull() )
-                                    pair->set_new_value( newvalue.toStdString() );
-                            }
-                            foreach( QString ek, (*it).endKeys)
-                            {
-                                comp->mutable_annotation_boundary()->add_end( ek.toStdString() );
-                            }
-                        break;
-                }
-            }
-        }
-    }
-}
-
-/**
-  * Convert the protocol buffer representation to the Qt-ified representation.
-  */
-WaveletDelta convert( const protocol::ProtocolWaveletDelta& delta )
-{
-    WaveletDelta result;
-    result.setAuthor( QString::fromStdString(delta.author()));
-    result.version().version = delta.hashed_version().version();
-    std::string hash = delta.hashed_version().history_hash();
-    result.version().hash = QByteArray( hash.data(), hash.length() );
-
-    for( int o = 0; o < delta.operation_size(); ++o )
-    {
-        const protocol::ProtocolWaveletOperation op = delta.operation(o);
-        if ( op.has_add_participant() )
-        {
-            WaveletDeltaOperation wo;
-            wo.setAddParticipant( QString::fromStdString(op.add_participant()));
-            result.addOperation(wo);
-        }
-        if ( op.has_remove_participant() )
-        {
-            WaveletDeltaOperation wo;
-            wo.setRemoveParticipant( QString::fromStdString(op.remove_participant()));
-            result.addOperation(wo);
-        }
-        if ( op.has_mutate_document() )
-        {
-            DocumentMutation m;
-            const protocol::ProtocolWaveletOperation_MutateDocument& mut = op.mutate_document();
-            const protocol::ProtocolDocumentOperation& dop = mut.document_operation();
-            for( int c = 0; c < dop.component_size(); ++c )
-            {
-                const protocol::ProtocolDocumentOperation_Component& comp = dop.component(c);
-                if ( comp.has_characters() )
-                {
-                    QString chars = QString::fromStdString(comp.characters());
-                    m.insertChars(chars);
-                }
-                else if ( comp.has_retain_item_count() )
-                {
-                    int retain = comp.retain_item_count();
-                    m.retain(retain);
-                }
-                else if ( comp.has_delete_characters() )
-                {
-                    QString chars = QString::fromStdString(comp.delete_characters());
-                    m.deleteChars(chars);
-                }
-                else if ( comp.has_element_end() )
-                {
-                    m.insertEnd();
-                }
-                else if ( comp.has_element_start() )
-                {
-                    QString type = QString::fromStdString(comp.element_start().type());
-                    StructuredDocument::AttributeList attribs;
-                    for( int a = 0; a < comp.element_start().attribute_size(); ++a )
-                        attribs[ QString::fromStdString(comp.element_start().attribute(a).key()) ] = QString::fromStdString(comp.element_start().attribute(a).value() );
-                    m.insertStart(type, attribs );
-                }
-                else if ( comp.has_annotation_boundary() )
-                {
-                    QList<QString> endKeys;
-                    StructuredDocument::AnnotationChange changes;
-                    for( int e = 0; e < comp.annotation_boundary().end_size(); ++e )
-                        endKeys.append( QString::fromStdString( comp.annotation_boundary().end(e) ) );
-                    for( int a = 0; a < comp.annotation_boundary().change_size(); ++a )
-                    {
-                        if ( comp.annotation_boundary().change(a).has_old_value() )
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].first = QString::fromStdString(comp.annotation_boundary().change(c).old_value() );
-                        else
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].first = QString::null;
-                        if ( comp.annotation_boundary().change(a).has_new_value() )
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].second = QString::fromStdString(comp.annotation_boundary().change(c).new_value() );
-                        else
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].second = QString::null;
-                    }
-                    m.annotationBoundary(endKeys, changes);
-                }
-                else if ( comp.delete_element_end() )
-                {
-                    m.deleteEnd();
-                }
-                else if ( comp.has_delete_element_start() )
-                {
-                    m.deleteStart( QString::fromStdString(comp.delete_element_start().type()) );
-                }
-                else
-                {
-                    qDebug("Oooops, yet unsupported operation");
-                    // TODO
-                }
-            }
-            WaveletDeltaOperation wo;
-            wo.setMutation(m);
-            wo.setDocumentId( QString::fromStdString( mut.document_id() ) );
-            result.addOperation(wo);
-        }
-    }
-    return result;
-}
 
 NetworkAdapter::NetworkAdapter(QObject* parent)
         : QNetworkAccessManager( parent ), m_rpc(0), m_isOnline(false), m_hasConnectionError(false)
@@ -298,7 +110,7 @@ void NetworkAdapter::submit(const WaveletDelta& delta, Wavelet* wavelet)
 //    req.set_wavelet_name( url.toString().toStdString() );
     req.set_wavelet_name( wavelet->url().toString().toStdString() );
     protocol::ProtocolWaveletDelta* d = req.mutable_delta();
-    convert( d, delta );
+    Converter::convert( d, delta );
 
     std::ostringstream str;
     req.SerializeToOstream(&str);
@@ -342,7 +154,7 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
             // Apply all updates to the wave digest
             for( int i = 0; i < update.applied_delta_size(); ++i )
             {
-                WaveletDelta wd = convert( update.applied_delta(i) );
+                WaveletDelta wd = Converter::convert( update.applied_delta(i) );
                 wave->digest()->processor()->handleReceive( wd );
             }
         }
@@ -355,7 +167,7 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
 
             for( int i = 0; i < update.applied_delta_size(); ++i )
             {                
-                WaveletDelta wd = convert( update.applied_delta(i) );
+                WaveletDelta wd = Converter::convert( update.applied_delta(i) );
                 wavelet->processor()->handleReceive( wd );
             }
 
