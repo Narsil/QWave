@@ -12,6 +12,7 @@ class RPC : public QObject
     Q_OBJECT
 public:
     RPC(QObject* parent = 0);
+    RPC(QTcpSocket* socket, QObject* parent = 0);
     ~RPC();
 
     void open(const QString& host, quint16 port);
