@@ -8,6 +8,15 @@ RPC::RPC(QObject* parent)
     m_socket = 0;
 }
 
+RPC::RPC(QTcpSocket* socket, QObject* parent)
+        : QObject( parent ), m_counter(0), m_lengthCompleted(0), m_bufferLen(0)
+{
+    m_socket = socket;
+    connect( m_socket, SIGNAL(disconnected()), SLOT(stop()));
+    connect( m_socket, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(stopOnError(QAbstractSocket::SocketError)));
+    connect( m_socket, SIGNAL(readyRead()), SLOT(readBytes()));
+}
+
 RPC::~RPC()
 {
 }
