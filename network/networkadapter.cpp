@@ -73,41 +73,11 @@ void NetworkAdapter::sendOpenWave(const QString& waveId, const QString& waveletI
     m_rpc->send("waveserver.ProtocolOpenRequest", str.str().data(), str.str().length());
 }
 
-//void NetworkAdapter::sendAddParticipant(Wavelet* wavelet, Participant* participant)
-//{
-//    QString waveId = wavelet->wave()->id();
-//    QString waveletId = wavelet->id();
-//    waveserver::ProtocolSubmitRequest req;
-//    QUrl url;
-//    url.setScheme("wave");
-//    url.setHost(m_serverName);
-//    url.setPath(waveId + "/" + waveletId);
-//    req.set_wavelet_name( url.toString().toStdString() );
-//    protocol::ProtocolWaveletDelta* delta = req.mutable_delta();
-//    delta->set_author(environment()->localUser()->address().toStdString());
-//    delta->mutable_hashed_version()->set_version(0);
-//    delta->mutable_hashed_version()->set_history_hash(url.toString().toStdString());
-//    protocol::ProtocolWaveletOperation* op = delta->add_operation();
-//    op->set_add_participant(participant->address().toStdString());
-//
-//    std::ostringstream str;
-//    req.SerializeToOstream(&str);
-//
-//    qDebug("SubmitRequest>> %s", req.DebugString().data());
-//
-//    m_rpc->send("waveserver.ProtocolSubmitRequest", str.str().data(), str.str().length());
-//}
-
 void NetworkAdapter::submit(const WaveletDelta& delta, Wavelet* wavelet)
 {
     QString waveId = wavelet->wave()->id();
     QString waveletId = wavelet->id();
     waveserver::ProtocolSubmitRequest req;
-//    QUrl url;
-//    url.setScheme("wave");
-//    url.setHost(m_serverName);
-//    url.setPath(waveId + "/" + waveletId);
-//    req.set_wavelet_name( url.toString().toStdString() );
     req.set_wavelet_name( wavelet->url().toString().toStdString() );
     protocol::ProtocolWaveletDelta* d = req.mutable_delta();
     Converter::convert( d, delta );

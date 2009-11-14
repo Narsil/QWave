@@ -76,16 +76,8 @@ void WaveletGraphicsItem::updateParticipants()
     m_addUserButton->setPos( (42 + 5) * m_participantItems.count() + 5, dy + 16);
 }
 
-void WaveletGraphicsItem::paint(QPainter *painter, const QStyleOptionGraphicsItem*, QWidget*)
+void WaveletGraphicsItem::paint(QPainter*, const QStyleOptionGraphicsItem*, QWidget*)
 {
-//    qreal dy = 0;
-//
-//    QBrush brush2(QColor(0xc9,0xe2,0xfc));
-//    painter->fillRect(0, dy, m_rect.width(), 42 + 2 * 5, brush2);
-//    dy += 42 + 2 * 5;
-//
-//    painter->setPen(QPen(QColor(0xaa,0xaa,0xaa)));
-//    painter->drawLine(0, dy, m_rect.width(), dy);
 }
 
 QRectF WaveletGraphicsItem::boundingRect() const

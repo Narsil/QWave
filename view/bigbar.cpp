@@ -23,7 +23,7 @@ BigBar::BigBar(QWidget* parent)
     setScene( m_scene );
 }
 
-void BigBar::drawBackground( QPainter* painter, const QRectF& rect )
+void BigBar::drawBackground( QPainter* painter, const QRectF& )
 {
     QBrush brush2(QColor(0xc9,0xe2,0xfc));
     painter->fillRect(0, 0, width(), height(), brush2);

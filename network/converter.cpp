@@ -162,13 +162,13 @@ WaveletDelta Converter::convert( const protocol::ProtocolWaveletDelta& delta )
                     for( int a = 0; a < comp.annotation_boundary().change_size(); ++a )
                     {
                         if ( comp.annotation_boundary().change(a).has_old_value() )
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].first = QString::fromStdString(comp.annotation_boundary().change(c).old_value() );
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(a).key()) ].first = QString::fromStdString(comp.annotation_boundary().change(a).old_value() );
                         else
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].first = QString::null;
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(a).key()) ].first = QString::null;
                         if ( comp.annotation_boundary().change(a).has_new_value() )
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].second = QString::fromStdString(comp.annotation_boundary().change(c).new_value() );
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(a).key()) ].second = QString::fromStdString(comp.annotation_boundary().change(a).new_value() );
                         else
-                            changes[ QString::fromStdString(comp.annotation_boundary().change(c).key()) ].second = QString::null;
+                            changes[ QString::fromStdString(comp.annotation_boundary().change(a).key()) ].second = QString::null;
                     }
                     m.annotationBoundary(endKeys, changes);
                 }
