@@ -34,6 +34,7 @@ public:
     void setAuthorPixmap(const QPixmap& pixmap);
 
     void toggleBold();
+    void toggleItalic();
     void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
 
 protected:

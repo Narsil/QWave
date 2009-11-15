@@ -197,6 +197,7 @@ void BlipGraphicsItem::titleChanged(const QString& title)
 
 void BlipGraphicsItem::toggleBold()
 {
+    // Find out wether to turn the style on or off
     QTextCursor cursor = m_text->textCursor();
     QTextCharFormat format = cursor.charFormat();
     QString value;
@@ -217,6 +218,36 @@ void BlipGraphicsItem::toggleBold()
         m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/fontWeight", value );
     }
 
+    // Change the format for the cursor or the selection.
+    m_adapter->suspendContentsChange(true);
+    cursor.mergeCharFormat( format );
+    m_adapter->suspendContentsChange(false);
+}
+
+void BlipGraphicsItem::toggleItalic()
+{
+    // Find out wether to turn the style on or off
+    QTextCursor cursor = m_text->textCursor();
+    QTextCharFormat format = cursor.charFormat();
+    QString value;
+    if ( !format.fontItalic() )
+    {
+        format.setFontItalic(true);
+        value = "italic";
+    }
+    else
+    {
+        format.setFontItalic( false );
+        value = QString::null;
+    }
+
+    // Tell the wave server that something has been formatted (if there is a selection).
+    if ( cursor.selectionEnd() != cursor.selectionStart() )
+    {
+        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/fontStyle", value );
+    }
+
+    // Change the format for the cursor or the selection.
     m_adapter->suspendContentsChange(true);
     cursor.mergeCharFormat( format );
     m_adapter->suspendContentsChange(false);

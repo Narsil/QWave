@@ -34,8 +34,6 @@ public:
         StructuredDocument::AttributeList attributes;
         QString text;
         int count;
-
-//        Item deepCopy();
     };
 
     void insertStart(const QString& tag, const StructuredDocument::AttributeList& attributes);
@@ -53,8 +51,6 @@ public:
     QList<Item>::const_iterator begin() const { return m_items.constBegin(); }
     QList<Item>::const_iterator end() const { return m_items.constEnd(); }
     int count() const;
-
-    // DocumentMutation concat( const DocumentMutation& otherMutation ) const;
 
     static QPair<DocumentMutation,DocumentMutation> xform( const DocumentMutation& m1, const DocumentMutation& m2, bool* ok );
 

@@ -3,6 +3,7 @@
 
 #include "structureddocument.h"
 #include <QStack>
+#include <QHash>
 
 class DocumentMutation;
 class Blip;
@@ -38,10 +39,19 @@ signals:
     void deletedLineBreak( int pos);
     void insertedLineBreak(int pos);
     void insertImage( int pos, const QString& attachmentId, const QImage& image, const QString& caption );
+    void setStyle( const QString& style, const QString& value, int startPos, int endPos );
     void setCursor(int pos, const QString& author);
     void mutationEnd();
 
 private:
+    struct PendingStyle
+    {
+        int startPos;
+        QString value;
+    };
+
+    void applyPendingStyleChange( const QString& style, int endPos );
+
     bool m_inBody;
     bool m_afterLine;
     int m_pos;
@@ -52,6 +62,7 @@ private:
     // bool m_captionChanged;
     QString m_caption;
     QString m_attachmentId;
+    QHash<QString,PendingStyle> m_pendingStyles;
 };
 
 #endif // BLIPDOCUMENT_H

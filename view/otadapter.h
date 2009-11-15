@@ -15,7 +15,7 @@ class Participant;
 class QTimer;
 
 /**
-  * This adapter connectes QTextDocument with SynchronizedDocument.
+  * This adapter connectes QTextDocument with BlipDocument.
   * This is required because the GUI edits a QTextDocument while the operation transformation (OT)
   * works on a SynchronizedDocument. The task of this adapter is to keep these two synchronized.
   */
@@ -69,6 +69,7 @@ private slots:
     void insertLineBreak(int inlinePos);
     void setCursor(int inlinePos, const QString& author);
     void insertImage( int inlinePos, const QString& attachmentId, const QImage& image, const QString& caption );
+    void setStyle( const QString& style, const QString& value, int startPos, int endPos );
     void mutationEnd();
     void removeOldCursors();
 

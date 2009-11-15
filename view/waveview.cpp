@@ -126,6 +126,11 @@ void WaveView::boldClicked()
 
 void WaveView::italicCicked()
 {
+    BlipGraphicsItem* item = focusBlipItem();
+    if ( !item )
+        return;
+    item->toggleItalic();
+    m_waveletView->setFocus();
 }
 
 void WaveView::underlineClicked()

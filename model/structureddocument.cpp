@@ -179,14 +179,14 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                 }
                 break;
             case DocumentMutation::AnnotationBoundary:                
-                    foreach( QString key, (*it).endKeys )
-                    {
-                        annoUpdates.remove(key);
-                    }
-                    foreach( QString key, (*it).annotations.keys() )
-                    {
-                        annoUpdates[key] = (*it).annotations[key];
-                    }
+                foreach( QString key, (*it).endKeys )
+                {
+                    annoUpdates.remove(key);
+                }
+                foreach( QString key, (*it).annotations.keys() )
+                {
+                    annoUpdates[key] = (*it).annotations[key];
+                }
                 onAnnotationUpdate(pos, annoUpdates);
                 currentAnno = oldAnno.merge(annoUpdates);
                 break;
