@@ -159,14 +159,45 @@ void BlipDocument::onInsertElementEnd(int index)
 
 void BlipDocument::onAnnotationUpdate(int index, const AnnotationChange& updates)
 {
-    // TODO
+    // Apply all styles which end here
+    foreach( QString pendstyle, m_pendingStyles.keys() )
+    {
+        if ( !updates.contains(pendstyle) )
+            applyPendingStyleChange( pendstyle, m_pos );
+    }
+
+    // Apply all styles which start here or change their value here?
+    foreach( QString style, updates.keys() )
+    {
+        // No change to this style?
+        if ( m_pendingStyles.contains(style) && m_pendingStyles[style].value == updates[style].second )
+            continue;
+        applyPendingStyleChange( style, m_pos );
+        PendingStyle s;
+        s.startPos = m_pos;
+        s.value = updates[style].second;
+        m_pendingStyles[ style ] = s;
+    }
 }
 
 void BlipDocument::onMutationEnd()
-{
+{    
     if ( m_cursorpos != -1 )
         emit setCursor( m_cursorpos, m_currentAuthor );
+
+    foreach( QString style, m_pendingStyles.keys() )
+    {
+        applyPendingStyleChange( style, m_pos );
+    }
 
     emit mutationEnd();
 }
 
+void BlipDocument::applyPendingStyleChange( const QString& style, int endPos )
+{
+    if ( !m_pendingStyles.contains(style) )
+        return;
+    PendingStyle s = m_pendingStyles[style];
+    m_pendingStyles.remove(style);
+    emit setStyle( style, s.value, s.startPos, endPos );
+}

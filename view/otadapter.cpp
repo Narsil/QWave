@@ -33,6 +33,7 @@ OTAdapter::OTAdapter(BlipGraphicsItem* parent )
     connect( blip()->document(), SIGNAL(mutationEnd()), SLOT(mutationEnd()));
     connect( blip()->document(), SIGNAL(insertImage(int,QString,QImage,QString)), SLOT(insertImage(int,QString,QImage,QString)));
     connect( blip()->document(), SIGNAL(setCursor(int,QString)), SLOT(setCursor(int,QString)));
+    connect( blip()->document(), SIGNAL(setStyle(QString,QString,int,int)), SLOT(setStyle(QString,QString,int,int)));
 }
 
 OTAdapter::~OTAdapter()
@@ -595,6 +596,35 @@ void OTAdapter::insertLineBreak(int inlinePos)
     QTextCursor cursor(doc);
     cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
     cursor.insertBlock();
+}
+
+void OTAdapter::setStyle( const QString& style, const QString& value, int startPos, int endPos )
+{
+    if ( m_blockUpdate )
+        return;
+    QTextDocument* doc = textItem()->document();
+    QTextCursor cursor(doc);
+    cursor.setPosition(startPos + textItem()->forbiddenTextRange());
+    cursor.movePosition( QTextCursor::Right, QTextCursor::KeepAnchor, endPos - startPos );
+    QTextCharFormat format;
+    if ( style == "style/fontWeight" )
+    {
+        if ( value == "bold" )
+            format.setFontWeight( QFont::Bold );
+        else
+            format.setFontWeight( QFont::Normal );
+    }
+    if ( style == "style/fontStyle" )
+    {
+        if ( value == "italic" )
+            format.setFontItalic(true);
+        else
+            format.setFontItalic(false);
+    }
+    else
+        qDebug("Unsupported style");
+    // TODO: Handle all styles here
+    cursor.mergeCharFormat(format);
 }
 
 void OTAdapter::setCursor(int inlinePos, const QString& author)

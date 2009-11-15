@@ -87,6 +87,10 @@ public:
     QString toString() const;
 
 protected:
+    /**
+      * While the document is mutated, this set of functions is called. This allows, for example, keeping
+      * a graphical representation of the text in sync with the document obtained from wave servers.
+      */
     virtual void onMutationStart(const QString& author);
     virtual void onRetainChar(int index);
     virtual void onRetainElementStart(int index);
