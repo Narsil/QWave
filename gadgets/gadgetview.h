@@ -3,10 +3,12 @@
 
 #include <QWebView>
 
+class QUrl;
+
 class GadgetView : public QWebView
 {
 public:
-    GadgetView();
+    GadgetView(const QUrl& url);
 };
 
 #endif // GADGETVIEW_H

@@ -278,6 +278,12 @@ void BlipGraphicsItem::insertGadget( const QUrl& url )
     // Insert the gadget tag
     int index = m_adapter->mapToBlip( m_text->textCursor().position() );
     blip()->insertGadget( index, url );
+
+    // Display the image in the QTextDocument
+    m_adapter->suspendContentsChange(true);
+    QTextCursor cursor( m_text->textCursor() );
+    m_text->insertGadget( &cursor, url );
+    m_adapter->suspendContentsChange(false);
 }
 
 /****************************************************************************
