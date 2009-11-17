@@ -273,6 +273,13 @@ void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const 
     m_adapter->suspendContentsChange(false);
 }
 
+void BlipGraphicsItem::insertGadget( const QUrl& url )
+{
+    // Insert the gadget tag
+    int index = m_adapter->mapToBlip( m_text->textCursor().position() );
+    blip()->insertGadget( index, url );
+}
+
 /****************************************************************************
  *
  * BlipReplyGraphicsItem

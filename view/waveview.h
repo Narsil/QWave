@@ -39,6 +39,7 @@ public slots:
     void underlineClicked();
     void strikeoutClicked();
     void imageClicked();
+    void gadgetClicked();
 
 signals:
 	void newWave(Participant*);
@@ -63,6 +64,7 @@ private:
     ButtonGraphicsItem* m_underlineButton;
     ButtonGraphicsItem* m_strikeoutButton;
     ButtonGraphicsItem* m_imageButton;
+    ButtonGraphicsItem* m_gadgetButton;
 };
 
 #endif

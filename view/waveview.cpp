@@ -16,6 +16,7 @@
 #include <QVBoxLayout>
 #include <QScrollBar>
 #include <QPixmap>
+#include <QUrl>
 
 WaveView::WaveView(Wave* wave, QWidget* parent )
         : QWidget(parent), m_wave(wave)
@@ -76,12 +77,15 @@ WaveView::WaveView(Wave* wave, QWidget* parent )
     m_toolBar->addItem(m_strikeoutButton);
     m_imageButton = new ButtonGraphicsItem( QPixmap("images/image.png") );
     m_toolBar->addItem(m_imageButton);
+    m_gadgetButton = new ButtonGraphicsItem( QPixmap("images/gadget.png") );
+    m_toolBar->addItem(m_gadgetButton);
 
     connect( m_boldButton, SIGNAL(clicked()), SLOT(boldClicked()));
     connect( m_italicButton, SIGNAL(clicked()), SLOT(italicCicked()));
     connect( m_underlineButton, SIGNAL(clicked()), SLOT(underlineClicked()));
     connect( m_strikeoutButton, SIGNAL(clicked()), SLOT(strikeoutClicked()));
     connect( m_imageButton, SIGNAL(clicked()), SLOT(imageClicked()));
+    connect( m_gadgetButton, SIGNAL(clicked()), SLOT(gadgetClicked()));
 }
 
 WaveView::~WaveView()
@@ -152,5 +156,17 @@ void WaveView::imageClicked()
     {
         item->insertImage( dlg.url(), dlg.image(), dlg.thumbnail(), dlg.caption() );
     }
+    m_waveletView->setFocus();
+}
+
+void WaveView::gadgetClicked()
+{
+    BlipGraphicsItem* item = focusBlipItem();
+    if ( !item )
+        return;
+
+    // TODO: Show a proper dialog
+    item->insertGadget( QUrl("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/gadget.xml" ) );
+
     m_waveletView->setFocus();
 }

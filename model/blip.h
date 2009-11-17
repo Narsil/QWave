@@ -11,6 +11,7 @@ class StructuredDocument;
 class Participant;
 class DocumentMutation;
 class Environment;
+class QUrl;
 
 class Blip : public QObject
 {
@@ -72,6 +73,7 @@ public:
       * as an attachmen to the wavelet.
       */
     void insertImage(int index, const QString& attachmentId, const QString& caption);
+    void insertGadget( int index, const QUrl& url );
 
 signals:
     /**

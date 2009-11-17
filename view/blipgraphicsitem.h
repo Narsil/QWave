@@ -36,6 +36,7 @@ public:
     void toggleBold();
     void toggleItalic();
     void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
+    void insertGadget( const QUrl& url );
 
 protected:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * event );
