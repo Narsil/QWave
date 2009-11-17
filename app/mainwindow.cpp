@@ -13,6 +13,7 @@
 #include "network/networkadapter.h"
 #include "view/wavelistview.h"
 #include "view/inboxview.h"
+#include "app/settings.h"
 
 #include <QtGlobal>
 #include <QLabel>
@@ -45,7 +46,8 @@ void MainWindow::newWave()
     // TODO: This is a crude way of creating new wave IDs
     QString rand;
     rand.setNum( qrand() );
-    Wave* wave = m_environment->createWave( m_environment->networkAdapter()->serverName(), "w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
+    // Wave* wave = m_environment->createWave( m_environment->networkAdapter()->serverName(), "w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
+    Wave* wave = m_environment->createWave( m_environment->settings()->waveDomain(), "w+" + rand); //new Wave(m_environment, m_environment->networkAdapter()->serverName(), "w+" + rand);
     // Add the new wave to the inbox and show it.
     m_environment->inbox()->addWave(wave);
     Wavelet* wavelet = wave->wavelet();
@@ -87,7 +89,8 @@ void MainWindow::newWave(Participant* p)
     // TODO: This is a crude way of creating new wave IDs
     QString rand;
     rand.setNum( qrand() );
-    Wave* wave = m_environment->createWave( m_environment->networkAdapter()->serverName(), "w+" + rand);
+    // Wave* wave = m_environment->createWave( m_environment->networkAdapter()->serverName(), "w+" + rand);
+    Wave* wave = m_environment->createWave( m_environment->settings()->waveDomain(), "w+" + rand);
     // Add the new wave to the inbox and show it.
     m_environment->inbox()->addWave(wave);
     Wavelet* wavelet = wave->wavelet();

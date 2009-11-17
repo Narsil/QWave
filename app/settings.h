@@ -13,11 +13,19 @@ public:
     void setServerPort(int port);
     int serverPort() const;
     void setUserAddress( const QString& userAddress );
+    /**
+      * @return the JID of the user, i.e. user@host.
+      */
     QString userAddress() const;
     void setUserName( const QString& userName );
+    /**
+      * @return the display name of the user.
+      */
     QString userName() const;
     void setPassword( const QString& password );
     QString password() const;
+
+    QString waveDomain() const;
 
     bool isConfigured() const;
 };

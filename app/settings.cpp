@@ -59,3 +59,13 @@ bool Settings::isConfigured() const
 {
     return this->serverPort() > 0 && !this->serverName().isEmpty() && !this->userName().isEmpty() && !this->userAddress().isEmpty();
 }
+
+QString Settings::waveDomain() const
+{
+    QString jid = userAddress();
+    qDebug("JID=%s", jid.toAscii().constData());
+    int index = jid.indexOf('@');
+    if ( index == -1 )
+        return QString::null;
+    return jid.mid( index + 1 );
+}
