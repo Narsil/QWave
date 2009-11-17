@@ -194,6 +194,20 @@ void Blip::insertImage(int index, const QString& attachmentId, const QString& ca
     wavelet()->processor()->handleSend( m1, id() );
 }
 
+void Blip::insertGadget( int index, const QUrl& url )
+{
+    DocumentMutation m1;
+    m1.retain( index );
+    int remain = m_doc->count() - index;
+    StructuredDocument::AttributeList attribs;
+    attribs["url"] = url.toString();
+    attribs["author"] = environment()->localUser()->address();
+    m1.insertStart( "gadget", attribs );
+    m1.insertEnd();
+    m1.retain( remain );
+    wavelet()->processor()->handleSend( m1, id() );
+}
+
 int Blip::childBlipCount() const
 {
     int result = 0;
