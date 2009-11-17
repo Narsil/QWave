@@ -4,6 +4,7 @@
 #include <QWidget>
 
 class Wave;
+class Participant;
 class WaveletView;
 class MainWindow;
 class TitleBar;
@@ -33,12 +34,14 @@ public:
 
 public slots:
     void setWave( Wave* wave );
-
     void boldClicked();
     void italicCicked();
     void underlineClicked();
     void strikeoutClicked();
     void imageClicked();
+
+signals:
+	void newWave(Participant*);
 
 protected:
     virtual void resizeEvent( QResizeEvent* event );
