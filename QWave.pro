@@ -3,7 +3,7 @@
 # -------------------------------------------------
 # CONFIG += release
 TARGET = QWave
-QT += network
+QT += network webkit xml
 TEMPLATE = app
 SOURCES += app/main.cpp \
     app/mainwindow.cpp \
@@ -52,7 +52,9 @@ SOURCES += app/main.cpp \
     view/imagehandler.cpp \
     model/attachment.cpp \
     view/toolbar.cpp \
-    network/converter.cpp
+    network/converter.cpp \
+    gadgets/gadgetmanifest.cpp \
+    gadgets/gadgetapi.cpp
 unix:SOURCES += protocol/waveclient-rpc.pb.cc \
     protocol/common.pb.cc
 win32:SOURCES += winprotobuf/protocol/waveclient-rpc.pb.cc \
@@ -103,7 +105,9 @@ HEADERS += app/mainwindow.h \
     view/imagehandler.h \
     model/attachment.h \
     view/toolbar.h \
-    network/converter.h
+    network/converter.h \
+    gadgets/gadgetmanifest.h \
+    gadgets/gadgetapi.h
 unix:HEADERS += protocol/waveclient-rpc.pb.h \
     protocol/common.pb.h
 win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \
