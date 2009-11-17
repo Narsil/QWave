@@ -3,6 +3,7 @@
 #include "otadapter.h"
 #include "caret.h"
 #include "imagehandler.h"
+#include "gadgets/gadgethandler.h"
 
 #include <QTextDocument>
 #include <QTextCursor>
@@ -65,6 +66,11 @@ void GraphicsTextItem::insertCaret( QTextCursor* cursor, const QString& text, co
 void GraphicsTextItem::insertImage( QTextCursor* cursor, const QString& id, const QImage& image, const QString& caption )
 {
     m_imageHandler->insertImage( cursor, id, image, caption );
+}
+
+void GraphicsTextItem::insertGadget( QTextCursor* cursor, const QUrl& url )
+{
+    m_gadgetHandler->insertGadget( cursor, url );
 }
 
 void GraphicsTextItem::focusInEvent( QFocusEvent* event )
