@@ -270,6 +270,7 @@ int main(int argc, char *argv[])
         w->setWaveView(view);
         view->connect( wlview, SIGNAL(selected(Wave*)), SLOT(setWave(Wave*)));
         w->connect( cview, SIGNAL(newWave(Participant*)), SLOT(newWave(Participant*)));
+        w->connect( view, SIGNAL(newWave(Participant*)), SLOT(newWave(Participant*)));
         w->show();    
         en->inbox()->addWave(wave);
     // End Test

@@ -11,6 +11,7 @@
 #include "blipgraphicsitem.h"
 #include "graphicstextitem.h"
 #include "insertimagedialog.h"
+#include "participantinfodialog.h"
 
 #include <QPainter>
 #include <QBrush>
@@ -70,6 +71,7 @@ void WaveletGraphicsItem::updateParticipants()
         ParticipantGraphicsItem* item = new ParticipantGraphicsItem(p, 42, false, this);
         item->setPos(dx + 5, dy + 5);
         dx += item->boundingRect().width() + 5;
+        connect(item,SIGNAL(clicked(Participant*)),SLOT(showParticipantInfo(Participant*)));
         m_participantItems.append( item );
     }
 
@@ -98,4 +100,10 @@ void WaveletGraphicsItem::showAddParticipantDialog()
 
     if ( dlg.result() )
         m_wavelet->processor()->handleSendAddParticipant(dlg.result());
+}
+
+void WaveletGraphicsItem::showParticipantInfo(Participant* participant){
+	ParticipantInfoDialog dlg(participant,m_view);
+	connect( &dlg, SIGNAL(newWave(Participant*)),m_view, SIGNAL(newWave(Participant*)));
+	dlg.exec();
 }

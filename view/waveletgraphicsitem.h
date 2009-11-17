@@ -28,6 +28,10 @@ private slots:
     void addParticipant(Participant* participant);
     void removeParticipant(Participant* participant);
     void showAddParticipantDialog();
+    void showParticipantInfo(Participant* participant);
+
+signals:
+	void newWave(Participant* participant);
 
 private:
     void updateParticipants();
