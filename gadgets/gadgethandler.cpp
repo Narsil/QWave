@@ -1,6 +1,7 @@
 #include "gadgethandler.h"
 #include "gadgetview.h"
 #include "view/graphicstextitem.h"
+#include "view/otadapter.h"
 
 #include <QTextDocument>
 #include <QAbstractTextDocumentLayout>
@@ -41,7 +42,10 @@ GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, Environment* enviro
 void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
 {
     QString id = QUuid::createUuid().toString();
-    GadgetView* view = new GadgetView(url, m_textItem->textWidth(), m_environment);
+    GadgetView* view = new GadgetView(url, m_textItem->textWidth(), id, m_environment);
+    bool check = connect( view, SIGNAL(sizeChangeRequired(GadgetView*)), SLOT(resizeGadget(GadgetView*)));
+    Q_ASSERT(check);
+
     QGraphicsProxyWidget* item = m_textItem->scene()->addWidget(view);
     item->setParentItem( m_textItem );
     m_gadgets[id] = view;
@@ -57,6 +61,43 @@ void GadgetHandler::setGadgetWidth( qreal width )
 {
     foreach( QGraphicsProxyWidget* view, m_gadgetItems.values() )
     {
-        view->setGeometry( QRectF( view->x(), view->y(), width, view->size().height() ) );
+        QSizeF s = ((GadgetView*)view->widget())->preferredSize();
+        view->setGeometry( QRectF( view->x(), view->y(), qMin( s.width(), width ), view->size().height() ) );
     }
+}
+
+void GadgetHandler::resizeGadget( GadgetView* view )
+{
+    QGraphicsProxyWidget* item = m_gadgetItems[ view->id() ];
+    QSizeF s = view->preferredSize();
+    item->setGeometry( QRectF( item->x(), item->y(), qMin( s.width(), m_textItem->textWidth() ), s.height() ) );
+
+    // Trigger a relayout
+    QTextCursor cursor = findGadget( view->id() );
+    if ( !cursor.isNull() )
+    {
+        m_textItem->adapter()->suspendContentsChange( true );
+        cursor.movePosition( QTextCursor::Left, QTextCursor::KeepAnchor, 1 );
+        cursor.mergeCharFormat( cursor.charFormat() );
+        m_textItem->adapter()->suspendContentsChange( false );
+    }
+}
+
+QTextCursor GadgetHandler::findGadget(const QString& id)
+{
+    QTextCursor cursor( m_textItem->document() );
+    cursor.movePosition( QTextCursor::Right );
+    while( true )
+    {
+        QTextCharFormat f = cursor.charFormat();
+        if ( f.objectType() == GadgetFormat )
+        {
+            if ( id == f.property(Id).toString() )
+                return cursor;
+        }
+        if ( cursor.atEnd() )
+            return QTextCursor();
+        cursor.movePosition( QTextCursor::Right );
+    }
+    return QTextCursor();
 }

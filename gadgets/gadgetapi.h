@@ -6,12 +6,13 @@
 #include <QHash>
 
 class QWebFrame;
+class GadgetView;
 
 class GadgetAPI : public QObject
 {
     Q_OBJECT
 public:
-    GadgetAPI(QWebFrame* frame, QObject* parent = 0);
+    GadgetAPI(GadgetView* view, QWebFrame* frame, QObject* parent = 0);
 
 public slots:
     void testme(const QVariant& text);
@@ -27,6 +28,8 @@ public slots:
     int wave_getMode();
     bool wave_isInWaveContainer();
     void wave_log( const QString& message );
+
+    void gadgets_adjustHeight( int height );
 
     QVariantMap participants_getAll();
 
@@ -46,6 +49,7 @@ private:
 
     QWebFrame* m_frame;
     QHash<QString,QString> m_state;
+    GadgetView* m_view;
 
     static QString* s_gadgetLib;
     static QString* s_ostemplatesLib;

@@ -32,6 +32,8 @@ public:
       */
     void updateWidth( qreal width );
 
+    OTAdapter* adapter() const { return m_adapter; }
+
     static GraphicsTextItem* cast( QGraphicsItem* item );
 
 protected:

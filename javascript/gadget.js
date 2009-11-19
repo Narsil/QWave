@@ -223,7 +223,7 @@ gadgets.json.parse = function(str)
 gadgets.window = {};
 gadgets.window.adjustHeight = function()
 {
-        // TODO
+        gadgetAPI.gadgets_adjustHeight( document.getElementById("__os__container").offsetHeight );
 };
 JSON = {};
 JSON.stringify = gadgets.json.stringify;
