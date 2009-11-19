@@ -12,7 +12,7 @@ class GadgetView : public QWebView
 {
     Q_OBJECT
 public:
-    GadgetView(const QUrl& url, Environment* environment);
+    GadgetView(const QUrl& url, int width, Environment* environment);
 
 private slots:
     void manifestFinished();
