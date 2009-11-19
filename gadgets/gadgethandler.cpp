@@ -8,8 +8,8 @@
 #include <QGraphicsScene>
 #include <QGraphicsProxyWidget>
 
-GadgetHandler::GadgetHandler(GraphicsTextItem* parent)
-        : QObject(parent), m_textItem(parent)
+GadgetHandler::GadgetHandler(GraphicsTextItem* parent, Environment* environment)
+        : QObject(parent), m_textItem(parent), m_environment(environment)
 {
 }
 
@@ -23,7 +23,7 @@ QSizeF GadgetHandler::intrinsicSize(QTextDocument *, int,
      return QSizeF(1,1);
  }
 
-void GadgetHandler::drawObject(QPainter *painter, const QRectF &rect, QTextDocument *, int, const QTextFormat &format)
+void GadgetHandler::drawObject(QPainter*, const QRectF &rect, QTextDocument*, int, const QTextFormat &format)
  {
     QString id = format.property(Id).toString();
     QGraphicsItem* item = m_gadgetItems[id];
@@ -31,9 +31,9 @@ void GadgetHandler::drawObject(QPainter *painter, const QRectF &rect, QTextDocum
         item->setPos( rect.x(), rect.y() );
  }
 
-GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, GraphicsTextItem* parent)
+GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, Environment* environment, GraphicsTextItem* parent)
 {
-    GadgetHandler* iface = new GadgetHandler(parent);
+    GadgetHandler* iface = new GadgetHandler(parent, environment);
     doc->documentLayout()->registerHandler(GadgetFormat, iface);
     return iface;
 }
@@ -41,7 +41,7 @@ GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, GraphicsTextItem* p
 void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
 {
     QString id = QUuid::createUuid().toString();
-    GadgetView* view = new GadgetView(url);
+    GadgetView* view = new GadgetView(url, m_environment);
     QGraphicsItem* item = m_textItem->scene()->addWidget(view);
     item->setParentItem( m_textItem );
     m_gadgets[id] = view;

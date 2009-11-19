@@ -9,6 +9,7 @@
 class GadgetView;
 class GraphicsTextItem;
 class QGraphicsItem;
+class Environment;
 
 class GadgetHandler : public QObject, public QTextObjectInterface
 {
@@ -25,20 +26,21 @@ public:
         Size = 2
     };
 
-    GadgetHandler(GraphicsTextItem* parent);
+    GadgetHandler(GraphicsTextItem* parent, Environment* environment);
 
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
     void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc, int posInDocument, const QTextFormat &format);
 
     void insertGadget(QTextCursor* cursor, const QUrl& url);
 
-    static GadgetHandler* initialize(QTextDocument* doc, GraphicsTextItem* parent);
+    static GadgetHandler* initialize(QTextDocument* doc, Environment* environment, GraphicsTextItem* parent);
 
 private:
     QFont m_font;
     QHash<QString,GadgetView*> m_gadgets;
     QHash<QString,QGraphicsItem*> m_gadgetItems;
     GraphicsTextItem* m_textItem;
+    Environment* m_environment;
 };
 
 #endif // GADGETHANDLER_H
