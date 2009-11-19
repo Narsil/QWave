@@ -1,5 +1,9 @@
 #include "gadgetapi.h"
 #include "gadgetview.h"
+#include "app/environment.h"
+#include "model/participant.h"
+#include "model/blip.h"
+#include "model/wavelet.h"
 #include <QWebFrame>
 #include <QWebPage>
 #include <QFile>
@@ -168,23 +172,31 @@ void GadgetAPI::wave_log( const QString& message )
 
 QVariantMap GadgetAPI::participants_getAll()
 {
+    Environment* en = m_view->environment();
+
     QVariantMap result;
-    result["myId"] = QVariant("Horst");
+    // TODO
     result["authorId"] = QVariant("Autor");
+    // Add the local user
+    result["myId"] = QVariant(en->localUser()->address());
     QVariantList participants;
-    participants.append( "Horst" );
-    participants.append( "Autor" );
+    participants.append( en->localUser()->address() );
+    QVariantMap lmap;
+    lmap["id"] = QVariant(en->localUser()->address());
+    lmap["displayName"] = QVariant(en->localUser()->name());
+    lmap["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
+    result[en->localUser()->address()] = lmap;
+
+    foreach( Participant* p, m_view->blip()->wavelet()->participants() )
+    {
+        participants.append( p->address() );
+        QVariantMap map;
+        map["id"] = QVariant(p->address());
+        map["displayName"] = QVariant(p->name());
+        map["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
+        result[p->address()] = map;
+    }
     result["participants"] = QVariant( participants );
-    QVariantMap horst;
-    horst["id"] = QVariant("Horst");
-    horst["displayName"] = QVariant("Horst aus Duisburg");
-    horst["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
-    result["Horst"] = horst;
-    QVariantMap autor;
-    autor["id"] = QVariant("Autor");
-    autor["displayName"] = QVariant("Gott");
-    autor["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
-    result["Horst"] = autor;
     return result;
 }
 

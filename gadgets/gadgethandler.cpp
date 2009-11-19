@@ -42,7 +42,7 @@ GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, Environment* enviro
 void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
 {
     QString id = QUuid::createUuid().toString();
-    GadgetView* view = new GadgetView(url, m_textItem->textWidth(), id, m_environment);
+    GadgetView* view = new GadgetView(m_textItem->adapter()->blip(), url, m_textItem->textWidth(), id, m_environment);
     bool check = connect( view, SIGNAL(sizeChangeRequired(GadgetView*)), SLOT(resizeGadget(GadgetView*)));
     Q_ASSERT(check);
 
