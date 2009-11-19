@@ -21,7 +21,7 @@ GraphicsTextItem::GraphicsTextItem(OTAdapter* adapter, QGraphicsItem* parent)
 
     m_caretIface = CaretInterface::initialize(this->document(), this);
     m_imageHandler = ImageHandler::initialize(this->document(), this);
-    m_gadgetHandler = GadgetHandler::initialize(this->document(), this);
+    m_gadgetHandler = GadgetHandler::initialize(this->document(), m_adapter->environment(), this);
 }
 
 GraphicsTextItem* GraphicsTextItem::cast( QGraphicsItem* item )

@@ -7,6 +7,7 @@
 #include <QList>
 
 class QNetworkReply;
+class Environment;
 
 /**
  * <Module>
@@ -23,8 +24,10 @@ class GadgetManifest : public QObject
 {
     Q_OBJECT
 public:
-    GadgetManifest(const QUrl& url, QObject* parent = 0);
+    GadgetManifest(const QUrl& url, Environment* environment, QObject* parent = 0);
     ~GadgetManifest();
+
+    void load();
 
     bool isMalformed() const { return m_malformed; }
     QUrl url() const { return m_url; }
@@ -36,7 +39,7 @@ public:
     QList<QString> requiredFeatures() const { return m_requiredFeatures; }
 
 signals:
-    void finished(const GadgetManifest* manifest);
+    void finished();
 
 private slots:
     void parse();
@@ -51,6 +54,7 @@ private:
     QList<QString> m_requiredFeatures;
     QString m_content;
     QString m_contentType;
+    Environment* m_environment;
 };
 
 #endif // GADGETMANIFEST_H

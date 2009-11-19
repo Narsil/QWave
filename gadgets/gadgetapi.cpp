@@ -12,7 +12,7 @@ GadgetAPI::GadgetAPI(QWebFrame* frame, QObject* parent)
 {
     if ( s_gadgetLib == 0 )
     {
-        QFile file( "gadget.js" );
+        QFile file( "javascript/gadget.js" );
         bool check = file.open( QIODevice::ReadOnly );
         Q_ASSERT(check);
         QTextStream stream( &file );
@@ -20,7 +20,7 @@ GadgetAPI::GadgetAPI(QWebFrame* frame, QObject* parent)
     }
     if ( s_ostemplatesLib == 0 )
     {
-        QFile file( "ostemplates.js" );
+        QFile file( "javascript/ostemplates.js" );
         bool check = file.open( QIODevice::ReadOnly );
         Q_ASSERT(check);
         QTextStream stream( &file );

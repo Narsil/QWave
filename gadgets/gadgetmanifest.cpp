@@ -1,4 +1,6 @@
 #include "gadgetmanifest.h"
+#include "app/environment.h"
+#include "network/networkadapter.h"
 #include <QDomDocument>
 #include <QDomNodeList>
 #include <QDomElement>
@@ -6,10 +8,14 @@
 #include <QNetworkAccessManager>
 #include <QTextStream>
 
-GadgetManifest::GadgetManifest(const QUrl& url, QObject* parent)
-        : QObject( parent ), m_url(url), m_reply(0), m_malformed(false)
+GadgetManifest::GadgetManifest(const QUrl& url, Environment* environment, QObject* parent)
+        : QObject( parent ), m_url(url), m_reply(0), m_malformed(false), m_environment(environment)
 {
-    QNetworkAccessManager* net = new QNetworkAccessManager(this);
+}
+
+void GadgetManifest::load()
+{
+    QNetworkAccessManager* net = m_environment->networkAdapter();
     m_reply = net->get( QNetworkRequest(m_url));
     connect( m_reply, SIGNAL(finished()), SLOT(parse()));
 }
@@ -26,14 +32,14 @@ void GadgetManifest::parse()
     if ( !doc.setContent( m_reply->readAll() ) )
     {
         m_malformed = true;
-        emit finished(this);
+        emit finished();
     }
 
     QDomNodeList lst = doc.elementsByTagName("Module");
     if ( lst.count() != 1 )
     {
         m_malformed = true;
-        emit finished(this);
+        emit finished();
     }
     QDomElement module = lst.item(0).toElement();
 
@@ -41,7 +47,7 @@ void GadgetManifest::parse()
     if ( lst.count() != 1 )
     {
         m_malformed = true;
-        emit finished(this);
+        emit finished();
     }
     QDomElement modulePrefs = lst.item(0).toElement();
     if ( modulePrefs.hasAttribute("width" ) )
@@ -63,7 +69,7 @@ void GadgetManifest::parse()
     if ( lst.count() != 1 )
     {
         m_malformed = true;
-        emit finished(this);
+        emit finished();
     }
     QDomElement content = lst.item(0).toElement();
     if ( content.hasAttribute("type") )
@@ -78,5 +84,5 @@ void GadgetManifest::parse()
     }
 //    qDebug ("%s", m_content.toAscii().constData());
 
-    emit finished(this);
+    emit finished();
 }
