@@ -3,8 +3,8 @@
 #include "gadgetapi.h"
 #include <QUrl>
 
-GadgetView::GadgetView(const QUrl& url, int width, const QString& id, Environment* environment)
-        : QWebView(), m_environment(environment), m_preferredSize( width, 150 ), m_id(id)
+GadgetView::GadgetView(Blip* blip, const QUrl& url, int width, const QString& id, Environment* environment)
+        : QWebView(), m_environment(environment), m_preferredSize( width, 150 ), m_id(id), m_blip(blip)
 {
     setGeometry( 0, 0, (int)m_preferredSize.width(), (int)m_preferredSize.height() );
     this->setHtml("<html><body style=\"background-color:#888888; overflow:hidden\"><h1>Loading gadget ...</h1></body></html>");
