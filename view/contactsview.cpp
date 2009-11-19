@@ -13,6 +13,7 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
         : QWidget(parent), m_contacts(contacts)
 {
     setMinimumWidth(180);
+    setMaximumWidth(180);
 
     m_verticalLayout = new QVBoxLayout(this);
     m_verticalLayout->setSpacing(0);
@@ -27,6 +28,7 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
 
     m_listView = new ParticipantListView(this);
     m_listView->setSelectable(true);
+    m_listView->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Expanding );
     m_titleBar = new TitleBar(this);
     m_verticalLayout->addWidget(m_titleBar);
     m_verticalLayout->addWidget(m_bigBar);

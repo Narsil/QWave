@@ -79,3 +79,9 @@ void GraphicsTextItem::focusInEvent( QFocusEvent* event )
     QGraphicsTextItem::focusInEvent(event);
     emit focusIn();
 }
+
+void GraphicsTextItem::updateWidth( qreal width )
+{
+    m_gadgetHandler->setGadgetWidth(width);
+    setTextWidth( width );
+}

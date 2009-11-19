@@ -42,7 +42,7 @@ void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
 {
     QString id = QUuid::createUuid().toString();
     GadgetView* view = new GadgetView(url, m_textItem->textWidth(), m_environment);
-    QGraphicsItem* item = m_textItem->scene()->addWidget(view);
+    QGraphicsProxyWidget* item = m_textItem->scene()->addWidget(view);
     item->setParentItem( m_textItem );
     m_gadgets[id] = view;
     m_gadgetItems[id] = item;
@@ -51,4 +51,12 @@ void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
     charFormat.setObjectType(GadgetFormat);
     charFormat.setProperty(Id, id);
     cursor->insertText(QString(QChar::ObjectReplacementCharacter), charFormat);
+}
+
+void GadgetHandler::setGadgetWidth( qreal width )
+{
+    foreach( QGraphicsProxyWidget* view, m_gadgetItems.values() )
+    {
+        view->setGeometry( QRectF( view->x(), view->y(), width, view->size().height() ) );
+    }
 }
