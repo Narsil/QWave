@@ -3,10 +3,10 @@
 #include "gadgetapi.h"
 #include <QUrl>
 
-GadgetView::GadgetView(const QUrl& url, Environment* environment)
+GadgetView::GadgetView(const QUrl& url, int width, Environment* environment)
         : QWebView(), m_environment(environment)
 {
-    this->setGeometry( 0, 0, 300, 150 );
+    this->setGeometry( 0, 0, width, 150 );
     this->setHtml("<html><body style=\"background-color:#888888; overflow:hidden\"><h1>Loading gadget ...</h1></body></html>");
 
     m_api = new GadgetAPI( page()->mainFrame(), this );
@@ -18,5 +18,5 @@ GadgetView::GadgetView(const QUrl& url, Environment* environment)
 void GadgetView::manifestFinished()
 {
     QString content = m_manifest->content();
-    this->setHtml("<html><body style=\"overflow:hidden\">" + content.mid(9, content.length() - 12) + "</body></html>");
+    this->setHtml("<html><body style=\"overflow:hidden\">" + content + "</body></html>");
 }

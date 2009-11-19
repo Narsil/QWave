@@ -41,7 +41,7 @@ GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, Environment* enviro
 void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
 {
     QString id = QUuid::createUuid().toString();
-    GadgetView* view = new GadgetView(url, m_environment);
+    GadgetView* view = new GadgetView(url, m_textItem->textWidth(), m_environment);
     QGraphicsItem* item = m_textItem->scene()->addWidget(view);
     item->setParentItem( m_textItem );
     m_gadgets[id] = view;

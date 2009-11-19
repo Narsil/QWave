@@ -3,10 +3,11 @@
 #include "network/networkadapter.h"
 #include <QDomDocument>
 #include <QDomNodeList>
+#include <QDomCDATASection>
 #include <QDomElement>
 #include <QNetworkReply>
 #include <QNetworkAccessManager>
-#include <QTextStream>
+// #include <QTextStream>
 
 GadgetManifest::GadgetManifest(const QUrl& url, Environment* environment, QObject* parent)
         : QObject( parent ), m_url(url), m_reply(0), m_malformed(false), m_environment(environment)
@@ -76,13 +77,15 @@ void GadgetManifest::parse()
         m_contentType = content.attribute("type");
     else
         m_contentType = "html";
-    QTextStream stream( &m_content );
+
+    m_content = "";
     lst = content.childNodes();
     for( int i = 0; i < lst.count(); ++i )
     {
-        lst.item(0).save(stream, 0);
+        QDomCDATASection cdata = lst.item(i).toCDATASection();
+        if ( !cdata.isNull() )
+            m_content.append( cdata.data() );
     }
-//    qDebug ("%s", m_content.toAscii().constData());
 
     emit finished();
 }
