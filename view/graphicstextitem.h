@@ -26,6 +26,12 @@ public:
     void insertImage( QTextCursor* cursor, const QString& id, const QImage& image, const QString& caption );
     void insertGadget( QTextCursor* cursor, const QUrl& url );
 
+    /**
+      * Call this function instead of setTextWidth, because this function will as well
+      * resize the gadgets.
+      */
+    void updateWidth( qreal width );
+
     static GraphicsTextItem* cast( QGraphicsItem* item );
 
 protected:

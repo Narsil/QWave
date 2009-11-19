@@ -11,6 +11,8 @@
 InboxView::InboxView(Environment* environment, QWidget* parent)
         : QWidget(parent), m_environment( environment )
 {
+    setMinimumWidth(300);
+
     m_verticalLayout = new QVBoxLayout(this);
     m_verticalLayout->setSpacing(0);
     m_verticalLayout->setMargin(0);
@@ -23,6 +25,7 @@ InboxView::InboxView(Environment* environment, QWidget* parent)
     l->addWidget(m_searchBox);
 
     m_listView = new WaveListView( environment->inbox() );
+    m_listView->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Expanding );
     m_titleBar = new TitleBar(this);
     m_verticalLayout->addWidget(m_titleBar);
     m_verticalLayout->addWidget(m_bigBar);

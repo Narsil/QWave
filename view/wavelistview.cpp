@@ -9,7 +9,6 @@
 WaveListView::WaveListView(WaveList* list, QWidget* parent)
         : QGraphicsView(parent), m_list(list), m_selectedItem(0)
 {
-    setMinimumWidth(300);
     setFrameShape(QFrame::NoFrame);
     setFrameShadow(QFrame::Plain);
     setLineWidth(0);
