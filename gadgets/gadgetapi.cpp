@@ -1,4 +1,5 @@
 #include "gadgetapi.h"
+#include "gadgetview.h"
 #include <QWebFrame>
 #include <QWebPage>
 #include <QFile>
@@ -7,8 +8,8 @@
 QString* GadgetAPI::s_gadgetLib = 0;
 QString* GadgetAPI::s_ostemplatesLib = 0;
 
-GadgetAPI::GadgetAPI(QWebFrame* frame, QObject* parent)
-        : QObject( parent ), m_frame(frame)
+GadgetAPI::GadgetAPI(GadgetView* view, QWebFrame* frame, QObject* parent)
+        : QObject( parent ), m_frame(frame), m_view(view)
 {
     if ( s_gadgetLib == 0 )
     {
@@ -185,4 +186,9 @@ QVariantMap GadgetAPI::participants_getAll()
     autor["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
     result["Horst"] = autor;
     return result;
+}
+
+void GadgetAPI::gadgets_adjustHeight( int height )
+{
+    m_view->adjustHeight( height );
 }

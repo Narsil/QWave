@@ -59,7 +59,8 @@ void BlipGraphicsItem::setWidth(qreal width)
     if ( m_lastWidth == width )
         return;
     m_lastWidth = width;
-    m_text->setTextWidth(width - m_text->x());
+    // m_text->setTextWidth(width - m_text->x());
+    m_text->updateWidth(width - m_text->x());
 }
 
 void BlipGraphicsItem::repaint()

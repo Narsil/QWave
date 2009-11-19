@@ -130,3 +130,4 @@ release {
         msvcrt.lib
     win32:LIBS += winprotobuf/lib/release/libprotobuf.lib
 }
+OTHER_FILES += javascript/gadget.js

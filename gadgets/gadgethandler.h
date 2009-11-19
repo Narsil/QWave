@@ -4,6 +4,7 @@
 #include <QObject>
 #include <QTextObjectInterface>
 #include <QTextFormat>
+#include <QTextCursor>
 #include <QString>
 
 class GadgetView;
@@ -30,9 +31,19 @@ public:
     void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc, int posInDocument, const QTextFormat &format);
 
     void insertGadget(QTextCursor* cursor, const QUrl& url);
+    /**
+      * Called when the containing text document is resized.
+      */
     void setGadgetWidth( qreal width );
+    QTextCursor findGadget(const QString& id);
 
     static GadgetHandler* initialize(QTextDocument* doc, Environment* environment, GraphicsTextItem* parent);
+
+private slots:
+    /**
+      * Called when a gadget requests a new size.
+      */
+    void resizeGadget( GadgetView* view );
 
 private:
     GadgetHandler(GraphicsTextItem* parent, Environment* environment);
