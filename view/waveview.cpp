@@ -115,10 +115,20 @@ void WaveView::italicCicked()
 
 void WaveView::underlineClicked()
 {
+    BlipGraphicsItem* item = focusBlipItem();
+    if ( !item )
+        return;
+    item->toggleUnderline();
+    m_waveletView->setFocus();
 }
 
 void WaveView::strikeoutClicked()
 {
+    BlipGraphicsItem* item = focusBlipItem();
+    if ( !item )
+        return;
+    item->toggleStrikeout();
+    m_waveletView->setFocus();
 }
 
 void WaveView::imageClicked()

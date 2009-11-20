@@ -352,6 +352,21 @@ void OTAdapter::setGraphicsText()
                 format.setFontItalic(true);
             else
                 format.setFontItalic(false);
+            if ( anno.value("style/textDecoration") == "underline" )
+            {
+                format.setFontUnderline(true);
+                format.setFontStrikeOut(false);
+            }
+            else if ( anno.value("style/textDecoration") == "line-through" )
+            {
+                format.setFontStrikeOut(true);
+                format.setFontUnderline(false);
+            }
+            else
+            {
+                format.setFontStrikeOut(false);
+                format.setFontUnderline(false);
+            }
         }
         switch( doc->typeAt(i) )
         {
@@ -614,12 +629,30 @@ void OTAdapter::setStyle( const QString& style, const QString& value, int startP
         else
             format.setFontWeight( QFont::Normal );
     }
-    if ( style == "style/fontStyle" )
+    else if ( style == "style/fontStyle" )
     {
         if ( value == "italic" )
             format.setFontItalic(true);
         else
             format.setFontItalic(false);
+    }
+    else if ( style == "style/textDecoration" )
+    {
+        if ( value == "underline" )
+        {
+            format.setFontUnderline(true);
+            format.setFontStrikeOut(false);
+        }
+        else if ( value == "line-through" )
+        {
+            format.setFontStrikeOut(true);
+            format.setFontUnderline(false);
+        }
+        else
+        {
+            format.setFontStrikeOut(false);
+            format.setFontUnderline(false);
+        }
     }
     else
         qDebug("Unsupported style");
