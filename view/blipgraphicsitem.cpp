@@ -254,6 +254,66 @@ void BlipGraphicsItem::toggleItalic()
     m_adapter->suspendContentsChange(false);
 }
 
+void BlipGraphicsItem::toggleUnderline()
+{
+    // Find out wether to turn the style on or off
+    QTextCursor cursor = m_text->textCursor();
+    QTextCharFormat format = cursor.charFormat();
+    QString value;
+    if ( !format.fontUnderline() )
+    {
+        format.setFontUnderline(true);
+        format.setFontStrikeOut(false);
+        value = "underline";
+    }
+    else
+    {
+        format.setFontUnderline( false );
+        value = QString::null;
+    }
+
+    // Tell the wave server that something has been formatted (if there is a selection).
+    if ( cursor.selectionEnd() != cursor.selectionStart() )
+    {
+        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/textDecoration", value );
+    }
+
+    // Change the format for the cursor or the selection.
+    m_adapter->suspendContentsChange(true);
+    cursor.mergeCharFormat( format );
+    m_adapter->suspendContentsChange(false);
+}
+
+void BlipGraphicsItem::toggleStrikeout()
+{
+    // Find out wether to turn the style on or off
+    QTextCursor cursor = m_text->textCursor();
+    QTextCharFormat format = cursor.charFormat();
+    QString value;
+    if ( !format.fontStrikeOut() )
+    {
+        format.setFontStrikeOut(true);
+        format.setFontUnderline(false);
+        value = "line-through";
+    }
+    else
+    {
+        format.setFontStrikeOut( false );
+        value = QString::null;
+    }
+
+    // Tell the wave server that something has been formatted (if there is a selection).
+    if ( cursor.selectionEnd() != cursor.selectionStart() )
+    {
+        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/textDecoration", value );
+    }
+
+    // Change the format for the cursor or the selection.
+    m_adapter->suspendContentsChange(true);
+    cursor.mergeCharFormat( format );
+    m_adapter->suspendContentsChange(false);
+}
+
 void BlipGraphicsItem::focusInEvent()
 {
     m_view->focusInEvent( this );

@@ -35,6 +35,8 @@ public:
 
     void toggleBold();
     void toggleItalic();
+    void toggleUnderline();
+    void toggleStrikeout();
     void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
     void insertGadget( const QUrl& url );
 
