@@ -6,10 +6,11 @@
 Wave::Wave(Environment* environment, const QString& domain, const QString &id)
         : QObject(environment), m_id(id), m_domain(domain)
 {
-    m_digest = new WaveDigest(this);
+
 
     Wavelet* wavelet = new Wavelet(this, domain, "conv+root");
     connect( wavelet, SIGNAL(blipCountChanged()), SIGNAL(blipCountChanged()));
+    m_digest = new WaveDigest(this,wavelet->processor());
 }
 
 Wavelet* Wave::wavelet() const
