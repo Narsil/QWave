@@ -19,7 +19,7 @@ class WaveDigest : public QObject
 {
     Q_OBJECT
 public:
-    WaveDigest(Wave* parent);
+    WaveDigest(Wave* parent,OTProcessor* processor);
 
     Wave* wave() const;
 
