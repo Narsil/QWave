@@ -41,6 +41,7 @@ QUrl Wavelet::url() const
     url.setHost( domain() );
     // TODO: This is only true for local wavelets!
     url.setPath( "/" + wave()->id() + "/" + m_id );
+    qDebug()<<url;
     return url;
 }
 
@@ -237,9 +238,11 @@ void Wavelet::removeParticipant( const QString& address )
         if ( p->address() == address )
         {
             m_participants.removeAll(p);
+            emit participantRemoved(p);
             return;
         }
     }
+
 }
 
 void Wavelet::mutateDocument( const QString& documentId, const DocumentMutation& mutation, const QString& author )

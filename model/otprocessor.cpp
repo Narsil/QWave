@@ -68,6 +68,15 @@ void OTProcessor::handleSendAddParticipant( Participant* p )
     handleSend(delta);
 }
 
+void OTProcessor::handleSendRemoveParticipant(const QString& address){
+	Q_ASSERT(m_wavelet !=0);
+	WaveletDelta delta;
+	WaveletDeltaOperation op;
+	op.setRemoveParticipant(address);
+	delta.addOperation(op);
+	handleSend(delta);
+}
+
 void OTProcessor::handleSend( const DocumentMutation& mutation, const QString& documentId )
 {
     WaveletDelta delta;

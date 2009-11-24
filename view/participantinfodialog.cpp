@@ -10,7 +10,7 @@
 #include <QGraphicsScene>
 #include <QGraphicsProxyWidget>
 
-ParticipantInfoDialog::ParticipantInfoDialog(Participant* participant, QWidget* parent)
+ParticipantInfoDialog::ParticipantInfoDialog(Participant* participant, QWidget* parent, bool showRemove)
         : PopupDialog( parent ), m_participant(participant)
 {
     setMinimumWidth(400);
@@ -35,10 +35,26 @@ ParticipantInfoDialog::ParticipantInfoDialog(Participant* participant, QWidget* 
     text->setFont( QFont( "Arial", 11 ) );
 
     connect( button, SIGNAL(clicked()), SLOT(newWave()));
+
+    //Adds remove button if parent is a waveview
+    if (showRemove){
+		QPushButton* removeFromWaveButton = new QPushButton();
+		removeFromWaveButton->setText(tr("Remove"));
+		QGraphicsProxyWidget* removeItem = scene()->addWidget(removeFromWaveButton);
+		removeItem->setParentItem( widget() );
+		removeItem->setPos( width() - item->preferredWidth() - removeItem->preferredWidth() - 20, height() - 10 - removeItem->preferredHeight() );
+		connect( removeFromWaveButton, SIGNAL(clicked()),SLOT(removeParticipant()));
+    }
 }
 
 void ParticipantInfoDialog::newWave()
 {
     emit newWave(m_participant);
     accept();
+}
+
+void ParticipantInfoDialog::removeParticipant(){
+	QString address=m_participant->address();
+	emit removeParticipant(address);
+	accept();
 }
