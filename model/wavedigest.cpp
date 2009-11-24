@@ -7,10 +7,11 @@
 #include "participant.h"
 #include "app/environment.h"
 
-WaveDigest::WaveDigest(Wave* parent,OTProcessor* processor)
-        : QObject(parent),m_processor(processor)
+WaveDigest::WaveDigest(Wave* parent)
+        : QObject(parent)
 {
     m_doc = new StructuredDocument(this);
+    m_processor = new OTProcessor(parent->environment(), this);
 
     connect( m_processor, SIGNAL(documentMutation(QString,DocumentMutation,QString)), SLOT(mutateDocument(QString,DocumentMutation,QString)));
     connect( m_processor, SIGNAL(participantAdd(QString)), SLOT(addParticipant(QString)));
