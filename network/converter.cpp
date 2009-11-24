@@ -86,6 +86,40 @@ void Converter::convert(protocol::ProtocolWaveletDelta* result, const WaveletDel
                                 comp->mutable_annotation_boundary()->add_end( ek.toStdString() );
                             }
                         break;
+                    case DocumentMutation::ReplaceAttributes:
+                        {
+                            protocol::ProtocolDocumentOperation_Component_ReplaceAttributes* repl = comp->mutable_replace_attributes();
+                            foreach( QString key, (*it).attributes.keys() )
+                            {
+                                if ( key[0] == '-' )
+                                {
+                                    protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = repl->add_old_attribute();
+                                    pair->set_key( key.mid(1).toStdString() );
+                                    pair->set_value( (*it).attributes[key].toStdString() );
+                                }
+                                else
+                                {
+                                    protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = repl->add_new_attribute();
+                                    pair->set_key( key.mid(1).toStdString() );
+                                    pair->set_value( (*it).attributes[key].toStdString() );
+                                }
+                            }
+                        }
+                        break;
+                    case DocumentMutation::UpdateAttributes:
+                        {
+                            protocol::ProtocolDocumentOperation_Component_UpdateAttributes* update = comp->mutable_update_attributes();
+                            foreach( QString key, (*it).attributes.keys() )
+                            {
+                                if ( key[0] == '-' )
+                                    continue;
+                                protocol::ProtocolDocumentOperation_Component_KeyValueUpdate* kv = update->add_attribute_update();
+                                kv->set_key( key.toStdString() );
+                                kv->set_new_value( (*it).attributes[key].toStdString() );
+                                kv->set_old_value( (*it).attributes["-" + key].toStdString() );
+                            }
+                        }
+                        break;
                 }
             }
         }
@@ -178,12 +212,39 @@ WaveletDelta Converter::convert( const protocol::ProtocolWaveletDelta& delta )
                 }
                 else if ( comp.has_delete_element_start() )
                 {
-                    m.deleteStart( QString::fromStdString(comp.delete_element_start().type()) );
+                    StructuredDocument::AttributeList attribs;
+                    for( int a = 0; a < comp.delete_element_start().attribute_size(); ++a )
+                        attribs[ QString::fromStdString(comp.delete_element_start().attribute(a).key()) ] = QString::fromStdString(comp.delete_element_start().attribute(a).value() );
+                    m.deleteStart( QString::fromStdString(comp.delete_element_start().type()), attribs );
                 }
-                else
+                else if ( comp.has_replace_attributes() )
                 {
-                    qDebug("Oooops, yet unsupported operation");
-                    // TODO
+                    StructuredDocument::AttributeList oldAttribs;
+                    StructuredDocument::AttributeList newAttribs;
+                    for( int a = 0; a < comp.replace_attributes().old_attribute_size(); ++a )
+                        oldAttribs[ QString::fromStdString( comp.replace_attributes().old_attribute(a).key() ) ] = QString::fromStdString(comp.replace_attributes().old_attribute(a).value() );
+                    for( int a = 0; a < comp.replace_attributes().new_attribute_size(); ++a )
+                        newAttribs[ QString::fromStdString( comp.replace_attributes().new_attribute(a).key() ) ] = QString::fromStdString(comp.replace_attributes().new_attribute(a).value() );
+                    m.replaceAttributes( oldAttribs, newAttribs );
+                }
+                else if ( comp.has_update_attributes() )
+                {
+                    QHash<QString,StructuredDocument::StringPair> updates;
+                    for( int a = 0; a < comp.update_attributes().attribute_update_size(); ++a )
+                    {
+                        QString key = QString::fromStdString( comp.update_attributes().attribute_update(a).key() );
+                        StructuredDocument::StringPair pair;
+                        if ( comp.update_attributes().attribute_update(a).has_new_value() )
+                            pair.second = QString::fromStdString(comp.update_attributes().attribute_update(a).new_value() );
+                        else
+                            pair.second = QString::null;
+                        if ( comp.update_attributes().attribute_update(a).has_old_value() )
+                            pair.first = QString::fromStdString(comp.update_attributes().attribute_update(a).old_value() );
+                        else
+                            pair.first = QString::null;
+                        updates[key] = pair;
+                    }
+                    m.updateAttributes(updates);
                 }
             }
             WaveletDeltaOperation wo;

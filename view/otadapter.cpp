@@ -208,7 +208,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
                             m.deleteChars(text);
                             text = "";
                         }
-                        m.deleteStart(bdoc->tagAt(pos));
+                        m.deleteStart(bdoc->tagAt(pos), bdoc->attributesAt(pos));
                         docRemoved++;
                         int stack = 1;
                         while( stack > 0 )
@@ -222,7 +222,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
                                     break;
                                 case StructuredDocument::Start:
                                     stack++;
-                                    m.deleteStart(bdoc->tagAt(pos));
+                                    m.deleteStart(bdoc->tagAt(pos), bdoc->attributesAt(pos));
                                     break;
                                 case StructuredDocument::End:
                                     stack--;

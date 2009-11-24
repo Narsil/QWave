@@ -178,6 +178,72 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                     }
                 }
                 break;
+            case DocumentMutation::UpdateAttributes:
+                {
+                    AttributeList old = m_attributes[pos];
+                    foreach( QString key, (*it).attributes )
+                    {
+                        if ( key[0] == '-' )
+                            continue;
+                        QString value = (*it).attributes[key];
+                        QString oldValue = (*it).attributes["-" + key];
+                        if ( !oldValue.isNull() )
+                        {
+                            if ( !old.contains( key ) )
+                            {
+                                qDebug("Ooooops, old tag did not contain the attribute.");
+                                return false;
+                            }
+                            if ( old[key] != (*it).attributes["-" + key] )
+                            {
+                                qDebug("Ooooops, old tag did not contain different attribute value.");
+                                return false;
+                            }
+                        }
+                        if ( value.isNull() )
+                            m_attributes[pos].remove(key);
+                        else
+                            m_attributes[pos].insert( key, value );
+                    }
+                }
+                break;
+            case DocumentMutation::ReplaceAttributes:
+                {
+                    int oldCount = 0;
+                    AttributeList old = m_attributes[pos];
+                    m_attributes[pos].clear();
+                    foreach( QString key, (*it).attributes )
+                    {
+                        if ( key[0] == '-' )
+                        {
+                            QString value = (*it).attributes[key];
+                            oldCount++;
+                            key = key.mid(1);
+                            if ( !old.contains( key ) )
+                            {
+                                qDebug("Ooooops, old tag did not contain the attribute.");
+                                return false;
+                            }
+                            if ( old[key] != value )
+                            {
+                                qDebug("Ooooops, old tag did not contain different attribute value.");
+                                return false;
+                            }
+                            continue;
+                        }
+
+                        QString value = (*it).attributes[key];
+                        if ( value.isNull() )
+                            continue;
+                        m_attributes[pos].insert( key, value );
+                    }
+                    if ( oldCount != old.count() )
+                    {
+                        qDebug("Oooops, the old tag had more attributes");
+                        return false;
+                    }
+                }
+                break;
             case DocumentMutation::AnnotationBoundary:                
                 foreach( QString key, (*it).endKeys )
                 {

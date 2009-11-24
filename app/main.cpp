@@ -130,7 +130,7 @@ int main(int argc, char *argv[])
 
         DocumentMutation m9;
         m9.retain(5);
-        m9.deleteStart("blip");
+        m9.deleteStart("blip", StructuredDocument::AttributeList());
         m9.deleteEnd();
         m9.retain(5);
         result = doc->apply(m9, "torben@localhost");

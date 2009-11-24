@@ -159,6 +159,8 @@ void BlipDocument::onInsertElementEnd(int index)
 
 void BlipDocument::onAnnotationUpdate(int index, const AnnotationChange& updates)
 {
+    Q_UNUSED(index);
+
     // Apply all styles which end here
     foreach( QString pendstyle, m_pendingStyles.keys() )
     {
