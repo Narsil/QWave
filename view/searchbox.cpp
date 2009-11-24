@@ -28,8 +28,8 @@ void SearchBox::paintEvent(QPaintEvent* event)
     QLineEdit::paintEvent(event);
 
     QPainter painter(this);
-    painter.drawPixmap(0, 0, *s_pixmapLeft);
-    painter.drawPixmap(width() - 22, 0, *s_pixmapRight);
+    painter.drawPixmap(0, 0,s_pixmapLeft->width(), height(), *s_pixmapLeft);
+    painter.drawPixmap(width() - 22, 0,s_pixmapRight->width(),	height(), *s_pixmapRight);
 
     painter.setPen(QColor(0xff,0xff,0xff));
     painter.drawLine(11, height() - 1, width() - 22, height() - 1);

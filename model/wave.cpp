@@ -10,7 +10,7 @@ Wave::Wave(Environment* environment, const QString& domain, const QString &id)
 
     Wavelet* wavelet = new Wavelet(this, domain, "conv+root");
     connect( wavelet, SIGNAL(blipCountChanged()), SIGNAL(blipCountChanged()));
-    m_digest = new WaveDigest(this,wavelet->processor());
+    m_digest = new WaveDigest(this);
 }
 
 Wavelet* Wave::wavelet() const
