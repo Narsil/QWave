@@ -56,6 +56,12 @@ public:
     void setSuspendSending(bool suspend);
     bool isSuspendSending() const { return m_suspendSending; }
 
+public slots:
+	/**
+	 * Consumed by the UI
+	 */
+	void handleSendRemoveParticipant(const QString &address);
+
 signals:
     /**
       * Connected to the wavelet.

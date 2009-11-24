@@ -9,13 +9,15 @@ class ParticipantInfoDialog : public PopupDialog
 {
     Q_OBJECT
 public:
-    ParticipantInfoDialog(Participant* participant, QWidget* parent = 0);
+    ParticipantInfoDialog(Participant* participant, QWidget* parent = 0, bool showRemove=false);
 
 signals:
     void newWave(Participant* participant);
+    void removeParticipant(const QString& adress);
 
 private slots:
     void newWave();
+    void removeParticipant();
 
 private:
     Participant* m_participant;
