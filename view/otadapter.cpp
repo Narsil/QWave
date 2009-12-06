@@ -25,6 +25,7 @@
 OTAdapter::OTAdapter(BlipGraphicsItem* parent )
         : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false), m_timer(0)
 {
+    // Connect to changes made to the BlipDocument. In response the slots will update the GUI.
     connect( blip()->document(), SIGNAL(deletedLineBreak(int)), SLOT(deleteLineBreak(int)));
     connect( blip()->document(), SIGNAL(insertedLineBreak(int)), SLOT(insertLineBreak(int)));
     connect( blip()->document(), SIGNAL(deletedText(int,QString)), SLOT(deleteText(int,QString)));
@@ -32,6 +33,7 @@ OTAdapter::OTAdapter(BlipGraphicsItem* parent )
     connect( blip()->document(), SIGNAL(mutationStart()), SLOT(mutationStart()));
     connect( blip()->document(), SIGNAL(mutationEnd()), SLOT(mutationEnd()));
     connect( blip()->document(), SIGNAL(insertImage(int,QString,QImage,QString)), SLOT(insertImage(int,QString,QImage,QString)));
+    connect( blip()->document(), SIGNAL(insertGadget(int,QString,QString)), SLOT(insertGadget(int,QString,QString)));
     connect( blip()->document(), SIGNAL(setCursor(int,QString)), SLOT(setCursor(int,QString)));
     connect( blip()->document(), SIGNAL(setStyle(QString,QString,int,int)), SLOT(setStyle(QString,QString,int,int)));
 }
@@ -327,7 +329,10 @@ void OTAdapter::setGraphicsText()
     QStack<int> stack;
     stack.push(0);
     bool isFirstLine = true;
+    // Used for the <image> tag
     QString attachmentId;
+    // Used for the <gadget> tag
+    QUrl gadgetUrl;
 
     StructuredDocument* doc = blip()->document();
     doc->print_();
@@ -409,6 +414,17 @@ void OTAdapter::setGraphicsText()
                         text = "";
                         stack.push(5);
                     }
+                    else if ( key == "gadget" )
+                    {
+                        if ( text != "" )
+                        {
+                            cursor.insertText(text, format);
+                            text = "";
+                        }
+                        StructuredDocument::AttributeList attribs = doc->attributesAt(i);
+                        gadgetUrl = QUrl( attribs["url"] );
+                        stack.push(7);
+                    }
                     else
                         stack.push(6);
                 }
@@ -426,6 +442,7 @@ void OTAdapter::setGraphicsText()
                     cursor.insertText(text, format);
                     text = "";
                 }
+                // </image>
                 else if ( t == 4 )
                 {
                     Attachment* attachment = blipItem()->blip()->wavelet()->attachment(attachmentId);
@@ -433,6 +450,12 @@ void OTAdapter::setGraphicsText()
                         textItem()->insertImage( &cursor, attachmentId, attachment->thumbnail(), text );
                     else
                         textItem()->insertImage( &cursor, attachmentId, QImage(), text );
+                    text = "";
+                }
+                // </gadget>
+                else if ( t == 7 )
+                {
+                    textItem()->insertGadget( &cursor, gadgetUrl );
                     text = "";
                 }
                 break;
@@ -691,6 +714,19 @@ void OTAdapter::insertImage( int inlinePos, const QString& attachmentId, const Q
     QTextCursor cursor(doc);
     cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
     textItem()->insertImage( &cursor, attachmentId, image, caption);
+}
+
+void OTAdapter::insertGadget( int inlinePos, const QString& url, const QString& author )
+{
+    Q_UNUSED(author)
+
+    if ( m_blockUpdate )
+        return;
+
+    QTextDocument* doc = textItem()->document();
+    QTextCursor cursor(doc);
+    cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
+    textItem()->insertGadget( &cursor, QUrl( url ));
 }
 
 void OTAdapter::mutationEnd()

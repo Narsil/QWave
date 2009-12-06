@@ -30,8 +30,20 @@ public:
     GraphicsTextItem* textItem() const;
     BlipGraphicsItem* blipItem() const;
 
+    /**
+      * Called when the blip text has been edited by the user.
+      * The function will change the BlipDocument accordingly.
+      */
     void onContentsChange( int position, int charsRemoved, int charsAdded );
+    /**
+      * Called when the style of the blip text has been edited by the user.
+      * The function will change the BlipDocument accordingly.
+      */
     void onStyleChange( int position, int charsFormatted, const QString& style, const QString& value );
+    /**
+      * Sometimes the UI must make changes to the text but does not want onContentChange to be called.
+      * Use this function to suspend onContentsChanged from investigating text editing.
+      */
     void suspendContentsChange( bool suspend ) { m_suspendContentsChange = suspend; }
 
     /**
@@ -48,6 +60,9 @@ public:
     Environment* environment() const;
 
 private:
+    /**
+      * Represents a cursor (caret) which shows where in a blip other users are currently editing.
+      */
     class Cursor
     {
     public:
@@ -94,6 +109,10 @@ private slots:
       * Called when the BlipDocument changes.
       */
     void insertImage( int inlinePos, const QString& attachmentId, const QImage& image, const QString& caption );
+    /**
+      * Called when the BlipDocument changes.
+      */
+    void insertGadget( int inlinePos, const QString& url, const QString& author );
     /**
       * Called when the BlipDocument changes.
       */
