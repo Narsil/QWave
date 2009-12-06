@@ -25,13 +25,22 @@ public:
     void setWavelet( Wavelet* wavelet );
 
 private slots:
+    /**
+      * Called when the participant list of the wavelet changes.
+      */
     void addParticipant(Participant* participant);
+    /**
+      * Called when the participant list of the wavelet changes.
+      */
     void removeParticipant(Participant* participant);
+    /**
+      * Called when the 'add participant' button is pressed.
+      */
     void showAddParticipantDialog();
+    /**
+      * Called when the user clicks on a participant.
+      */
     void showParticipantInfo(Participant* participant);
-
-signals:
-	void newWave(Participant* participant);
 
 private:
     void updateParticipants();
