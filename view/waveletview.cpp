@@ -72,21 +72,24 @@ void WaveletView::layoutBlips(qreal width)
 
 void WaveletView::layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal width )
 {
-    bool created = false;
+//    bool created = false;
     BlipGraphicsItem* b = m_blipItems[blip->id()];
     if ( !b )
     {
-        b = new BlipGraphicsItem( this, blip, width - xoffset );
+        b = new BlipGraphicsItem( this, blip, xoffset, yoffset, width - xoffset );
         m_blipItems[blip->id()] = b;
-        created = true;
+//        created = true;
     }
     else
+    {
         b->setWidth(width - xoffset);
+        b->setPos( xoffset, yoffset );
+    }
     // b->setZValue( m_gfx->zValue() + 1 );
     // scene()->addItem(b);
-    b->setPos( xoffset, yoffset );
-    if ( created )
-        scene()->addItem(b);
+    // b->setPos( xoffset, yoffset );
+    // if ( created )
+    //    scene()->addItem(b);
     yoffset += b->boundingRect().height();
 
     qreal dx = xoffset + 42;
