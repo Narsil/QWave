@@ -24,7 +24,7 @@ class BlipGraphicsItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
 public:
-    BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width);
+    BlipGraphicsItem(WaveletView* view, Blip* blip, qreal x, qreal y, qreal width);
 
     QTextDocument* document();
     Blip* blip() const { return m_blip; }

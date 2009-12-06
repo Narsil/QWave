@@ -23,10 +23,11 @@
 #include <QImage>
 #include <QUrl>
 
-BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
+BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal x, qreal y, qreal width)
         : m_blip(blip), m_replyItem( 0 ), m_view(view), m_lastWidth(width)
 {
     setAcceptHoverEvents(true);
+    setPos( x, y );
 
     m_adapter = new OTAdapter(this);
 
@@ -38,6 +39,8 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal width)
         m_text->setPos(44,2);
     m_text->setTextWidth(width - m_text->x());
     connect( m_text, SIGNAL(focusIn()), SLOT(focusInEvent()));
+
+    view->scene()->addItem(this);
 
     QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SLOT(titleChanged(const QString&)));
     // Show the contents of the document

@@ -66,6 +66,7 @@ void GadgetAPI::updateParticipants()
     m_frame->evaluateJavaScript("wave.updateWaveParticipants_();");
 }
 
+// TODO: Remove
 void GadgetAPI::testme(const QVariant& obj)
 {
     if ( obj.type() == QVariant::List )
@@ -87,6 +88,7 @@ void GadgetAPI::testme(const QVariant& obj)
     }
 }
 
+// TODO: Remove
 void GadgetAPI::testme2(const QVariantMap& lst)
 {
         foreach( QString s, lst.keys() )
