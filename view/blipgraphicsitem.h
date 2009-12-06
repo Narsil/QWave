@@ -16,6 +16,10 @@ class BlipReplyGraphicsItem;
 class Blip;
 class OTAdapter;
 
+/**
+  * Displayes a blip and allows the blipto be edited.
+  * For details on editing see GraphicsTextItem.
+  */
 class BlipGraphicsItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
@@ -33,11 +37,29 @@ public:
 
     void setAuthorPixmap(const QPixmap& pixmap);
 
+    /**
+      * Called from the GUI.
+      */
     void toggleBold();
+    /**
+      * Called from the GUI.
+      */
     void toggleItalic();
+    /**
+      * Called from the GUI.
+      */
     void toggleUnderline();
+    /**
+      * Called from the GUI.
+      */
     void toggleStrikeout();
+    /**
+      * Called from the GUI.
+      */
     void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
+    /**
+      * Called from the GUI.
+      */
     void insertGadget( const QUrl& url );
 
 protected:

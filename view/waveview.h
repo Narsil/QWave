@@ -17,15 +17,18 @@ class QGraphicsScene;
 class QVBoxLayout;
 class QGraphicsView;
 
+/**
+  * Displays a wave and allows the user to edit the wave.
+  * Most of the work is done in WaveletView and its affiliated classes, however.
+  * The purpose of WaveView is to act as a container for all this detailed stuff and to provide a UI
+  * for editing and formatting text (bold, italic, inserting images, gadgets etc.).
+  */
 class WaveView : public QWidget
 {
     Q_OBJECT
 public:
     WaveView(Wave* wave, QWidget* parent = 0);
     ~WaveView();
-
-//    QGraphicsScene* scene() { return m_scene; }
-//    QGraphicsScene* headScene() { return m_headScene; }
 
     Wave* wave() const { return m_wave; }
     WaveletView* waveletView() const { return m_waveletView; }
@@ -42,7 +45,10 @@ public slots:
     void gadgetClicked();
 
 signals:
-	void newWave(Participant*);
+    /**
+      * Emitted when a new wave with a participant of this wavelet should be created.
+      */
+    void newWave(Participant*);
 
 protected:
     virtual void resizeEvent( QResizeEvent* event );
@@ -53,12 +59,9 @@ private:
     TitleBar* m_titleBar;
     BigBar* m_bigBar;
     ToolBar* m_toolBar;
-//    QGraphicsScene* m_headScene;
     QVBoxLayout *m_verticalLayout;
-//    QGraphicsView *m_graphicsViewHead;
     WaveletGraphicsItem* m_gfx;
 
-    ButtonGraphicsItem* m_addUserButton;
     ButtonGraphicsItem* m_boldButton;
     ButtonGraphicsItem* m_italicButton;
     ButtonGraphicsItem* m_underlineButton;

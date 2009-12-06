@@ -15,7 +15,7 @@ class Participant;
 class QTimer;
 
 /**
-  * This adapter connectes QTextDocument with BlipDocument.
+  * This adapter connects QTextDocument with BlipDocument.
   * This is required because the GUI edits a QTextDocument while the operation transformation (OT)
   * works on a SynchronizedDocument. The task of this adapter is to keep these two synchronized.
   */
@@ -59,18 +59,53 @@ private:
     };
 
 signals:
+    /**
+      * Emitted when the first line of the first root blip changes.
+      * This can be used to change the title in the GUI.
+      */
     void titleChanged(const QString& title);
 
 private slots:
+    /**
+      * Called when the BlipDocument starts to change.
+      */
     void mutationStart();
+    /**
+      * Called when the BlipDocument changes.
+      */
     void insertText( int inlinePos, const QString& text );
+    /**
+      * Called when the BlipDocument changes.
+      */
     void deleteText( int inlinePos, const QString& text );
+    /**
+      * Called when the BlipDocument changes.
+      */
     void deleteLineBreak(int inlinePos);
+    /**
+      * Called when the BlipDocument changes.
+      */
     void insertLineBreak(int inlinePos);
+    /**
+      * Called when the BlipDocument changes.
+      */
     void setCursor(int inlinePos, const QString& author);
+    /**
+      * Called when the BlipDocument changes.
+      */
     void insertImage( int inlinePos, const QString& attachmentId, const QImage& image, const QString& caption );
+    /**
+      * Called when the BlipDocument changes.
+      */
     void setStyle( const QString& style, const QString& value, int startPos, int endPos );
+    /**
+      * Called when the BlipDocument finished changing.
+      */
     void mutationEnd();
+    /**
+      * Called after a timeout to remove carets (cursors) which are old, i.e. the caret did not move for some time.
+      * Old carets are then removed.
+      */
     void removeOldCursors();
 
 private:

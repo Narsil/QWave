@@ -23,7 +23,13 @@ public:
     int forbiddenTextRange() const { return m_forbiddenTextRange; }
 
     void insertCaret( QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner );
+    /**
+      * Called from the GUI or from OTAdapter when applying OT deltas.
+      */
     void insertImage( QTextCursor* cursor, const QString& id, const QImage& image, const QString& caption );
+    /**
+      * Called from the GUI or from OTAdapter when applying OT deltas.
+      */
     void insertGadget( QTextCursor* cursor, const QUrl& url );
 
     /**
