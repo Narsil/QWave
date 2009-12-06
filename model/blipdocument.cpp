@@ -124,6 +124,12 @@ void BlipDocument::onInsertElementStart(int index)
         m_inCaption = true;
         m_caption = "";
     }
+    else if ( tag == "gadget" )
+    {
+        AttributeList attribs = attributesAt(index);
+        m_gadgetUrl = attribs["url"];
+        m_gadgetAuthor = attribs["author"];
+    }
 }
 
 void BlipDocument::onInsertElementEnd(int index)
@@ -154,6 +160,10 @@ void BlipDocument::onInsertElementEnd(int index)
             emit insertImage( m_pos, m_attachmentId, attachment->thumbnail(), m_caption );
         else
             emit insertImage( m_pos, m_attachmentId, QImage(), m_caption );
+    }
+    else if ( tag == "gadget" )
+    {
+        emit insertGadget( m_pos, m_gadgetUrl, m_gadgetAuthor );
     }
 }
 
