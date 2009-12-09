@@ -16,6 +16,7 @@ SOURCES += main.cpp \
     ../../app/environment.cpp \
     ../../network/networkadapter.cpp \
     ../../network/rpc.cpp \
+    ../../network/converter.cpp \
     ../../model/wavelist.cpp \
     ../../model/waveletdelta.cpp \
     ../../model/otprocessor.cpp \
@@ -38,6 +39,7 @@ HEADERS += ../../model/wavelet.h \
     ../../app/environment.h \
     ../../network/networkadapter.h \
     ../../network/rpc.h \
+    ../../network/converter.h \
     ../../model/wavelist.h \
     ../../model/waveletdelta.h \
     ../../model/otprocessor.h \
