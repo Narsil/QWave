@@ -114,16 +114,6 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
 
 void OTProcessor::handleReceive( const WaveletDelta& incoming )
 {
-    // Throw away all delta that we have in common with the server
-    while( !m_outgoingDeltas.isEmpty() )
-    {
-        const WaveletDelta& m = m_outgoingDeltas.first();
-        if ( m.version().version < incoming.version().version )
-            m_outgoingDeltas.removeFirst();
-        else
-            break;
-    }
-
     // Check whether this delta actually acks a delta we have sent    
     if ( m_submitPending && incoming.author() == m_environment->localUser()->address() )
     {
