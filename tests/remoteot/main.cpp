@@ -228,7 +228,7 @@ void RemoteOT::concurrentEdit2()
     wavelet2->rootBlips()[1]->document()->print_();
 
     // Now compare the document of both users. It must be the same
-    QCOMPARE( wavelet1->rootBlips()[1]->document()->toString(), wavelet2->rootBlips()[0]->document()->toString() );
+    QCOMPARE( wavelet1->rootBlips()[1]->document()->toString(), wavelet2->rootBlips()[1]->document()->toString() );
 }
 
 void RemoteOT::cleanupTestCase()
