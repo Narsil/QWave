@@ -350,6 +350,11 @@ void BlipGraphicsItem::insertGadget( const QUrl& url )
     m_adapter->suspendContentsChange(false);
 }
 
+void BlipGraphicsItem::mousePressEvent ( QGraphicsSceneMouseEvent* )
+{
+    m_blip->setUnread(false);
+}
+
 /****************************************************************************
  *
  * BlipReplyGraphicsItem
