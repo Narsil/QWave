@@ -61,6 +61,7 @@ public:
     int unreadChildBlipCount() const;
     bool isUnread() const { return m_unread; }
     void setUnread( bool unread );
+    void setChildrenUnread(bool unread);
 
     void print_(int indent);
 

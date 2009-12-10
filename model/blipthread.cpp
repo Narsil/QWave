@@ -64,3 +64,13 @@ int BlipThread::unreadBlipCount() const
     }
     return result;
 }
+
+void BlipThread::setUnread(bool unread)
+{
+	foreach( Blip* b, blips() )
+	{
+		if ( b->isUnread()!=unread )
+			b->setUnread(unread);
+		b->setChildrenUnread(unread);
+	}
+}

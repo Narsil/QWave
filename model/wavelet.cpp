@@ -354,3 +354,13 @@ int Wavelet::unreadBlipCount() const
 
     return result;
 }
+
+void Wavelet::setUnread(bool unread)
+{
+	foreach( Blip* blip, rootBlips() )
+	{
+		if ( blip->isUnread()!=unread )
+			blip->setUnread(unread);
+		blip->setChildrenUnread(unread);
+	}
+}

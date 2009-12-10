@@ -226,6 +226,14 @@ void Blip::setUnread( bool unread )
     emit unreadChanged();
 }
 
+void Blip::setChildrenUnread(bool unread)
+{
+	foreach( BlipThread* t, m_threads )
+	{
+		t->setUnread(unread);
+	}
+}
+
 int Blip::unreadChildBlipCount() const
 {
     int result = 0;

@@ -17,6 +17,7 @@ public:
     WaveListView(WaveList* lst, QWidget* parent = 0);
 
     void select( Wave* wave );
+    Wave* selectedWave();
 
 signals:
     void selected(Wave* wave);

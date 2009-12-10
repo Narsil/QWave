@@ -6,6 +6,9 @@
 #include "app/environment.h"
 #include "inboxbuttonview.h"
 #include "buttongraphicsitem.h"
+#include "model/wave.h"
+#include "model/wavelet.h"
+#include "toolbar.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -31,20 +34,39 @@ InboxView::InboxView(Environment* environment, QWidget* parent)
     l->addWidget(m_inboxButtonView);
     l->addWidget(m_searchBox);
 
+    m_toolBar = new ToolBar(this);
+    m_markAsRead = new ButtonGraphicsItem(QPixmap("images/read.png"));
+    m_toolBar->addItem(m_markAsRead);
+    m_markAsUnread = new ButtonGraphicsItem(QPixmap("images/unread.png"));
+	m_toolBar->addItem(m_markAsUnread);
+
     m_listView = new WaveListView( environment->inbox() );
     m_listView->setSizePolicy( QSizePolicy::Preferred, QSizePolicy::Expanding );
     m_titleBar = new TitleBar(this);
     m_verticalLayout->addWidget(m_titleBar);
     m_verticalLayout->addWidget(m_bigBar);
+    m_verticalLayout->addWidget(m_toolBar);
     m_verticalLayout->addWidget(m_listView);
 
     m_titleBar->setText(tr("Inbox"));
 
     connect( m_listView, SIGNAL(selected(Wave*)), SIGNAL(selected(Wave*)));
     connect( m_newWaveButton, SIGNAL(clicked()), SIGNAL(newWave()));
+    connect( m_markAsRead, SIGNAL(clicked()), SLOT(markSelectedRead()));
+    connect( m_markAsUnread, SIGNAL(clicked()), SLOT(markSelectedUnread()));
 }
 
 void InboxView::select( Wave* wave )
 {
     m_listView->select(wave);
+}
+
+void InboxView::markSelectedUnread()
+{
+	m_listView->selectedWave()->wavelet()->setUnread(true);
+}
+
+void InboxView::markSelectedRead()
+{
+	m_listView->selectedWave()->wavelet()->setUnread(false);
 }
