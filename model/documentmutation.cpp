@@ -281,8 +281,10 @@ void DocumentMutation::xformAnnotationBoundary( DocumentMutation& r1, DocumentMu
     Q_UNUSED(item2);
     Q_UNUSED(ok);
 
+    // TODO: merge two annotation boundaries
+    // TODO: May need transformation even in the face of past annotation boundaries
+
     r1.annotationBoundary( item1.endKeys, item1.annotations );
-    r2.retain( item1.text.length() );
     next1 = true;
     next2 = false;
 }
