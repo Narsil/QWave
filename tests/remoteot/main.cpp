@@ -23,6 +23,7 @@
     void toUpper();
     void concurrentEdit();
     void concurrentEdit2();
+    void concurrentEdit3();
     void cleanupTestCase();
 
 private:
@@ -123,6 +124,19 @@ void RemoteOT::initTestCase()
     m3.insertEnd();
     wavelet1->processor()->handleSend( m3, "b+b2" );
 
+    // Create an empty blip
+    DocumentMutation m4;
+    map.clear();
+    map["name"] = m_environment1->localUser()->address();
+    m4.insertStart("contributor", map);
+    m4.insertEnd();
+    map.clear();
+    m4.insertStart("body", map);
+    m4.insertStart("line", map);
+    m4.insertEnd();
+    m4.insertEnd();
+    wavelet1->processor()->handleSend( m4, "b+b3" );
+
     // Wait until this has been processed
     while( wavelet1->processor()->queuedDeltaCount() > 0 )
         QTest::qWait(250);
@@ -167,15 +181,15 @@ void RemoteOT::concurrentEdit()
         QTest::qWait(250);
 
     // Wait until user 2 got all deltas
-    while( wavelet2->processor()->serverVersion() < 6 )
+    while( wavelet2->processor()->serverVersion() < 7 )
         QTest::qWait(250);
 
     wavelet2->processor()->setSuspendSending(false);
 
     // Wait until user 1 and 2 got all deltas
-    while( wavelet1->processor()->serverVersion() < 7 )
+    while( wavelet1->processor()->serverVersion() < 8 )
         QTest::qWait(250);
-    while( wavelet2->processor()->serverVersion() < 7 )
+    while( wavelet2->processor()->serverVersion() < 8 )
         QTest::qWait(250);
 
     wavelet1->rootBlips()[0]->document()->print_();
@@ -230,6 +244,63 @@ void RemoteOT::concurrentEdit2()
     // Now compare the document of both users. It must be the same
     QCOMPARE( wavelet1->rootBlips()[1]->document()->toString(), wavelet2->rootBlips()[1]->document()->toString() );
 }
+
+void RemoteOT::concurrentEdit3()
+{
+    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
+
+    int v1 = wavelet1->processor()->serverVersion();
+    int v2 = wavelet2->processor()->serverVersion();
+
+    // Insert "Hallo" in the blip
+    DocumentMutation m1;
+    m1.retain(5);
+    m1.insertChars("Hallo");
+    m1.retain(1);
+    wavelet1->processor()->handleSend( m1, "b+b3" );
+
+    // Wait until user 1 and 2 got all deltas
+    while( wavelet1->processor()->serverVersion() < v1 + 1 )
+        QTest::qWait(250);
+    while( wavelet2->processor()->serverVersion() < v2 + 1 )
+        QTest::qWait(250);
+
+    DocumentMutation m1b;
+    m1b.retain(5);
+    StructuredDocument::AnnotationChange format;
+    format["style/fontSize"].second = "20";
+    m1b.annotationBoundary(QList<QString>(), format);
+    m1b.retain(5);
+    QList<QString> end;
+    end.append("style/fontSize");
+    m1b.annotationBoundary(end, StructuredDocument::AnnotationChange());
+    m1b.retain(1);
+    wavelet1->processor()->handleSend( m1b, "b+b3" );
+
+    DocumentMutation m2;
+    m2.retain(5 + 3);
+    StructuredDocument::AnnotationChange format2;
+    format2["style/fontSize"].second = "12";
+    m2.annotationBoundary(QList<QString>(), format2);
+    m2.insertChars("ZWOELF");
+    m2.annotationBoundary(end, StructuredDocument::AnnotationChange());
+    m2.retain(3);
+    wavelet2->processor()->handleSend( m2, "b+b3" );
+
+    // Wait until user 1 and 2 got all deltas
+    while( wavelet1->processor()->serverVersion() < v1 + 3 )
+        QTest::qWait(250);
+    while( wavelet2->processor()->serverVersion() < v1 + 3 )
+        QTest::qWait(250);
+
+    wavelet1->rootBlips()[2]->document()->print_();
+    wavelet2->rootBlips()[2]->document()->print_();
+
+    // Now compare the document of both users. It must be the same
+    QCOMPARE( wavelet1->rootBlips()[2]->document()->toString(), wavelet2->rootBlips()[2]->document()->toString() );
+}
+
 
 void RemoteOT::cleanupTestCase()
 {
