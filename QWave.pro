@@ -59,7 +59,8 @@ SOURCES += app/main.cpp \
     gadgets/gadgetapi.cpp \
     gadgets/gadgethandler.cpp \
     gadgets/gadgetview.cpp \
-    gadgets/extensionmanifest.cpp
+    gadgets/extensionmanifest.cpp\
+    view/inboxbuttonview.cpp
 unix:SOURCES += protocol/waveclient-rpc.pb.cc \
     protocol/common.pb.cc
 win32:SOURCES += winprotobuf/protocol/waveclient-rpc.pb.cc \
@@ -115,7 +116,8 @@ HEADERS += app/mainwindow.h \
     gadgets/gadgetapi.h \
     gadgets/gadgethandler.h \
     gadgets/gadgetview.h \
-    gadgets/extensionmanifest.h
+    gadgets/extensionmanifest.h\
+    view/inboxbuttonview.h
 unix:HEADERS += protocol/waveclient-rpc.pb.h \
     protocol/common.pb.h
 win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \
