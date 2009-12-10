@@ -95,6 +95,10 @@ void RemoteOT::initTestCase()
     map["id"] = "b+b2";
     m1.insertStart("blip", map);
     m1.insertEnd();
+    map.clear();
+    map["id"] = "b+b3";
+    m1.insertStart("blip", map);
+    m1.insertEnd();
     m1.insertEnd();
     wavelet1->processor()->handleSend( m1, "conversation" );
 
