@@ -4,6 +4,8 @@
 #include "bigbar.h"
 #include "wavelistview.h"
 #include "app/environment.h"
+#include "inboxbuttonview.h"
+#include "buttongraphicsitem.h"
 
 #include <QVBoxLayout>
 #include <QHBoxLayout>
@@ -21,7 +23,12 @@ InboxView::InboxView(Environment* environment, QWidget* parent)
     m_bigBar = new BigBar(this);
     m_searchBox = new SearchBox(m_bigBar);
     m_searchBox->setText("in:inbox");
+    m_newWaveButton = new ButtonGraphicsItem( QPixmap("images/newwave.png"));
+    m_inboxButtonView = new InboxButtonView(this);
+    m_inboxButtonView->addItem(m_newWaveButton);
+    m_inboxButtonView->setMaximumWidth(QPixmap("images/newwave.png").width()+5);
     QHBoxLayout* l = new QHBoxLayout(m_bigBar);
+    l->addWidget(m_inboxButtonView);
     l->addWidget(m_searchBox);
 
     m_listView = new WaveListView( environment->inbox() );
@@ -34,6 +41,7 @@ InboxView::InboxView(Environment* environment, QWidget* parent)
     m_titleBar->setText(tr("Inbox"));
 
     connect( m_listView, SIGNAL(selected(Wave*)), SIGNAL(selected(Wave*)));
+    connect( m_newWaveButton, SIGNAL(clicked()), SIGNAL(newWave()));
 }
 
 void InboxView::select( Wave* wave )

@@ -269,6 +269,7 @@ int main(int argc, char *argv[])
         w->setInboxView(wlview);
         w->setWaveView(view);
         view->connect( wlview, SIGNAL(selected(Wave*)), SLOT(setWave(Wave*)));
+	w->connect( wlview, SIGNAL(newWave()), SLOT(newWave()));
         w->connect( cview, SIGNAL(newWave(Participant*)), SLOT(newWave(Participant*)));
         w->connect( view, SIGNAL(newWave(Participant*)), SLOT(newWave(Participant*)));
         w->show();    

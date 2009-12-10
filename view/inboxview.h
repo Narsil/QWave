@@ -10,6 +10,8 @@ class SearchBox;
 class Wave;
 class BigBar;
 class QVBoxLayout;
+class ButtonGraphicsItem;
+class InboxButtonView;
 
 class InboxView : public QWidget
 {
@@ -21,8 +23,11 @@ public:
 
 signals:
     void selected(Wave* wave);
+    void newWave();
 
 private:
+    ButtonGraphicsItem* m_newWaveButton;
+    InboxButtonView* m_inboxButtonView;
     WaveListView* m_listView;
     SearchBox* m_searchBox;
     TitleBar* m_titleBar;
