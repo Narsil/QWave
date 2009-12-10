@@ -12,6 +12,7 @@ class BigBar;
 class QVBoxLayout;
 class ButtonGraphicsItem;
 class InboxButtonView;
+class ToolBar;
 
 class InboxView : public QWidget
 {
@@ -21,6 +22,10 @@ public:
 
     void select( Wave* wave );
 
+private slots:
+	void markSelectedUnread();
+	void markSelectedRead();
+
 signals:
     void selected(Wave* wave);
     void newWave();
@@ -28,12 +33,16 @@ signals:
 private:
     ButtonGraphicsItem* m_newWaveButton;
     InboxButtonView* m_inboxButtonView;
+    ToolBar* m_toolBar;
     WaveListView* m_listView;
     SearchBox* m_searchBox;
     TitleBar* m_titleBar;
     BigBar* m_bigBar;
     QVBoxLayout* m_verticalLayout;
     Environment* m_environment;
+
+    ButtonGraphicsItem* m_markAsUnread;
+    ButtonGraphicsItem* m_markAsRead;
 };
 
 #endif // INBOXVIEW_H

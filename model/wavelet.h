@@ -43,6 +43,7 @@ public:
 
     int blipCount() const;
     int unreadBlipCount() const;
+    void setUnread(bool unread);
 
     void print_();
 

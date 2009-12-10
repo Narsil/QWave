@@ -95,3 +95,8 @@ void WaveListView::select( Wave* wave )
         return;
     itemClicked(item);
 }
+
+Wave* WaveListView::selectedWave()
+{
+	return m_selectedItem->wave();
+}
