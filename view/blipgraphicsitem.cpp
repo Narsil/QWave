@@ -352,7 +352,10 @@ void BlipGraphicsItem::insertGadget( const QUrl& url )
 
 void BlipGraphicsItem::mousePressEvent ( QGraphicsSceneMouseEvent* )
 {
-    m_blip->setUnread(false);
+	if (m_blip->isUnread())
+		m_blip->setUnread(false);
+	else
+		m_blip->setUnread(true);
 }
 
 /****************************************************************************
