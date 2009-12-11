@@ -7,6 +7,10 @@ class QGraphicsView;
 class QGraphicsScene;
 class QGraphicsWidget;
 
+/**
+  * An abstract base class for popup dialogs which use a QGraphicsView to show
+  * the contents of the dialog.
+  */
 class PopupDialog : public QDialog
 {
 public:
