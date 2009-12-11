@@ -5,6 +5,9 @@
 
 class Participant;
 
+/**
+  * Shows information about a participant, i.e. a picture, name, etc.
+  */
 class ParticipantInfoDialog : public PopupDialog
 {
     Q_OBJECT
