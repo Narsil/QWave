@@ -46,13 +46,13 @@ WaveView::WaveView(Wave* wave, QWidget* parent )
 
     m_verticalLayout->addWidget(m_waveletView);
 
-    m_boldButton = new ButtonGraphicsItem( QPixmap("images/bold.png") );
+    m_boldButton = new ButtonGraphicsItem( QPixmap("images/bold.png"),0,0.5 );
     m_toolBar->addItem(m_boldButton);
-    m_italicButton = new ButtonGraphicsItem( QPixmap("images/italic.png") );
+    m_italicButton = new ButtonGraphicsItem( QPixmap("images/italic.png"),0,0.5 );
     m_toolBar->addItem(m_italicButton);
-    m_underlineButton = new ButtonGraphicsItem( QPixmap("images/underline.png") );
+    m_underlineButton = new ButtonGraphicsItem( QPixmap("images/underline.png"),0,0.5 );
     m_toolBar->addItem(m_underlineButton);
-    m_strikeoutButton = new ButtonGraphicsItem( QPixmap("images/strikeout.png") );
+    m_strikeoutButton = new ButtonGraphicsItem( QPixmap("images/strikeout.png"),0,0.5 );
     m_toolBar->addItem(m_strikeoutButton);
     m_imageButton = new ButtonGraphicsItem( QPixmap("images/image.png") );
     m_toolBar->addItem(m_imageButton);

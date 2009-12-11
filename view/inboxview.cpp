@@ -63,10 +63,12 @@ void InboxView::select( Wave* wave )
 
 void InboxView::markSelectedUnread()
 {
-	m_listView->selectedWave()->wavelet()->setUnread(true);
+	if(m_listView->selectedWave()!=0)
+		m_listView->selectedWave()->wavelet()->setUnread(true);
 }
 
 void InboxView::markSelectedRead()
 {
-	m_listView->selectedWave()->wavelet()->setUnread(false);
+	if(m_listView->selectedWave()!=0)
+		m_listView->selectedWave()->wavelet()->setUnread(false);
 }
