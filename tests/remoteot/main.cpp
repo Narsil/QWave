@@ -20,7 +20,6 @@
      Q_OBJECT
  private slots:
     void initTestCase();
-    void toUpper();
     void concurrentEdit();
     void concurrentEdit2();
     void concurrentEdit3();
@@ -30,12 +29,6 @@ private:
     Environment* m_environment1;
     Environment* m_environment2;
  };
-
-void RemoteOT::toUpper()
-{
-     QString str = "Hello";
-     QVERIFY(str.toUpper() == "HELLO");
-}
 
 void RemoteOT::initTestCase()
 {
@@ -291,6 +284,11 @@ void RemoteOT::concurrentEdit3()
     m2.annotationBoundary(end, StructuredDocument::AnnotationChange());
     m2.retain(3);
     wavelet2->processor()->handleSend( m2, "b+b3" );
+
+//    bool ok = false;
+//    QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( m1b, m2, &ok );
+//    pair.first.print_();
+//    pair.second.print_();
 
     // Wait until user 1 and 2 got all deltas
     while( wavelet1->processor()->serverVersion() < v1 + 3 )
