@@ -64,8 +64,9 @@ void ParticipantInfoDialog::newWave()
     accept();
 }
 
-void ParticipantInfoDialog::removeParticipant(){
-	QString address=m_participant->address();
-	emit removeParticipant(address);
-	accept();
+void ParticipantInfoDialog::removeParticipant()
+{
+    QString address = m_participant->address();
+    emit removeParticipant(address);
+    accept();
 }

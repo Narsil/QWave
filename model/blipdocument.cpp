@@ -64,6 +64,20 @@ void BlipDocument::onRetainElementEnd(int index)
     }
 }
 
+void BlipDocument::onUpdateAttributes(int index, const AttributeList& updates)
+{
+    Q_UNUSED(updates);
+    onRetainElementStart(index);
+    // TODO: Emit a signal
+}
+
+void BlipDocument::onReplaceAttributes(int index, const AttributeList& updates)
+{
+    Q_UNUSED(updates);
+    onRetainElementStart(index);
+    // TODO: Emit a signal
+}
+
 void BlipDocument::onDeleteChars(int index, const QString& chars)
 {
     Q_UNUSED(index);

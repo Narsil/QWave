@@ -9,6 +9,9 @@ class DocumentMutation;
 class Blip;
 class QImage;
 
+/**
+  * Represents the content of a blip.
+  */
 class BlipDocument : public StructuredDocument
 {
     Q_OBJECT
@@ -30,6 +33,8 @@ protected:
     virtual void onInsertElementStart(int index);
     virtual void onInsertElementEnd(int index);
     virtual void onAnnotationUpdate(int index, const AnnotationChange& updates);
+    virtual void onUpdateAttributes(int index, const AttributeList& updates);
+    virtual void onReplaceAttributes(int index, const AttributeList& updates);
     virtual void onMutationEnd();
 
 signals:    

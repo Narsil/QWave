@@ -7,6 +7,9 @@
 #include <QPair>
 #include "structureddocument.h"
 
+/**
+  * Mutates a StructuredDocument.
+  */
 class DocumentMutation
 {
 public:
@@ -28,13 +31,13 @@ public:
         UpdateAttributes
     };
 
+    /**
+      * Represents a mutation operation.
+      */
     struct Item
     {
         ItemType type;
         QList<QString> endKeys;
-        /**
-          * Used as well for attribute changes
-          */
         StructuredDocument::AnnotationChange annotations;
         StructuredDocument::AttributeList attributes;
         QString text;
@@ -61,26 +64,27 @@ public:
 
     static QPair<DocumentMutation,DocumentMutation> xform( const DocumentMutation& m1, const DocumentMutation& m2, bool* ok );
 
+    QString toString() const;
     void print_();
 
 private:
     void updateAttributes( const StructuredDocument::AttributeList& changes );
     void replaceAttributes( const StructuredDocument::AttributeList& changes );
 
-    static void xformInsertElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformInsertElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformInsertChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformDeleteElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformDeleteElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformDeleteChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformRetain( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformAnnotationBoundary( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformUpdateAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
-    static void xformReplaceAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok );
+    static void xformInsertElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformInsertElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformInsertChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformDeleteElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformDeleteElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformDeleteChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformRetain( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformAnnotationBoundary( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool twisted, bool* ok );
+    static void xformUpdateAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
+    static void xformReplaceAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok );
 
     static bool shorten( Item& item, int len );
-    QString mapToString(const StructuredDocument::AttributeList& map);
-    QString mapToString(const StructuredDocument::AnnotationChange& map);
+    static QString mapToString(const StructuredDocument::AttributeList& map);
+    static QString mapToString(const StructuredDocument::AnnotationChange& map);
 
     QList<Item> m_items;
 };
