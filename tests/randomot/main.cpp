@@ -34,19 +34,48 @@ private:
 void RandomOT::initTestCase()
 {
     // Seed
-    qsrand(1);
+    qsrand(2);
 }
 
 void RandomOT::randomOT()
 {
-    for( int i = 0; i < 20; ++i )
+    for( int i = 0; i < 200000; ++i )
     {
         StructuredDocument* doc = createDocument();
-        doc->print_();
+        // doc->print_();
+        StructuredDocument doc2( *doc );
 
-        DocumentMutation* m = createMutation(doc);
-        m->print_();
+        DocumentMutation* m1 = createMutation(doc);
+        // m1->print_();
+        DocumentMutation* m2 = createMutation(doc);
+        // m2->print_();
 
+        QString out = "\ndoc1: " + doc->toString() + "\ndoc2: " + doc2.toString() + "\nm1: " + m1->toString() + "\nm2: " + m2->toString() + "\n";
+
+        bool ok = true;
+        QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( *m1, *m2, &ok );
+        QVERIFY2( ok == true, out.toAscii().constData() );
+
+        out += "m1b: " + pair.first.toString() + "\nm2b: " + pair.second.toString() + "\n";
+
+        ok = doc->apply( *m1, "a", true );
+        QVERIFY2( ok == true, out.toAscii().constData() );
+        ok = doc->apply( pair.second, "b", true );
+        QVERIFY2( ok == true, out.toAscii().constData() );
+        ok = doc2.apply(*m2, "b", true);
+        QVERIFY2( ok == true, out.toAscii().constData() );
+        ok = doc2.apply(pair.first, "a", true);
+        QVERIFY2( ok == true, out.toAscii().constData() );
+
+        out += "doc1b: " + doc->toString() + "\ndoc2b: " + doc2.toString() + "\n";
+
+        // doc->print_();
+        // doc2.print_();
+
+        QVERIFY2( doc->toString() == doc2.toString(), out.toAscii().constData() );
+
+        delete m1;
+        delete m2;
         delete doc;
     }
 }
@@ -82,7 +111,9 @@ DocumentMutation* RandomOT::createMutation(StructuredDocument* doc)
                 if ( r % 10 <= 1 || deleting )
                 {
                     deleting = true;
-                    m->deleteStart( doc->tagAt(i), doc->attributesAt(i) );
+                    StructuredDocument::AttributeList attribs = doc->attributesAt(i);
+                    attribs.remove("**t");
+                    m->deleteStart( doc->tagAt(i), attribs );
                     deleteDepth++;
                 }
                 else if ( r % 10 <= 3 )
@@ -164,7 +195,7 @@ StructuredDocument* RandomOT::createDocument()
     QStack<QString> tags;
     DocumentMutation m;
     int r = 0;
-    while( ( r = qrand() ) >= RAND_MAX / 20 )
+    while( ( r = qrand() ) >= RAND_MAX / 20 || m.count() < 5 )
     {
         if ( r % 10 > 1 )
         {
