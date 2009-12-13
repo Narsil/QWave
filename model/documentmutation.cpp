@@ -104,6 +104,27 @@ void DocumentMutation::deleteChars(const QString& chars)
 
 void DocumentMutation::annotationBoundary(const QList<QString>& endKeys, const StructuredDocument::AnnotationChange& changes)
 {
+    if ( m_items.count() > 0 && m_items.last().type == AnnotationBoundary )
+    {
+        StructuredDocument::AnnotationChange a = m_items.last().annotations;
+        QList<QString> e = m_items.last().endKeys;
+        foreach( QString key, endKeys )
+        {
+            if ( a.contains( key ) )
+                a.remove(key);
+            if ( !e.contains( key ) )
+                e.append(key);
+        }
+        foreach( QString key, changes.keys() )
+        {
+            StructuredDocument::StringPair pair = changes[key];
+            a[key] = pair;
+        }
+        m_items.last().annotations = a;
+        m_items.last().endKeys = e;
+        return;
+    }
+
     Item item;
     item.endKeys = endKeys;
     item.annotations = changes;
@@ -175,7 +196,7 @@ int DocumentMutation::count() const
     return m_items.count();
 }
 
-void DocumentMutation::print_()
+QString DocumentMutation::toString() const
 {
     QString result = "";
     for( QList<Item>::const_iterator it = begin(); it != end(); ++it )
@@ -204,10 +225,22 @@ void DocumentMutation::print_()
                 result += "Delete \"" + (*it).text + "\"\n";
                 break;
             case ReplaceAttributes:
-                result += "ReplaceAttributes";
+                result += "ReplaceAttributes ";
+                foreach( QString k, (*it).attributes.keys() )
+                {
+                    result += k + "=" + (*it).attributes[k] + " ";
+                }
+                result += "\n";
                 break;
             case UpdateAttributes:
-                result += "UpdateAttributes";
+                result += "UpdateAttributes ";
+                foreach( QString k, (*it).attributes.keys() )
+                {
+                    if ( k[0] == '-' )
+                        continue;
+                    result += k + "=" + (*it).attributes["-" + k] + "->" + (*it).attributes[k] + " ";
+                }
+                result += "\n";
                 break;
             case AnnotationBoundary:
                 {
@@ -222,7 +255,12 @@ void DocumentMutation::print_()
         }
     }
 
-    qDebug() << result.toLatin1().constData();
+    return result;
+}
+
+void DocumentMutation::print_()
+{
+    qDebug() << toString().toLatin1().constData();
 }
 
 QString DocumentMutation::mapToString(const StructuredDocument::AttributeList& map)
@@ -240,35 +278,41 @@ QString DocumentMutation::mapToString(const StructuredDocument::AnnotationChange
     QString result = "";
     foreach( QString key, map.keys() )
     {
-        result += key + "=\"" + map[key].second + "\" ";
+        result += key + "=\"" + map[key].first + "\"->\"" + map[key].second + "\" ";
     }
     return result;
 }
 
-void DocumentMutation::xformInsertElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformInsertElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     Q_UNUSED(item2);
     Q_UNUSED(ok);
+    Q_UNUSED(anno1);
+    Q_UNUSED(anno2);
     r1.m_items.append(item1);
     r2.retain( 1 );
     next1 = true;
     next2 = false;
 }
 
-void DocumentMutation::xformInsertElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformInsertElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     Q_UNUSED(item2);
     Q_UNUSED(ok);
+    Q_UNUSED(anno1);
+    Q_UNUSED(anno2);
     r1.m_items.append(item1);
     r2.retain( 1 );
     next1 = true;
     next2 = false;
 }
 
-void DocumentMutation::xformInsertChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformInsertChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     Q_UNUSED(item2);
     Q_UNUSED(ok);
+    Q_UNUSED(anno1);
+    Q_UNUSED(anno2);
 
     r1.insertChars( item1.text );
     r2.retain( item1.text.length() );
@@ -276,34 +320,100 @@ void DocumentMutation::xformInsertChars( DocumentMutation& r1, DocumentMutation&
     next2 = false;
 }
 
-void DocumentMutation::xformAnnotationBoundary( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformAnnotationBoundary( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool twisted, bool* ok )
 {
     Q_UNUSED(item2);
     Q_UNUSED(ok);
 
-    // TODO: merge two annotation boundaries
-    // TODO: May need transformation even in the face of past annotation boundaries
+    StructuredDocument::AnnotationChange a = item1.annotations;
+    QList<QString> e = item1.endKeys;
+    StructuredDocument::AnnotationChange a2;
+    QList<QString> e2;
 
-    r1.annotationBoundary( item1.endKeys, item1.annotations );
+    if ( !twisted )
+    {
+        foreach( QString key, e )
+        {
+            if ( anno2.contains(key) )
+            {
+                e.removeOne(key);
+                a2[key] = anno2[key];
+            }
+            anno1.remove(key);
+        }
+        foreach( QString key, a.keys() )
+        {
+            anno1[key] = a[key];
+            if ( anno2.contains(key) )
+            {
+                a.remove(key);
+                if ( anno2[key].second == a[key].second )
+                    e2.append(key);
+                else
+                {
+                    a2[key] = anno2[key];
+                    a2[key].first = a[key].second;
+                }
+            }
+        }
+    }
+    else
+    {
+        foreach( QString key, e )
+        {
+            if ( anno2.contains(key) )
+            {
+                a2[key] = anno2[key];
+            }
+            anno1.remove(key);
+        }
+        foreach( QString key, a.keys() )
+        {
+            anno1[key] = a[key];
+            if ( anno2.contains(key) )
+            {
+                if ( anno2[key].second == a[key].second )
+                    a.remove(key);
+                else
+                {
+                    a[key].first = anno2[key].second;
+                    e2.append(key);
+                }
+            }
+        }
+    }
+
+    if ( e2.count() != 0 || a2.count() != 0 )
+    {
+        r2.annotationBoundary( e2, a2 );
+    }
+
+    if ( e.count() == 0 && a.count() == 0 )
+    {
+        next1 = true;
+        return;
+    }
+
+    r1.annotationBoundary( e, a );
     next1 = true;
     next2 = false;
 }
 
-void DocumentMutation::xformRetain( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformRetain( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     switch( item2.type )
     {
     case ElementStart:
-        xformInsertElementStart( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementStart( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case ElementEnd:
-        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case InsertChars:
-        xformInsertChars( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertChars( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case AnnotationBoundary:
-        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, ok );
+        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, anno2, anno1, true, ok );
         break;
     case Retain:
         {
@@ -317,10 +427,16 @@ void DocumentMutation::xformRetain( DocumentMutation& r1, DocumentMutation& r2, 
         }
         break;
     case DeleteStart:
+        if ( !shorten( item1, 1 ) )
+            next1 = true;
+        r2.deleteStart( item2.text, item2.attributes );
+        next2 = true;
+        break;
     case DeleteEnd:
         if ( !shorten( item1, 1 ) )
             next1 = true;
-        r2.m_items.append(item2);
+        r2.deleteEnd();
+        next2 = true;
         break;
     case DeleteChars:
         {
@@ -333,43 +449,58 @@ void DocumentMutation::xformRetain( DocumentMutation& r1, DocumentMutation& r2, 
         }
         break;
     case ReplaceAttributes:
-    case UpdateAttributes:
+        r1.retain(1);
         if ( !shorten( item1, 1 ) )
             next1 = true;
+        r2.replaceAttributes( item2.attributes );
         next2 = true;
         break;
-
+    case UpdateAttributes:
+        r1.retain(1);
+        if ( !shorten( item1, 1 ) )
+            next1 = true;
+        r2.updateAttributes( item2.attributes );
+        next2 = true;
+        break;
     }
 }
 
-void DocumentMutation::xformDeleteElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformDeleteElementStart( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     switch( item2.type )
     {
     case ElementStart:
-        xformInsertElementStart( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementStart( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case ElementEnd:
-        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case InsertChars:
-        xformInsertChars( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertChars( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case AnnotationBoundary:
-        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, ok );
+        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, anno2, anno1, true, ok );
         break;
     case Retain:
-        xformRetain( r2, r1, item2, item1, next2, next1, ok );
+        // xformRetain( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
+        r1.deleteStart( item1.text, item1.attributes );
+        next1 = true;
+        if ( !shorten( item2, 1 ) )
+            next2 = true;
         break;
     case DeleteStart:
         next1 = true;
         next2 = true;
         break;
     case UpdateAttributes:
-        // TODO
+        r1.deleteStart( item1.text, item1.attributes );
+        next1 = true;
+        next2 = true;
         break;
     case ReplaceAttributes:
-        // TODO
+        r1.deleteStart( item1.text, item1.attributes );
+        next1 = true;
+        next2 = true;
         break;
     case DeleteEnd:
     case DeleteChars:
@@ -379,24 +510,28 @@ void DocumentMutation::xformDeleteElementStart( DocumentMutation& r1, DocumentMu
     }
 }
 
-void DocumentMutation::xformDeleteElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformDeleteElementEnd( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     switch( item2.type )
     {
     case ElementStart:
-        xformInsertElementStart( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementStart( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case ElementEnd:
-        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case InsertChars:
-        xformInsertChars( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertChars( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case AnnotationBoundary:
-        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, ok );
+        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, anno2, anno1, true, ok );
         break;
     case Retain:
-        xformRetain( r2, r1, item2, item1, next2, next1, ok );
+        // xformRetain( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
+        r1.deleteEnd();
+        next1 = true;
+        if ( !shorten( item2, 1 ) )
+            next2 = true;
         break;
     case DeleteEnd:
         next1 = true;
@@ -412,24 +547,32 @@ void DocumentMutation::xformDeleteElementEnd( DocumentMutation& r1, DocumentMuta
     }
 }
 
-void DocumentMutation::xformDeleteChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformDeleteChars( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     switch( item2.type )
     {
     case ElementStart:
-        xformInsertElementStart( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementStart( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case ElementEnd:
-        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case InsertChars:
-        xformInsertChars( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertChars( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case AnnotationBoundary:
-        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, ok );
+        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, anno2, anno1, true, ok );
         break;
     case Retain:
-        xformRetain( r2, r1, item2, item1, next2, next1, ok );
+        // xformRetain( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
+        {
+            int len = qMin( item1.text.length(), item2.count );
+            r1.deleteChars( item1.text.left(len) );
+            if ( !shorten( item1, len ) )
+                next1 = true;
+            if ( !shorten( item2, len ) )
+                next2 = true;
+        }
         break;
     case DeleteChars:
         {
@@ -450,56 +593,48 @@ void DocumentMutation::xformDeleteChars( DocumentMutation& r1, DocumentMutation&
     }
 }
 
-void DocumentMutation::xformUpdateAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformUpdateAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     switch( item2.type )
     {
     case ElementStart:
-        xformInsertElementStart( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementStart( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case ElementEnd:
-        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case InsertChars:
-        xformInsertChars( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertChars( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case AnnotationBoundary:
-        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, ok );
+        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, anno2, anno1, true, ok );
         break;
-    case Retain:
-        xformRetain( r2, r1, item2, item1, next2, next1, ok );
+    case Retain:        
+        r1.updateAttributes( item1.attributes );
+        next1 = true;
+        r2.retain(1);
+        if ( !shorten( item2, 1 ) )
+            next2 = true;
         break;
     case DeleteStart:
-        xformDeleteElementStart( r2, r1, item2, item1, next2, next1, ok );
+        next1 = true;
+        r2.deleteStart( item2.text, item2.attributes );
+        next2 = true;
         break;
     case UpdateAttributes:
         {
-            StructuredDocument::AttributeList attribs1;
-            foreach( QString key, item1.attributes.keys() )
-            {
-                if ( key[0] != '-' )
-                    attribs1[ key ] = item1.attributes[key];
-                else
-                {
-                    QString k = key.mid(1);
-                    if ( item2.attributes.contains(k) )
-                        attribs1[key] = item2.attributes[k];
-                    else
-                        attribs1[key] = item1.attributes[key];
-                }
-            }
-            StructuredDocument::AttributeList attribs2;
+            StructuredDocument::AttributeList attribs1 = item1.attributes;
+            StructuredDocument::AttributeList attribs2 = item2.attributes;
             foreach( QString key, item2.attributes.keys() )
             {
                 if ( key[0] != '-' )
-                    attribs2[ key ] = item2.attributes[key];
-                else
+                    continue;
+                key = key.mid(1);
+                if ( item1.attributes.contains(key) )
                 {
-                    QString k = key.mid(1);
-                    if ( item1.attributes.contains(k) )
-                        attribs2[key] = item1.attributes[k];
-                    else
-                        attribs1[key] = item2.attributes[key];
+                    attribs2["-" + key] = item1.attributes[key];
+                    attribs1.remove(key);
+                    attribs1.remove("-" + key);
                 }
             }
             r1.updateAttributes(attribs1);
@@ -510,29 +645,25 @@ void DocumentMutation::xformUpdateAttributes( DocumentMutation& r1, DocumentMuta
         break;
     case ReplaceAttributes:
         {
-            StructuredDocument::AttributeList attribs1 = item1.attributes;
+            r1.retain(1);
+            next1 = true;
+            StructuredDocument::AttributeList attribs2 = item2.attributes;
             foreach( QString key, item1.attributes.keys() )
             {
+                if ( key[0] == '-' )
+                    continue;
                 if ( item2.attributes.contains(key) )
-                    attribs1[ "-" + key ] = item2.attributes[key];
-                else if ( !item1.attributes[key].isNull() )
-                    attribs1[ "-" + key ] = QString::null;
-                else
-                    attribs1.remove(key);
-            }
-            r1.updateAttributes( attribs1 );
-            StructuredDocument::AttributeList attribs2 = item2.attributes;
-            foreach( QString key, item2.attributes.keys() )
-            {
-                if ( item1.attributes.contains(key) )
                 {
                     if ( item1.attributes[key].isNull() )
                         attribs2.remove("-" + key);
                     else
                         attribs2[ "-" + key ] = item1.attributes[key];
                 }
+                else if ( !item1.attributes[key].isNull() )
+                    attribs2[ "-" + key ] = item1.attributes[key];
             }
-            r1.replaceAttributes(attribs2);
+            r2.replaceAttributes(attribs2);
+            next2 = true;
         }
         break;
     case DeleteEnd:
@@ -543,47 +674,80 @@ void DocumentMutation::xformUpdateAttributes( DocumentMutation& r1, DocumentMuta
     }
 }
 
-void DocumentMutation::xformReplaceAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, bool* ok )
+void DocumentMutation::xformReplaceAttributes( DocumentMutation& r1, DocumentMutation& r2, Item& item1, Item& item2, bool& next1, bool& next2, StructuredDocument::AnnotationChange& anno1, StructuredDocument::AnnotationChange& anno2, bool* ok )
 {
     switch( item2.type )
     {
     case ElementStart:
-        xformInsertElementStart( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementStart( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case ElementEnd:
-        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertElementEnd( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case InsertChars:
-        xformInsertChars( r2, r1, item2, item1, next2, next1, ok );
+        xformInsertChars( r2, r1, item2, item1, next2, next1, anno2, anno1, ok );
         break;
     case AnnotationBoundary:
-        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, ok );
+        xformAnnotationBoundary( r2, r1, item2, item1, next2, next1, anno2, anno1, true, ok );
         break;
     case Retain:
-        xformRetain( r2, r1, item2, item1, next2, next1, ok );
+        r1.replaceAttributes( item1.attributes );
+        next1 = true;
+        r2.retain(1);
+        if ( !shorten( item2, 1 ) )
+            next2 = true;
         break;
     case DeleteStart:
-        xformDeleteElementStart( r2, r1, item2, item1, next2, next1, ok );
+        next1 = true;
+        r2.deleteStart( item2.text, item2.attributes );
+        next2 = true;
         break;
     case UpdateAttributes:
-        xformUpdateAttributes( r2, r1, item2, item1, next2, next1, ok );
+        {
+            StructuredDocument::AttributeList attribs1 = item1.attributes;
+            StructuredDocument::AttributeList attribs2 = item2.attributes;
+            foreach( QString key, item1.attributes.keys() )
+            {
+                if ( key[0] == '-' )
+                    continue;
+                if ( attribs2.contains(key) )
+                    attribs2[ "-" + key ] = item1.attributes[key];
+            }
+            foreach( QString key, item2.attributes.keys() )
+            {
+                if ( key[0] == '-' )
+                    continue;
+                if ( !attribs1.contains(key) )
+                    attribs2["-" + key] = QString::null;
+                attribs1[key] = item2.attributes[key];
+                attribs1["-" + key] = item2.attributes[key];
+            }
+            r1.replaceAttributes( attribs1 );
+            r2.updateAttributes( attribs2 );
+            next1 = true;
+            next2 = true;
+        }
         break;
     case ReplaceAttributes:
         {
-            StructuredDocument::AttributeList newAttribs1;
-            foreach( QString key, item1.attributes.keys() )
-            {
-                if ( key[0] != '-' )
-                    newAttribs1[ key.mid(1) ] = item1.attributes[key];
-            }
-            StructuredDocument::AttributeList newAttribs2;
+            r1.retain(1);
+            next1 = true;
+            StructuredDocument::AttributeList attribs2 = item2.attributes;
             foreach( QString key, item2.attributes.keys() )
             {
                 if ( key[0] != '-' )
-                    newAttribs2[ key.mid(1) ] = item2.attributes[key];
+                    continue;
+                if ( !item1.attributes.contains(key.mid(1)) )
+                    attribs2.remove( key );
             }
-            r2.replaceAttributes( newAttribs1, newAttribs2 );
-            r1.replaceAttributes( newAttribs2, newAttribs1 );
+            foreach( QString key, item1.attributes.keys() )
+            {
+                if ( key[0] == '-' )
+                    continue;
+                attribs2["-" + key] = item1.attributes[key];
+            }
+            r2.replaceAttributes( attribs2 );
+            next2 = true;
         }
         break;
     case DeleteEnd:
@@ -602,6 +766,8 @@ QPair<DocumentMutation,DocumentMutation> DocumentMutation::xform( const Document
 
     DocumentMutation r1;
     DocumentMutation r2;
+    StructuredDocument::AnnotationChange anno1;
+    StructuredDocument::AnnotationChange anno2;
 
     QList<Item>::const_iterator it1 = m1.begin();
     QList<Item>::const_iterator it2 = m2.begin();
@@ -629,34 +795,34 @@ QPair<DocumentMutation,DocumentMutation> DocumentMutation::xform( const Document
         switch( item1.type )
         {
             case ElementStart:
-                xformInsertElementStart( r1, r2, item1, item2, next1, next2, ok );
+                xformInsertElementStart( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case ElementEnd:
-                xformInsertElementEnd( r1, r2, item1, item2, next1, next2, ok );
+                xformInsertElementEnd( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case InsertChars:
-                xformInsertChars( r1, r2, item1, item2, next1, next2, ok );
+                xformInsertChars( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case Retain:
-                xformRetain( r1, r2, item1, item2, next1, next2, ok );
+                xformRetain( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case DeleteStart:
-                xformDeleteElementStart( r1, r2, item1, item2, next1, next2, ok );
+                xformDeleteElementStart( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case DeleteEnd:
-                xformDeleteElementEnd( r1, r2, item1, item2, next1, next2, ok );
+                xformDeleteElementEnd( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case DeleteChars:
-                xformDeleteChars( r1, r2, item1, item2, next1, next2, ok );
+                xformDeleteChars( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case UpdateAttributes:
-                xformUpdateAttributes( r1, r2, item1, item2, next1, next2, ok );
+                xformUpdateAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case ReplaceAttributes:
-                xformReplaceAttributes( r1, r2, item1, item2, next1, next2, ok );
+                xformReplaceAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
                 break;
             case AnnotationBoundary:
-                xformAnnotationBoundary( r1, r2, item1, item2, next1, next2, ok );
+                xformAnnotationBoundary( r1, r2, item1, item2, next1, next2, anno1, anno2, false, ok );
                 break;
         }
 

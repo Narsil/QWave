@@ -26,7 +26,7 @@ void StructuredDocument::insertStart( int index, const QString& tag, const Attri
     m_attributes.insert( index, m );
 }
 
-bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& author)
+bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& author, bool check)
 {
     if ( !m_authors.contains(author) )
         m_authors.append(author);
@@ -91,19 +91,21 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                         }
                         m_annotations[pos] = currentAnno;
                         QChar ch = m_items[pos];
+                        // Start tag?
                         if ( ch.unicode() == 0 )
                         {
-                            stackCount++;
+//                            stackCount++;
                             onRetainElementStart(pos);
                         }
+                        // End tag?
                         else if ( ch.unicode() == 1 )
                         {
-                            if ( stackCount == 0 )
-                            {
-                                qDebug("Oooooops StructuredDocument 3");
-                                return false;
-                            }
-                            stackCount--;
+//                            if ( stackCount == 0 )
+//                            {
+//                                qDebug("Oooooops StructuredDocument 3");
+//                                return false;
+//                            }
+//                            stackCount--;
                             onRetainElementEnd(pos);
                         }
                         else
@@ -180,24 +182,36 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                 break;
             case DocumentMutation::UpdateAttributes:
                 {
+                    onUpdateAttributes(pos, (*it).attributes);
                     AttributeList old = m_attributes[pos];
-                    foreach( QString key, (*it).attributes )
+                    if ( check )
+                    {
+                        if ( typeAt(pos) != Start )
+                        {
+                            qDebug("UpdateAttributes works on start tags only");
+                            return false;
+                        }
+                    }
+                    foreach( QString key, (*it).attributes.keys() )
                     {
                         if ( key[0] == '-' )
                             continue;
                         QString value = (*it).attributes[key];
-                        QString oldValue = (*it).attributes["-" + key];
-                        if ( !oldValue.isNull() )
+                        if ( check )
                         {
-                            if ( !old.contains( key ) )
+                            QString oldValue = (*it).attributes["-" + key];
+                            if ( !oldValue.isNull() )
                             {
-                                qDebug("Ooooops, old tag did not contain the attribute.");
-                                return false;
-                            }
-                            if ( old[key] != (*it).attributes["-" + key] )
-                            {
-                                qDebug("Ooooops, old tag did not contain different attribute value.");
-                                return false;
+                                if ( !old.contains( key ) )
+                                {
+                                    qDebug("Ooooops, UpdateAttributes: old tag did not contain the attribute.");
+                                    return false;
+                                }
+                                if ( old[key] != (*it).attributes["-" + key] )
+                                {
+                                    qDebug("Ooooops, UpdateAttributes: old tag did contain different attribute value.");
+                                    return false;
+                                }
                             }
                         }
                         if ( value.isNull() )
@@ -205,19 +219,35 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                         else
                             m_attributes[pos].insert( key, value );
                     }
+                    pos++;
                 }
                 break;
             case DocumentMutation::ReplaceAttributes:
-                {
+                {                    
+                    onReplaceAttributes(pos, (*it).attributes);
                     int oldCount = 0;
                     AttributeList old = m_attributes[pos];
+                    QString tag = old["**t"];
+                    if ( check )
+                    {
+                        if ( typeAt(pos) != Start )
+                        {
+                            qDebug("Ooooooops, ReplaceAttributes works on start tags only");
+                            return false;
+                        }
+                        // -1 because the **t attribute is contained here, too.
+                        oldCount = old.count() - 1;
+                    }
                     m_attributes[pos].clear();
-                    foreach( QString key, (*it).attributes )
+                    m_attributes[pos].insert( "**t", tag );
+                    foreach( QString key, (*it).attributes.keys() )
                     {
                         if ( key[0] == '-' )
                         {
+                            if ( !check )
+                                continue;
                             QString value = (*it).attributes[key];
-                            oldCount++;
+                            oldCount--;
                             key = key.mid(1);
                             if ( !old.contains( key ) )
                             {
@@ -226,7 +256,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                             }
                             if ( old[key] != value )
                             {
-                                qDebug("Ooooops, old tag did not contain different attribute value.");
+                                qDebug("Ooooops, old tag did contain a different attribute value.");
                                 return false;
                             }
                             continue;
@@ -236,12 +266,13 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                         if ( value.isNull() )
                             continue;
                         m_attributes[pos].insert( key, value );
-                    }
-                    if ( oldCount != old.count() )
+                    }                    
+                    if ( oldCount != 0 )
                     {
                         qDebug("Oooops, the old tag had more attributes");
                         return false;
                     }
+                    pos++;
                 }
                 break;
             case DocumentMutation::AnnotationBoundary:                
@@ -327,7 +358,7 @@ QString StructuredDocument::toString() const
                 {
                     if ( key[0] == '*' )
                         continue;
-                    result += key + "=\"" + attribs[key] + "\" ";
+                    result += " " + key + "=\"" + attribs[key] + "\"";
                 }
                 result += ">";
                 break;
@@ -406,6 +437,18 @@ void StructuredDocument::onInsertElementEnd(int index)
 }
 
 void StructuredDocument::onAnnotationUpdate(int index, const AnnotationChange& updates)
+{
+    Q_UNUSED(index);
+    Q_UNUSED(updates);
+}
+
+void StructuredDocument::onUpdateAttributes(int index, const AttributeList& updates)
+{
+    Q_UNUSED(index);
+    Q_UNUSED(updates);
+}
+
+void StructuredDocument::onReplaceAttributes(int index, const AttributeList& updates)
 {
     Q_UNUSED(index);
     Q_UNUSED(updates);

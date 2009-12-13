@@ -11,6 +11,15 @@
 
 class DocumentMutation;
 
+/**
+  * A structured document is an XML-like data structure and is the basis for OT in wave.
+  * It contains text and tags. Each element of the document can have some optional annotations, too,
+  * which are usually used to assign style to the text, i.e. font, color, etc.
+  *
+  * Furthermore, you can apply deltas (class DocumentMutation) to a structured document.
+  *
+  * BlipDocument derives from this class.
+  */
 class StructuredDocument : public QObject
 {
     Q_OBJECT
@@ -65,7 +74,7 @@ public:
     /**
       * @return false is an error occured. In this case the document is malformed and cannot be used any further.
       */
-    virtual bool apply(const DocumentMutation& mutation, const QString& author);
+    virtual bool apply(const DocumentMutation& mutation, const QString& author, bool check = false);
 
     const QList<QString>& authors() { return m_authors; }
 
@@ -102,6 +111,8 @@ protected:
     virtual void onInsertElementStart(int index);
     virtual void onInsertElementEnd(int index);
     virtual void onAnnotationUpdate(int index, const AnnotationChange& updates);
+    virtual void onUpdateAttributes(int index, const AttributeList& updates);
+    virtual void onReplaceAttributes(int index, const AttributeList& updates);
     virtual void onMutationEnd();
 
 private:
