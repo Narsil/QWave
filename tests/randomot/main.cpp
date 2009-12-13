@@ -93,6 +93,32 @@ DocumentMutation* RandomOT::createMutation(StructuredDocument* doc)
     int deleteDepth = 0;
     for( int i = 0; i < doc->count(); ++i )
     {
+        int stackCount = 0;
+        int ins = 0;
+        while ( (ins = qrand()) % 5 == 0 )
+        {
+            if ( ins % 3 == 0 )
+            {
+                QString tag = QString( QChar( 'a' + (qrand()%26) ) );
+                m->insertStart(tag);
+                stackCount++;
+            }
+            else if ( ins % 3 == 1 && stackCount > 0 )
+            {
+                stackCount--;
+                m->insertEnd();
+            }
+            else
+            {
+                m->insertChars( QString( QChar( 'a' + (qrand()%26) ) ) );
+            }
+        }
+        while( stackCount > 0 )
+        {
+            stackCount--;
+            m->insertEnd();
+        }
+
         if ( deleting && qrand() % 3 == 0 )
         {
             if ( deleteDepth == 0 )
