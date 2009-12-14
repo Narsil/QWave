@@ -779,14 +779,16 @@ QPair<DocumentMutation,DocumentMutation> DocumentMutation::xform( const Document
         {
             r2.m_items.append( item2 );
             it2++;
-            item2 = *it2;
+            if ( it2 != m2.end() )
+                item2 = *it2;
             continue;
         }
         if ( it2 == m2.end() )
         {
             r1.m_items.append( item2 );
             it1++;
-            item1 = *it1;
+            if ( it1 != m1.end() )
+                item1 = *it1;
             continue;
         }
 
