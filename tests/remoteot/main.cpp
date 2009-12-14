@@ -1,6 +1,7 @@
 #include <QtTest/QtTest>
 #include <QtGlobal>
 #include <QHash>
+#include <QDateTime>
 
 #include "app/environment.h"
 #include "app/settings.h"
@@ -28,10 +29,19 @@
 private:
     Environment* m_environment1;
     Environment* m_environment2;
+    // Used to make blip names unique
+    QString m_rand;
+    // The current wave name. Has the form: "w+xxxxxxx".
+    QString m_wavename;
  };
 
 void RemoteOT::initTestCase()
 {
+    // Create a random name for use in the blip
+    m_rand = QString("b%1b").arg( QDateTime::currentDateTime().toTime_t() );
+    m_wavename = QString("w+%1").arg( QDateTime::currentDateTime().toTime_t() );
+    // m_wavename = "w+testwave";
+
     m_environment1 = new Environment("remoteot1");
     Settings* settings = m_environment1->settings();
     settings->setServerName("localhost");
@@ -65,7 +75,7 @@ void RemoteOT::initTestCase()
         QFAIL("Connection error");
 
     // Create a wave on behalf of user 1
-    Wave* wave1 = m_environment1->createWave( m_environment1->networkAdapter()->serverName(), "w+testwave");
+    Wave* wave1 = m_environment1->createWave( m_environment1->networkAdapter()->serverName(), m_wavename);
     // Add the new wave to the inbox.
     m_environment1->inbox()->addWave(wave1);
     // Get the root wavelet
@@ -81,15 +91,15 @@ void RemoteOT::initTestCase()
     DocumentMutation m1;
     m1.insertStart("conversation");
     QHash<QString,QString> map;
-    map["id"] = "b+b1";
+    map["id"] = "b+" + m_rand + "1";
     m1.insertStart("blip", map);
     m1.insertEnd();
     map.clear();
-    map["id"] = "b+b2";
+    map["id"] = "b+" + m_rand + "2";
     m1.insertStart("blip", map);
     m1.insertEnd();
     map.clear();
-    map["id"] = "b+b3";
+    map["id"] = "b+" + m_rand + "3";
     m1.insertStart("blip", map);
     m1.insertEnd();
     m1.insertEnd();
@@ -106,7 +116,7 @@ void RemoteOT::initTestCase()
     m2.insertStart("line", map);
     m2.insertEnd();
     m2.insertEnd();
-    wavelet1->processor()->handleSend( m2, "b+b1" );
+    wavelet1->processor()->handleSend( m2, "b+" + m_rand + "1" );
 
     // Create an empty blip
     DocumentMutation m3;
@@ -119,7 +129,7 @@ void RemoteOT::initTestCase()
     m3.insertStart("line", map);
     m3.insertEnd();
     m3.insertEnd();
-    wavelet1->processor()->handleSend( m3, "b+b2" );
+    wavelet1->processor()->handleSend( m3, "b+" + m_rand + "2" );
 
     // Create an empty blip
     DocumentMutation m4;
@@ -132,14 +142,14 @@ void RemoteOT::initTestCase()
     m4.insertStart("line", map);
     m4.insertEnd();
     m4.insertEnd();
-    wavelet1->processor()->handleSend( m4, "b+b3" );
+    wavelet1->processor()->handleSend( m4, "b+" + m_rand + "3" );
 
     // Wait until this has been processed
     while( wavelet1->processor()->queuedDeltaCount() > 0 )
         QTest::qWait(250);
 
     // Open the wave for user 2
-    Wave* wave2 = m_environment2->createWave( m_environment1->networkAdapter()->serverName(), "w+testwave");
+    Wave* wave2 = m_environment2->createWave( m_environment1->networkAdapter()->serverName(), m_wavename);
     // Add the new wave to the inbox.
     m_environment2->inbox()->addWave(wave2);
     // Get the root wavelet
@@ -154,23 +164,23 @@ void RemoteOT::initTestCase()
 
 void RemoteOT::concurrentEdit()
 {
-    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
+    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
     // Create an empty blip
     DocumentMutation m1;
     m1.retain(5);
     m1.insertChars("Hallo");
     m1.retain(1);
     wavelet1->processor()->setSuspendSending(true);
-    wavelet1->processor()->handleSend( m1, "b+b1" );
+    wavelet1->processor()->handleSend( m1, "b+" + m_rand + "1" );
 
-    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
     // Create an empty blip
     DocumentMutation m2;
     m2.retain(5);
     m2.insertChars("Welt");
     m2.retain(1);
     wavelet2->processor()->setSuspendSending(true);
-    wavelet2->processor()->handleSend( m2, "b+b1" );
+    wavelet2->processor()->handleSend( m2, "b+" + m_rand + "1" );
 
     wavelet1->processor()->setSuspendSending(false);
     // Wait until this has been processed
@@ -198,8 +208,8 @@ void RemoteOT::concurrentEdit()
 
 void RemoteOT::concurrentEdit2()
 {
-    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
-    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
+    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
 
     int v1 = wavelet1->processor()->serverVersion();
     int v2 = wavelet2->processor()->serverVersion();
@@ -209,7 +219,7 @@ void RemoteOT::concurrentEdit2()
     m1.retain(5);
     m1.insertChars("Hallo");
     m1.retain(1);
-    wavelet1->processor()->handleSend( m1, "b+b2" );
+    wavelet1->processor()->handleSend( m1, "b+" + m_rand + "2" );
 
     // Wait until user 1 and 2 got all deltas
     while( wavelet1->processor()->serverVersion() < v1 + 1 )
@@ -221,13 +231,13 @@ void RemoteOT::concurrentEdit2()
     m1b.retain(5+2);
     m1b.deleteChars("ll");
     m1b.retain(2);
-    wavelet1->processor()->handleSend( m1b, "b+b2" );
+    wavelet1->processor()->handleSend( m1b, "b+" + m_rand + "2" );
 
     DocumentMutation m2;
     m2.retain(5 + 2 + 1);
     m2.insertChars("XZY");
     m2.retain(3);
-    wavelet2->processor()->handleSend( m2, "b+b2" );
+    wavelet2->processor()->handleSend( m2, "b+" + m_rand + "2" );
 
     // Wait until user 1 and 2 got all deltas
     while( wavelet1->processor()->serverVersion() < v1 + 3 )
@@ -244,8 +254,8 @@ void RemoteOT::concurrentEdit2()
 
 void RemoteOT::concurrentEdit3()
 {
-    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
-    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), "w+testwave")->wavelet();
+    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
 
     int v1 = wavelet1->processor()->serverVersion();
     int v2 = wavelet2->processor()->serverVersion();
@@ -255,7 +265,7 @@ void RemoteOT::concurrentEdit3()
     m1.retain(5);
     m1.insertChars("Hallo");
     m1.retain(1);
-    wavelet1->processor()->handleSend( m1, "b+b3" );
+    wavelet1->processor()->handleSend( m1, "b+" + m_rand + "3" );
 
     // Wait until user 1 and 2 got all deltas
     while( wavelet1->processor()->serverVersion() < v1 + 1 )
@@ -273,7 +283,7 @@ void RemoteOT::concurrentEdit3()
     end.append("style/fontSize");
     m1b.annotationBoundary(end, StructuredDocument::AnnotationChange());
     m1b.retain(1);
-    wavelet1->processor()->handleSend( m1b, "b+b3" );
+    wavelet1->processor()->handleSend( m1b, "b+" + m_rand + "3" );
 
     DocumentMutation m2;
     m2.retain(5 + 3);
@@ -283,12 +293,19 @@ void RemoteOT::concurrentEdit3()
     m2.insertChars("ZWOELF");
     m2.annotationBoundary(end, StructuredDocument::AnnotationChange());
     m2.retain(3);
-    wavelet2->processor()->handleSend( m2, "b+b3" );
+    wavelet2->processor()->handleSend( m2, "b+" + m_rand + "3" );
 
-//    bool ok = false;
-//    QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( m1b, m2, &ok );
-//    pair.first.print_();
-//    pair.second.print_();
+    bool ok = false;
+    QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( m1b, m2, &ok );
+    QVERIFY(ok == true);
+    pair.first.print_();
+    pair.second.print_();
+
+    ok = false;
+    pair = DocumentMutation::xform( m2, m1b, &ok );
+    QVERIFY(ok == true);
+    pair.first.print_();
+    pair.second.print_();
 
     // Wait until user 1 and 2 got all deltas
     while( wavelet1->processor()->serverVersion() < v1 + 3 )
