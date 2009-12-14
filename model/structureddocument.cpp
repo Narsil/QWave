@@ -94,18 +94,11 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                         // Start tag?
                         if ( ch.unicode() == 0 )
                         {
-//                            stackCount++;
                             onRetainElementStart(pos);
                         }
                         // End tag?
                         else if ( ch.unicode() == 1 )
                         {
-//                            if ( stackCount == 0 )
-//                            {
-//                                qDebug("Oooooops StructuredDocument 3");
-//                                return false;
-//                            }
-//                            stackCount--;
                             onRetainElementEnd(pos);
                         }
                         else
@@ -282,7 +275,8 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                 }
                 foreach( QString key, (*it).annotations.keys() )
                 {
-                    annoUpdates[key] = (*it).annotations[key];
+//                    if ( currentAnno.value(key) != (*it).annotations[key].second )
+                        annoUpdates[key] = (*it).annotations[key];
                 }
                 onAnnotationUpdate(pos, annoUpdates);
                 currentAnno = oldAnno.merge(annoUpdates);

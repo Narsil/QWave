@@ -61,7 +61,7 @@ public:
         Annotation merge(const AnnotationChange& map) const;
 
         bool operator==( const Annotation& a ) const { return a.d.data() == d.data() || (a.d.data() && d.data() && a.d->map == d->map); }
-        bool operator!=( const Annotation& a ) const { return a.d.data() != d.data() || (d.data() && a.d->map != d->map); }
+        bool operator!=( const Annotation& a ) const { return !(a.d.data() == d.data() || (a.d.data() && d.data() && a.d->map == d->map)); }
 
     private:
         QSharedDataPointer<AnnotationData> d;

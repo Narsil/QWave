@@ -346,7 +346,6 @@ void DocumentMutation::xformAnnotationBoundary( DocumentMutation& r1, DocumentMu
             anno1[key] = a[key];
             if ( anno2.contains(key) )
             {
-                a.remove(key);
                 if ( anno2[key].second == a[key].second )
                     e2.append(key);
                 else
@@ -354,6 +353,7 @@ void DocumentMutation::xformAnnotationBoundary( DocumentMutation& r1, DocumentMu
                     a2[key] = anno2[key];
                     a2[key].first = a[key].second;
                 }
+                a.remove(key);
             }
         }
     }
