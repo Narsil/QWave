@@ -80,6 +80,8 @@ void RemoteOT::initTestCase()
     m_environment1->inbox()->addWave(wave1);
     // Get the root wavelet
     Wavelet* wavelet1 = wave1->wavelet();
+	//Turn off the gathering flag of this processor
+	wavelet1->processor()->setGatheringDeltas(false);
     // Tell the server about the new wave
     wavelet1->processor()->handleSendAddParticipant(m_environment1->localUser());
     // Add user 2 to the wave
@@ -154,7 +156,9 @@ void RemoteOT::initTestCase()
     m_environment2->inbox()->addWave(wave2);
     // Get the root wavelet
     Wavelet* wavelet2 = wave2->wavelet();
-    // Open the wavelet and receive the initial deltas
+	//Turn off the gathering flag of this processor
+	wavelet2->processor()->setGatheringDeltas(false);
+	// Open the wavelet and receive the initial deltas
     m_environment2->networkAdapter()->openWavelet(wavelet2);
 
     // Wait until user 2 got all deltas

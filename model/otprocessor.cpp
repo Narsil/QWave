@@ -4,14 +4,16 @@
 #include "app/environment.h"
 #include "network/networkadapter.h"
 
+#include <QDebug>
+
 OTProcessor::OTProcessor(Environment* environment, QObject* parent)
-        : QObject( parent ), m_environment(environment), m_wavelet(0)
+        : QObject( parent ), m_environment(environment), m_wavelet(0), m_gatherDeltas(true)
 {
      setup();
 }
 
 OTProcessor::OTProcessor(Wavelet* wavelet)
-        : QObject( wavelet ), m_environment(wavelet->environment()), m_wavelet(wavelet)
+        : QObject( wavelet ), m_environment(wavelet->environment()), m_wavelet(wavelet), m_gatherDeltas(true)
 {
      setup();
 }
@@ -110,6 +112,26 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     // Send it to the server via the network
     if ( !m_submitPending )
         submitNext();
+    else if(m_gatherDeltas)
+    	gatherOutgoingDeltas();
+}
+
+void OTProcessor::gatherOutgoingDeltas(){
+	// First element is waiting for acknowledgment so
+	// we gather every other pending deltas
+	if (m_outgoingDeltas.size()<=2)
+		return;
+	else if (m_outgoingDeltas.size()>3)
+		qDebug("Ooops we shouldn't have accumulated more than 3 deltas");
+	qDebug("Gathering deltas");
+	WaveletDelta lastDelta = m_outgoingDeltas.takeLast();
+	WaveletDelta remainingDelta = m_outgoingDeltas.takeLast();
+	foreach( WaveletDeltaOperation op, lastDelta.operations() )
+	{
+		remainingDelta.addOperation(op);
+	}
+	m_clientMsgCount--;
+	m_outgoingDeltas.append(remainingDelta);
 }
 
 void OTProcessor::handleReceive( const WaveletDelta& incoming )
@@ -161,6 +183,14 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming )
             emit participantRemove( sop.removeParticipant() );
     }
     m_serverMsgCount++;
+}
+
+void OTProcessor::setGatheringDeltas(bool gather){
+	qDebug()<<"Changed gathering deltas flag ?"<<m_gatherDeltas<<" "<<gather;
+	if ( m_gatherDeltas == gather )
+		return;
+	m_gatherDeltas = gather;
+	qDebug("Changed gathering deltas flag");
 }
 
 void OTProcessor::setSuspendSending(bool suspend)
