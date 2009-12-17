@@ -118,12 +118,12 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
 
 void OTProcessor::gatherOutgoingDeltas(){
 	// First element is waiting for acknowledgment so
-	// we gather every other pending deltas
+	// we gather the two last deltas. The number of deltas should not
+	// go above 3 as when a third delta is given it is automatically gathered
 	if (m_outgoingDeltas.size()<=2)
 		return;
 	else if (m_outgoingDeltas.size()>3)
 		qDebug("Ooops we shouldn't have accumulated more than 3 deltas");
-	qDebug("Gathering deltas");
 	WaveletDelta lastDelta = m_outgoingDeltas.takeLast();
 	WaveletDelta remainingDelta = m_outgoingDeltas.takeLast();
 	foreach( WaveletDeltaOperation op, lastDelta.operations() )
@@ -186,11 +186,10 @@ void OTProcessor::handleReceive( const WaveletDelta& incoming )
 }
 
 void OTProcessor::setGatheringDeltas(bool gather){
-	qDebug()<<"Changed gathering deltas flag ?"<<m_gatherDeltas<<" "<<gather;
 	if ( m_gatherDeltas == gather )
 		return;
 	m_gatherDeltas = gather;
-	qDebug("Changed gathering deltas flag");
+	qDebug()<<"Changed gathering deltas flag to "<<m_gatherDeltas;
 }
 
 void OTProcessor::setSuspendSending(bool suspend)
