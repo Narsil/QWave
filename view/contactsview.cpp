@@ -13,7 +13,9 @@ ContactsView::ContactsView(Contacts* contacts, QWidget* parent)
         : QWidget(parent), m_contacts(contacts)
 {
     setMinimumWidth(180);
+#ifndef TABGUI
     setMaximumWidth(180);
+#endif
 
     m_verticalLayout = new QVBoxLayout(this);
     m_verticalLayout->setSpacing(0);

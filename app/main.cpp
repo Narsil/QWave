@@ -3,6 +3,7 @@
 #include <QSplitter>
 #include <QDateTime>
 #include <QSettings>
+#include <QTabWidget>
 
 #include "mainwindow.h"
 #include "model/wave.h"
@@ -255,17 +256,26 @@ int main(int argc, char *argv[])
     cmut3.apply(mdoc);
     mdoc->print_(); */
 
+
+    WaveView* view = new WaveView(wave);
+    // WaveListView* wlview = new WaveListView(en->inbox());
+    InboxView* wlview = new InboxView(en);
+    ContactsView* cview = new ContactsView( en->contacts() );
+
+#ifdef TABGUI
+        QTabWidget* tabwidget = new QTabWidget();
+        tabwidget->addTab(cview, w->tr("Contacts") );
+        tabwidget->addTab(wlview, w->tr("Inbox") );
+        tabwidget->addTab(view, w->tr("Wave") );
+        w->setCentralWidget(tabwidget);
+#else
         QSplitter* splitter = new QSplitter();
-
-        WaveView* view = new WaveView(wave);
-        // WaveListView* wlview = new WaveListView(en->inbox());
-        InboxView* wlview = new InboxView(en);
-        ContactsView* cview = new ContactsView( en->contacts() );
-
         splitter->addWidget(cview);
         splitter->addWidget(wlview);
         splitter->addWidget(view);
         w->setCentralWidget(splitter);
+#endif
+
         w->setInboxView(wlview);
         w->setWaveView(view);
         view->connect( wlview, SIGNAL(selected(Wave*)), SLOT(setWave(Wave*)));

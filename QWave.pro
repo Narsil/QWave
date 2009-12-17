@@ -2,6 +2,11 @@
 # Project created by QtCreator 2009-10-11T22:32:00
 # -------------------------------------------------
 # CONFIG += release
+
+# Uncomment this line to get the tabbed GUI.
+# Tabbed GUI is useful on small mobile devices such as the N900.
+# DEFINES += TABGUI
+
 TARGET = QWave
 QT += network \
     webkit \
