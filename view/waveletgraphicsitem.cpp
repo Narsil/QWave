@@ -102,9 +102,10 @@ void WaveletGraphicsItem::showAddParticipantDialog()
         m_wavelet->processor()->handleSendAddParticipant(dlg.result());
 }
 
-void WaveletGraphicsItem::showParticipantInfo(Participant* participant){
-	ParticipantInfoDialog dlg(participant,m_view,true);
-	connect( &dlg, SIGNAL(newWave(Participant*)),m_view, SIGNAL(newWave(Participant*)));
-	connect( &dlg, SIGNAL(removeParticipant(const QString&)), m_wavelet->processor(),SLOT(handleSendRemoveParticipant( const QString&)));
-	dlg.exec();
+void WaveletGraphicsItem::showParticipantInfo(Participant* participant)
+{
+    ParticipantInfoDialog dlg(participant,m_view,true);
+    connect( &dlg, SIGNAL(newWave(Participant*)),m_view, SIGNAL(newWave(Participant*)));
+    connect( &dlg, SIGNAL(removeParticipant(const QString&)), m_wavelet->processor(),SLOT(handleSendRemoveParticipant( const QString&)));
+    dlg.exec();
 }

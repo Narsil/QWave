@@ -14,6 +14,7 @@
 #include "model/contacts.h"
 #include "model/attachment.h"
 #include "caret.h"
+#include "gadgets/gadgetview.h"
 
 #include <QStack>
 #include <QTextDocument>
@@ -830,4 +831,22 @@ void OTAdapter::removeOldCursors()
         delete m_timer;
         m_timer = 0;
     }
+}
+
+void OTAdapter::gadgetSubmit( GadgetView* view, const QString& key, const QString& value )
+{
+    m_blockUpdate = true;
+
+    // TODO
+
+    m_blockUpdate = false;
+}
+
+void OTAdapter::gadgetSubmit( GadgetView* view, const QHash<QString,QString>& delta )
+{
+    m_blockUpdate = true;
+
+    // TODO
+
+    m_blockUpdate = false;
 }

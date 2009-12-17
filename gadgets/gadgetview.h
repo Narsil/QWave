@@ -10,6 +10,12 @@ class Environment;
 class Blip;
 class QUrl;
 
+/**
+  * Show the GUI of a gadget.
+  * GadgetView embeds a WebKit browser for this purpose.
+  *
+  * GadgetView exposes an instance of GadgetAPI to the gadget's javascript code.
+  */
 class GadgetView : public QWebView
 {
     Q_OBJECT
@@ -26,11 +32,23 @@ public:
 
     Environment* environment() const { return m_environment; }
     Blip* blip() const { return m_blip; }
+    GadgetAPI* gadgetAPI() const { return m_api; }
 
     void adjustHeight( int height );
 
+    /**
+      * Called by GadgetAPI.
+      */
+    void onSubmit(const QString& key, const QString& value );
+    /**
+      * Called by GadgetAPI.
+      */
+    void onSubmit(const QHash<QString,QString>& delta );
+
 signals:
     void sizeChangeRequired(GadgetView* view);
+    void submit(GadgetView* view, const QString& key, const QString& value );
+    void submit(GadgetView* view, const QHash<QString,QString>& delta );
 
 private slots:
     void manifestFinished();

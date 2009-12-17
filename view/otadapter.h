@@ -12,6 +12,8 @@ class GraphicsTextItem;
 class Environment;
 class DocumentMutation;
 class Participant;
+class GadgetView;
+
 class QTimer;
 
 /**
@@ -81,6 +83,15 @@ signals:
     void titleChanged(const QString& title);
 
 private slots:
+    /**
+      * Called when a gadget submits a delta
+      */
+    void gadgetSubmit(GadgetView* view, const QString& key, const QString& value );
+    /**
+      * Called when a gadget submits a delta
+      */
+    void gadgetSubmit(GadgetView* view, const QHash<QString,QString>& delta );
+
     /**
       * Called when the BlipDocument starts to change.
       */

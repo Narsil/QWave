@@ -331,10 +331,10 @@ void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const 
     blip()->insertImage( index, attachmentId, caption );
 
     // Display the image in the QTextDocument
-    m_adapter->suspendContentsChange(true);
-    QTextCursor cursor( m_text->textCursor() );
-    m_text->insertImage( &cursor, attachmentId, thumbnail, caption );
-    m_adapter->suspendContentsChange(false);
+//    m_adapter->suspendContentsChange(true);
+//    QTextCursor cursor( m_text->textCursor() );
+//    m_text->insertImage( &cursor, attachmentId, thumbnail, caption );
+//    m_adapter->suspendContentsChange(false);
 }
 
 void BlipGraphicsItem::insertGadget( const QUrl& url )
@@ -344,18 +344,18 @@ void BlipGraphicsItem::insertGadget( const QUrl& url )
     blip()->insertGadget( index, url );
 
     // Display the image in the QTextDocument
-    m_adapter->suspendContentsChange(true);
-    QTextCursor cursor( m_text->textCursor() );
-    m_text->insertGadget( &cursor, url );
-    m_adapter->suspendContentsChange(false);
+//    m_adapter->suspendContentsChange(true);
+//    QTextCursor cursor( m_text->textCursor() );
+//    m_text->insertGadget( &cursor, url );
+//    m_adapter->suspendContentsChange(false);
 }
 
 void BlipGraphicsItem::mousePressEvent ( QGraphicsSceneMouseEvent* )
 {
-	if (m_blip->isUnread())
-		m_blip->setUnread(false);
-	else
-		m_blip->setUnread(true);
+    if (m_blip->isUnread())
+        m_blip->setUnread(false);
+    else
+        m_blip->setUnread(true);
 }
 
 /****************************************************************************

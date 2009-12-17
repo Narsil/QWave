@@ -134,16 +134,16 @@ void GadgetAPI::state_submitDelta( const QVariantMap& object )
         delta[key] = object[key].toString();
         m_state[key] = delta[key];
     }
-    emit submit( delta );
-    // HACK
+    m_view->onSubmit( delta );
+
     updateState();
 }
 
 void GadgetAPI::state_submitValue( const QString& key, const QString& value )
 {
     m_state[key] = value;
-    emit submit( key, value );
-    // HACK
+    m_view->onSubmit( key, value );
+
     updateState();
 }
 
