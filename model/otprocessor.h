@@ -29,6 +29,10 @@ public:
       */
     void handleSend( WaveletDelta& outgoing );
     /**
+     * Gathers pending operations while waiting for server acknowledgment.
+     */
+    void gatherOutgoingDeltas();
+    /**
       * Called upon receipt of a delta from the server.
       */
     void handleReceive( const WaveletDelta& incoming );
@@ -53,6 +57,7 @@ public:
       */
     int serverVersion() const { return m_serverVersion; }
 
+    void setGatheringDeltas(bool gather);
     void setSuspendSending(bool suspend);
     bool isSuspendSending() const { return m_suspendSending; }
 
@@ -92,6 +97,7 @@ private:
     int m_serverVersion;
     QByteArray m_serverHash;
     bool m_suspendSending;
+    bool m_gatherDeltas;
 };
 
 #endif // OTPROCESSOR_H
