@@ -45,6 +45,10 @@ void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
     GadgetView* view = new GadgetView(m_textItem->adapter()->blip(), url, m_textItem->textWidth(), id, m_environment);
     bool check = connect( view, SIGNAL(sizeChangeRequired(GadgetView*)), SLOT(resizeGadget(GadgetView*)));
     Q_ASSERT(check);
+    check = m_textItem->adapter()->connect( view, SIGNAL(submit(GadgetView*,QHash<QString,QString>)), SLOT(gadgetSubmit(GadgetView*,QHash<QString,QString>)) );
+    Q_ASSERT(check);
+    check = m_textItem->adapter()->connect( view, SIGNAL(submit(GadgetView*,QString,QString)), SLOT(gadgetSubmit(GadgetView*,QString,QString)));
+    Q_ASSERT(check);
 
     QGraphicsProxyWidget* item = m_textItem->scene()->addWidget(view);
     item->setParentItem( m_textItem );

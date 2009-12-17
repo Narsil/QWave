@@ -35,8 +35,6 @@ public slots:
 
 signals:
     void log( const QString& message );
-    void submit( const QString& key, const QString& value );
-    void submit( const QHash<QString,QString>& delta );
     void stateReset();
 
 private slots:

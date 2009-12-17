@@ -34,3 +34,13 @@ void GadgetView::adjustHeight( int height )
     m_preferredSize = QSizeF( m_preferredSize.width(), height );
     emit sizeChangeRequired(this);
 }
+
+void GadgetView::onSubmit(const QString& key, const QString& value )
+{
+    emit submit( this, key, value );
+}
+
+void GadgetView::onSubmit(const QHash<QString,QString>& delta )
+{
+    emit submit( this, delta );
+}
