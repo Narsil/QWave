@@ -168,7 +168,7 @@ void OTAdapter::onStyleChange( int position, int charsFormatted, const QString& 
                 }
                 break;
             case StructuredDocument::End:
-                qDebug("OOOoooops, should not have encountered the end tag.");
+                qDebug("OTAdapter::onStyleChange OOOoooops, should not have encountered the end tag.");
                 break;
         }
     }
@@ -275,7 +275,7 @@ void OTAdapter::onContentsChange( int position, int charsRemoved, int charsAdded
                     }
                     break;
                 case StructuredDocument::End:
-                        qDebug("OOOoooops, should not have encountered the end tag.");
+                        qDebug("OTAdapter::onContentsChange  OOOoooops, should not have encountered the end tag.");
                         break;
             }
         }
