@@ -57,6 +57,9 @@ public:
       */
     int serverVersion() const { return m_serverVersion; }
 
+	/**
+	 * You can turn on and off the gathering of pending deltas with this.
+	 */
     void setGatheringDeltas(bool gather);
     void setSuspendSending(bool suspend);
     bool isSuspendSending() const { return m_suspendSending; }
