@@ -116,22 +116,23 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     	gatherOutgoingDeltas();
 }
 
-void OTProcessor::gatherOutgoingDeltas(){
-	// First element is waiting for acknowledgment so
-	// we gather the two last deltas. The number of deltas should not
-	// go above 3 as when a third delta is given it is automatically gathered
-	if (m_outgoingDeltas.size()<=2)
-		return;
-	else if (m_outgoingDeltas.size()>3)
-		qDebug("Ooops we shouldn't have accumulated more than 3 deltas");
-	WaveletDelta lastDelta = m_outgoingDeltas.takeLast();
-	WaveletDelta remainingDelta = m_outgoingDeltas.takeLast();
-	foreach( WaveletDeltaOperation op, lastDelta.operations() )
-	{
-		remainingDelta.addOperation(op);
-	}
-	m_clientMsgCount--;
-	m_outgoingDeltas.append(remainingDelta);
+void OTProcessor::gatherOutgoingDeltas()
+{
+    // First element is waiting for acknowledgment so
+    // we gather the two last deltas. The number of deltas should not
+    // go above 3 as when a third delta is given it is automatically gathered
+    if (m_outgoingDeltas.size()<=2)
+        return;
+    else if (m_outgoingDeltas.size()>3)
+        qDebug("Ooops we shouldn't have accumulated more than 3 deltas");
+    WaveletDelta lastDelta = m_outgoingDeltas.takeLast();
+    WaveletDelta remainingDelta = m_outgoingDeltas.takeLast();
+    foreach( WaveletDeltaOperation op, lastDelta.operations() )
+    {
+        remainingDelta.addOperation(op);
+    }
+    m_clientMsgCount--;
+    m_outgoingDeltas.append(remainingDelta);
 }
 
 void OTProcessor::handleReceive( const WaveletDelta& incoming )

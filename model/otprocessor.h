@@ -29,10 +29,6 @@ public:
       */
     void handleSend( WaveletDelta& outgoing );
     /**
-     * Gathers pending operations while waiting for server acknowledgment.
-     */
-    void gatherOutgoingDeltas();
-    /**
       * Called upon receipt of a delta from the server.
       */
     void handleReceive( const WaveletDelta& incoming );
@@ -57,18 +53,18 @@ public:
       */
     int serverVersion() const { return m_serverVersion; }
 
-	/**
-	 * You can turn on and off the gathering of pending deltas with this.
-	 */
+    /**
+     * You can turn on and off the gathering of pending deltas with this.
+     */
     void setGatheringDeltas(bool gather);
     void setSuspendSending(bool suspend);
     bool isSuspendSending() const { return m_suspendSending; }
 
 public slots:
-	/**
-	 * Consumed by the UI
-	 */
-	void handleSendRemoveParticipant(const QString &address);
+    /**
+     * Consumed by the UI
+     */
+    void handleSendRemoveParticipant(const QString &address);
 
 signals:
     /**
@@ -87,6 +83,10 @@ signals:
 private:
     void setup();
     void submitNext();
+    /**
+     * Gathers pending operations while waiting for server acknowledgment.
+     */
+    void gatherOutgoingDeltas();
 
     int m_serverMsgCount;
     int m_clientMsgCount;

@@ -76,43 +76,78 @@ void OTAdapter::onStyleChange( int position, int charsFormatted, const QString& 
             charsFormatted--;
     }
 
+    // Nothing to format at all?
     if ( charsFormatted == 0 )
         return;
 
     // Construct a document mutation which reflects the change made to the QTextDocument.
     DocumentMutation m;
+    // Map the position inside of QTextDocument to an index inside the StructuredDocument
     int index = this->mapToBlip(position);
+    // Skip all characters up to this point of modification
     m.retain(index);
 
-    // Choose some impossible value here to trigger an annotation change in the loop below
-    QString oldvalue = "$$$$$";
+    // StructuredDocument::Annotation anno2 = bdoc->annotationAt(index);
+    // QString oldvalue = anno2.value(style);
+
+    // Choose some value which will trigger the if clause below when it is executed the first time
+    QString oldvalue = "$$$$$$$";
+
+    // Count number of characters since (a) the start of the style change or (b) the last annotation boundary
     int docFormatted = 0;
     int changeStart = 0;
-    QString text = "";
     int pos = index;
+
+    // Iterate over the document and find out where annotations need to be changed.
     for( int i = 0; i < charsFormatted; ++i, pos++ )
     {
+        StructuredDocument::Annotation anno = bdoc->annotationAt(pos);
+        QString current = anno.value(style);
+
+        // There is a style change in the document?
+        if ( current != oldvalue )
+        {
+            // The document style does not have the desired value?
+            if ( current != value )
+            {
+                m.retain(docFormatted - changeStart);
+                changeStart = docFormatted;
+                oldvalue = current;
+                // Begin an annotation update
+                StructuredDocument::AnnotationChange change;
+                change[style].first = oldvalue;
+                change[style].second = value;
+                m.annotationBoundary( QList<QString>(), change );
+            }
+            // The document has the desried style value and this is the beginning of the style change?
+            else if ( oldvalue == "$$$$$$$" )
+            {
+                oldvalue = current;
+            }
+            // From here on the document style has the desired value (But it did not have it before)
+            else
+            {
+                m.retain(docFormatted - changeStart);
+                changeStart = docFormatted;
+                oldvalue = current;
+                // End the annotation update here
+                QList<QString> endkeys;
+                endkeys.append( style );
+                m.annotationBoundary( endkeys, StructuredDocument::AnnotationChange() );
+            }
+        }
+
         switch ( bdoc->typeAt(pos) )
         {
             case StructuredDocument::Char:
             {
-                StructuredDocument::Annotation anno = bdoc->annotationAt(i);
-                if ( anno.value(style) != oldvalue )
-                {
-                    m.retain(docFormatted - changeStart);
-                    changeStart = docFormatted;
-                    oldvalue = anno.value(style);
-                    StructuredDocument::AnnotationChange change;
-                    change[style].first = oldvalue;
-                    change[style].second = value;
-                    m.annotationBoundary( QList<QString>(), change );
-                }
                 docFormatted++;
                 break;
             }
             case StructuredDocument::Start:
                 {
                     docFormatted++;
+                    // This must be an <image>, <gadget> or <line> tag. The contents of it will be ignored. So skip it.
                     int stack = 1;
                     while( stack > 0 )
                     {
@@ -137,11 +172,16 @@ void OTAdapter::onStyleChange( int position, int charsFormatted, const QString& 
                 break;
         }
     }
-    QList<QString> endKeys;
-    endKeys.append(style);
-    m.retain(docFormatted - changeStart);
-    m.annotationBoundary( endKeys, StructuredDocument::AnnotationChange() );
-    m.retain( bdoc->count() - index - docFormatted );
+    if ( oldvalue != value )
+    {
+        QList<QString> endKeys;
+        endKeys.append(style);
+        m.retain(docFormatted - changeStart);
+        m.annotationBoundary( endKeys, StructuredDocument::AnnotationChange() );
+        m.retain( bdoc->count() - index - docFormatted );
+    }
+    else
+        m.retain( bdoc->count() - index - changeStart );
 
     // Send the mutation to the OTProcessor
     m_blockUpdate = true;
