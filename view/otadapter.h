@@ -127,6 +127,10 @@ private slots:
     /**
       * Called when the BlipDocument changes.
       */
+    void setGadgetState( int inlinePos, const QString& gadgetId, const QString& name, const QString& value );
+    /**
+      * Called when the BlipDocument changes.
+      */
     void setStyle( const QString& style, const QString& value, int startPos, int endPos );
     /**
       * Called when the BlipDocument finished changing.

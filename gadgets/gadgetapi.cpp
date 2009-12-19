@@ -13,7 +13,7 @@ QString* GadgetAPI::s_gadgetLib = 0;
 QString* GadgetAPI::s_ostemplatesLib = 0;
 
 GadgetAPI::GadgetAPI(GadgetView* view, QWebFrame* frame, QObject* parent)
-        : QObject( parent ), m_frame(frame), m_view(view)
+        : QObject( parent ), m_frame(frame), m_view(view), m_initialized(false)
 {
     if ( s_gadgetLib == 0 )
     {
@@ -53,7 +53,16 @@ void GadgetAPI::loadFinished( bool ok )
     }
     qDebug("Load succeeded");
     updateParticipants();
+    updateState();
     m_frame->evaluateJavaScript("gadgets.util.callOnLoadHandlers_();");
+    m_initialized = true;
+}
+
+void GadgetAPI::setState( const QString& key, const QString& value )
+{
+    m_state[key] = value;
+    if ( isInitialized() )
+        updateState();
 }
 
 void GadgetAPI::updateState()

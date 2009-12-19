@@ -15,6 +15,7 @@
 #include "model/attachment.h"
 #include "caret.h"
 #include "gadgets/gadgetview.h"
+#include "gadgets/gadgetapi.h"
 
 #include <QStack>
 #include <QTextDocument>
@@ -42,6 +43,8 @@ OTAdapter::OTAdapter(BlipGraphicsItem* parent )
     check = connect( blip()->document(), SIGNAL(insertImage(int,QString,QImage,QString)), SLOT(insertImage(int,QString,QImage,QString)));
     Q_ASSERT(check);
     check = connect( blip()->document(), SIGNAL(insertGadget(int,QString,QString,QString)), SLOT(insertGadget(int,QString,QString,QString)));
+    Q_ASSERT(check);
+    check = connect( blip()->document(), SIGNAL(setGadgetState(int,QString,QString,QString)), SLOT(setGadgetState(int,QString,QString,QString)));
     Q_ASSERT(check);
     check = connect( blip()->document(), SIGNAL(setCursor(int,QString)), SLOT(setCursor(int,QString)));
     Q_ASSERT(check);
@@ -385,6 +388,7 @@ void OTAdapter::setGraphicsText()
     // Used for the <gadget> tag
     QUrl gadgetUrl;
     QString gadgetId;
+    QHash<QString,QString> gadgetState;
 
     StructuredDocument* doc = blip()->document();
     doc->print_();
@@ -476,7 +480,14 @@ void OTAdapter::setGraphicsText()
                         StructuredDocument::AttributeList attribs = doc->attributesAt(i);
                         gadgetUrl = QUrl( attribs["url"] );
                         gadgetId = attribs["**id"];
+                        gadgetState.clear();
                         stack.push(7);
+                    }
+                    else if ( key == "state" )
+                    {
+                        StructuredDocument::AttributeList attribs = doc->attributesAt(i);
+                        gadgetState[ attribs["name"] ] = attribs["value"];
+                        stack.push(8);
                     }
                     else
                         stack.push(6);
@@ -508,7 +519,11 @@ void OTAdapter::setGraphicsText()
                 // </gadget>
                 else if ( t == 7 )
                 {
-                    textItem()->insertGadget( &cursor, gadgetUrl, gadgetId );
+                    GadgetView* view = textItem()->insertGadget( &cursor, gadgetUrl, gadgetId );
+                    foreach( QString key, gadgetState.keys() )
+                    {
+                        view->gadgetAPI()->setState( key, gadgetState[key] );
+                    }
                     text = "";
                 }
                 break;
@@ -792,6 +807,16 @@ void OTAdapter::insertGadget( int inlinePos, const QString& url, const QString& 
     QTextCursor cursor(doc);
     cursor.setPosition(inlinePos + textItem()->forbiddenTextRange());
     textItem()->insertGadget( &cursor, QUrl( url ), id);
+}
+
+void OTAdapter::setGadgetState( int inlinePos, const QString& gadgetId, const QString& name, const QString& value )
+{
+    Q_UNUSED(inlinePos);
+
+    GadgetView* view = textItem()->gadget( gadgetId );
+    Q_ASSERT(view != 0);
+
+    view->gadgetAPI()->setState( name, value );
 }
 
 void OTAdapter::mutationEnd()
