@@ -550,6 +550,7 @@ int OTAdapter::mapToBlip(int position)
     int linesSeen = 0;
 
     QStack<int> stack;
+    // Put a 0 on the stack as a terminator
     stack.push(0);
 
     // Skip the required number of characters and newlines.
@@ -585,6 +586,16 @@ int OTAdapter::mapToBlip(int position)
                         if ( linesSeen - 1 == blockCount && charsSeen == charIndex )
                             return i;
                         stack.push(4);
+                        // The image counts as one char in QTextDocument
+                        charsSeen++;
+                    }
+                    else if ( key == "gadget" )
+                    {
+                        if ( linesSeen - 1 == blockCount && charsSeen == charIndex )
+                            return i;
+                        stack.push(6);
+                        // The gadget counts as one char in QTextDocument
+                        charsSeen++;
                     }
                     else
                         stack.push(5);
@@ -596,11 +607,12 @@ int OTAdapter::mapToBlip(int position)
                 if ( t == 0 )
                 {
                     qDebug("Ooooops, malformed doc");
-                    continue;
+                    return -1;
                 }
-                // End of the last line? -> return this position since there are no additional characters
+                // End of the last line? (i.e. the end of the <body> tag) -> return this position since there are no additional characters
                 if ( t == 1 )
                     return i;
+                // End of the line?
                 else if ( t == 3 )
                 {
                     linesSeen++;

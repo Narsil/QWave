@@ -46,6 +46,8 @@ void BlipDocument::onRetainElementStart(int index)
     m_stack.push(tag);
     if ( tag == "body" )
         m_inBody = true;
+    else if ( tag == "caption" )
+        m_inCaption = true;
 }
 
 void BlipDocument::onRetainElementEnd(int index)
@@ -61,6 +63,12 @@ void BlipDocument::onRetainElementEnd(int index)
         }
         else if ( tag == "body" )
             m_inBody = false;
+        else if ( tag == "caption" )
+            m_inCaption = false;
+        else if ( tag == "image" )
+            m_pos++;
+        else if ( tag == "gadget" )
+            m_pos++;
     }
 }
 
