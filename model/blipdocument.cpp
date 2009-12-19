@@ -78,16 +78,32 @@ void BlipDocument::onRetainElementEnd(int index)
 
 void BlipDocument::onUpdateAttributes(int index, const AttributeList& updates)
 {
-    Q_UNUSED(updates);
+    Q_UNUSED(updates);            
     onRetainElementStart(index);
-    // TODO: Emit a signal
+}
+
+void BlipDocument::onUpdatedAttributes(int index)
+{
+    if ( m_stack.top() == "state" )
+    {
+        AttributeList attribs = this->attributesAt(index);
+        emit setGadgetState( m_pos, m_gadgetId, attribs["name"], attribs["value"]);
+    }
 }
 
 void BlipDocument::onReplaceAttributes(int index, const AttributeList& updates)
 {
     Q_UNUSED(updates);
     onRetainElementStart(index);
-    // TODO: Emit a signal
+}
+
+void BlipDocument::onReplacedAttributes(int index)
+{
+    if ( m_stack.top() == "state" )
+    {
+        AttributeList attribs = this->attributesAt(index);
+        emit setGadgetState( m_pos, m_gadgetId, attribs["name"], attribs["value"]);
+    }
 }
 
 void BlipDocument::onDeleteChars(int index, const QString& chars)
@@ -104,6 +120,11 @@ void BlipDocument::onDeleteElementStart(int index)
     {
         emit deletedLineBreak(m_pos);
         m_cursorpos = m_pos;
+    }
+    else if ( tagAt(index) == "state" )
+    {
+        AttributeList attribs = this->attributesAt(index);
+        emit setGadgetState( m_pos, m_gadgetId, attribs["name"], QString::null);
     }
 }
 

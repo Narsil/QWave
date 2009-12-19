@@ -212,6 +212,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                         else
                             m_attributes[pos].insert( key, value );
                     }
+                    onUpdatedAttributes(pos);
                     pos++;
                 }
                 break;
@@ -265,6 +266,7 @@ bool StructuredDocument::apply(const DocumentMutation& mutation, const QString& 
                         qDebug("Oooops, the old tag had more attributes");
                         return false;
                     }
+                    onReplacedAttributes(pos);
                     pos++;
                 }
                 break;
@@ -442,10 +444,20 @@ void StructuredDocument::onUpdateAttributes(int index, const AttributeList& upda
     Q_UNUSED(updates);
 }
 
+void StructuredDocument::onUpdatedAttributes(int index)
+{
+    Q_UNUSED(index);
+}
+
 void StructuredDocument::onReplaceAttributes(int index, const AttributeList& updates)
 {
     Q_UNUSED(index);
     Q_UNUSED(updates);
+}
+
+void StructuredDocument::onReplacedAttributes(int index)
+{
+    Q_UNUSED(index);
 }
 
 void StructuredDocument::onMutationEnd()
