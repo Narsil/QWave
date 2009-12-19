@@ -44,7 +44,7 @@ signals:
     void deletedLineBreak( int pos);
     void insertedLineBreak(int pos);
     void insertImage( int pos, const QString& attachmentId, const QImage& image, const QString& caption );
-    void insertGadget( int pos, const QString& url, const QString& author );
+    void insertGadget( int pos, const QString& url, const QString& author, const QString& id );
     void setStyle( const QString& style, const QString& value, int startPos, int endPos );
     void setCursor(int pos, const QString& author);
     void mutationEnd();
@@ -84,6 +84,10 @@ private:
       * Required for the <gadget> tag.
       */
     QString m_gadgetAuthor;
+    /**
+      * Required for the <gadget> tag.
+      */
+    QString m_gadgetId;
     QHash<QString,PendingStyle> m_pendingStyles;
 };
 

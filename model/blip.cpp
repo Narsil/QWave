@@ -208,6 +208,79 @@ void Blip::insertGadget( int index, const QUrl& url )
     wavelet()->processor()->handleSend( m1, id() );
 }
 
+void Blip::insertGadgetState( int gadgetIndex, const QString& name, const QString& value )
+{
+    // First, search whether a state tag with the same name attribute exists already
+    int index = gadgetIndex + 1;
+    int tagCount = 1;
+    bool found = false;
+    // Iterate over the contents of the gadget tag
+    while( tagCount > 0 )
+    {
+        switch( m_doc->typeAt(index) )
+        {
+            case StructuredDocument::Start:
+                tagCount++;
+                if ( m_doc->tagAt(index) == "state" && m_doc->attributesAt(index)["name"] == name )
+                {
+                    found = true;
+                    // This terminate the while loop
+                    tagCount = 0;
+                }
+                break;
+            case StructuredDocument::End:
+                tagCount--;
+                break;
+            case StructuredDocument::Char:
+                // Do nothing by intention
+                break;
+        }
+        index++;
+    }
+
+    DocumentMutation m1;
+    if ( found )
+    {
+        m1.retain( index );
+        int remain = m_doc->count() - index;
+        if ( value.isNull() )
+        {
+            m1.deleteStart( "state", m_doc->attributesAt(index) );
+            m1.deleteEnd();
+            m1.retain( remain - 2 );
+        }
+        else
+        {
+            StructuredDocument::AttributeList attribs = m_doc->attributesAt(index);
+            QHash<QString,StructuredDocument::StringPair> changes;
+            changes["value"].first = attribs["value"];
+            changes["value"].second = value;
+            m1.retain( remain - 1 );
+        }
+    }
+    else
+    {
+        m1.retain( gadgetIndex + 1 );
+        StructuredDocument::AttributeList attribs;
+        attribs["name"] = name;
+        attribs["value"] = value;
+        m1.insertStart( "state", attribs );
+        m1.insertEnd();
+        m1.retain( m_doc->count() - gadgetIndex - 1 );
+    }
+    wavelet()->processor()->handleSend( m1, id() );
+}
+
+int Blip::gadgetIndex(const QString& gadgetId) const
+{
+    for( int i = 0; i < m_doc->count(); ++i )
+    {
+        if ( m_doc->typeAt(i) == StructuredDocument::Start && m_doc->tagAt(i) == "gadget" && m_doc->attributesAt(i)["**id"] == gadgetId )
+            return i;
+    }
+    return -1;
+}
+
 int Blip::childBlipCount() const
 {
     int result = 0;

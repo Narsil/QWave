@@ -3,7 +3,9 @@
 #include "documentmutation.h"
 #include "attachment.h"
 #include "wavelet.h"
+
 #include <QStack>
+#include <QUuid>
 
 BlipDocument::BlipDocument(Blip* parent)
         : StructuredDocument( parent )
@@ -151,6 +153,8 @@ void BlipDocument::onInsertElementStart(int index)
         AttributeList attribs = attributesAt(index);
         m_gadgetUrl = attribs["url"];
         m_gadgetAuthor = attribs["author"];
+        m_gadgetId = QUuid::createUuid().toString();
+        mutableAttributesAt(index)["**id"] = m_gadgetId;
     }
 }
 
@@ -185,7 +189,7 @@ void BlipDocument::onInsertElementEnd(int index)
     }
     else if ( tag == "gadget" )
     {
-        emit insertGadget( m_pos, m_gadgetUrl, m_gadgetAuthor );
+        emit insertGadget( m_pos, m_gadgetUrl, m_gadgetAuthor, m_gadgetId );
     }
 }
 

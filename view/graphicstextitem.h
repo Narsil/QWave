@@ -30,7 +30,7 @@ public:
     /**
       * Called from the GUI or from OTAdapter when applying OT deltas.
       */
-    void insertGadget( QTextCursor* cursor, const QUrl& url );
+    void insertGadget( QTextCursor* cursor, const QUrl& url, const QString& id );
 
     /**
       * Call this function instead of setTextWidth, because this function will as well

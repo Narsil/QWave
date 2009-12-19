@@ -70,11 +70,23 @@ public:
     void createFollowUpBlip();
     void createReplyBlip();
     /**
-      * Inserts an image into the blip. Before calling this function you must add the image itself
+      * Inserts an image into the blip, i.e. it inserts am <image> and <caption> tag. Before calling this function you must add the image itself
       * as an attachmen to the wavelet.
       */
     void insertImage(int index, const QString& attachmentId, const QString& caption);
+    /**
+      * Inserts a <gadget> tag into the blip.
+      */
     void insertGadget( int index, const QUrl& url );
+    /**
+      * Inserts a <state> tag into the blip.
+      */
+    void insertGadgetState( int gadgetIndex, const QString& name, const QString& value );
+
+    /**
+      * @return the index in the BlipDocument where the gadget with the required id is or -1.
+      */
+    int gadgetIndex(const QString& gadgetId) const;
 
 signals:
     /**

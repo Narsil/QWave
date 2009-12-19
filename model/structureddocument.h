@@ -96,6 +96,8 @@ public:
     QString toString() const;
 
 protected:
+    AttributeList& mutableAttributesAt( int index ) { return m_attributes[index]; }
+
     /**
       * While the document is mutated, this set of functions is called. This allows, for example, keeping
       * a graphical representation of the text in sync with the document obtained from wave servers.
