@@ -69,9 +69,9 @@ void GraphicsTextItem::insertImage( QTextCursor* cursor, const QString& id, cons
     m_imageHandler->insertImage( cursor, id, image, caption );
 }
 
-void GraphicsTextItem::insertGadget( QTextCursor* cursor, const QUrl& url )
+void GraphicsTextItem::insertGadget( QTextCursor* cursor, const QUrl& url, const QString& id )
 {
-    m_gadgetHandler->insertGadget( cursor, url );
+    m_gadgetHandler->insertGadget( cursor, url, id );
 }
 
 void GraphicsTextItem::focusInEvent( QFocusEvent* event )

@@ -123,7 +123,7 @@ private slots:
     /**
       * Called when the BlipDocument changes.
       */
-    void insertGadget( int inlinePos, const QString& url, const QString& author );
+    void insertGadget( int inlinePos, const QString& url, const QString& author, const QString& id );
     /**
       * Called when the BlipDocument changes.
       */

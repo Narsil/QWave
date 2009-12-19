@@ -5,7 +5,6 @@
 
 #include <QTextDocument>
 #include <QAbstractTextDocumentLayout>
-#include <QUuid>
 #include <QGraphicsScene>
 #include <QGraphicsProxyWidget>
 
@@ -39,9 +38,8 @@ GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, Environment* enviro
     return iface;
 }
 
-void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url)
+void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url, const QString& id)
 {
-    QString id = QUuid::createUuid().toString();
     GadgetView* view = new GadgetView(m_textItem->adapter()->blip(), url, m_textItem->textWidth(), id, m_environment);
     bool check = connect( view, SIGNAL(sizeChangeRequired(GadgetView*)), SLOT(resizeGadget(GadgetView*)));
     Q_ASSERT(check);

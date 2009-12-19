@@ -30,7 +30,7 @@ public:
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
     void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc, int posInDocument, const QTextFormat &format);
 
-    void insertGadget(QTextCursor* cursor, const QUrl& url);
+    void insertGadget(QTextCursor* cursor, const QUrl& url, const QString& id);
     /**
       * Called when the containing text document is resized.
       */
