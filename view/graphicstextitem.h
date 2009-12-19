@@ -7,6 +7,7 @@ class OTAdapter;
 class CaretInterface;
 class ImageHandler;
 class GadgetHandler;
+class GadgetView;
 class QImage;
 class QUrl;
 
@@ -30,7 +31,7 @@ public:
     /**
       * Called from the GUI or from OTAdapter when applying OT deltas.
       */
-    void insertGadget( QTextCursor* cursor, const QUrl& url, const QString& id );
+    GadgetView* insertGadget( QTextCursor* cursor, const QUrl& url, const QString& id );
 
     /**
       * Call this function instead of setTextWidth, because this function will as well
@@ -39,6 +40,8 @@ public:
     void updateWidth( qreal width );
 
     OTAdapter* adapter() const { return m_adapter; }
+
+    GadgetView* gadget( const QString& id ) const;
 
     static GraphicsTextItem* cast( QGraphicsItem* item );
 

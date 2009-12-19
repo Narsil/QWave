@@ -50,6 +50,8 @@ void BlipDocument::onRetainElementStart(int index)
         m_inBody = true;
     else if ( tag == "caption" )
         m_inCaption = true;
+    else if ( tag == "gadget" )
+        m_gadgetId = attributesAt(index)["**id"];
 }
 
 void BlipDocument::onRetainElementEnd(int index)
@@ -155,6 +157,11 @@ void BlipDocument::onInsertElementStart(int index)
         m_gadgetAuthor = attribs["author"];
         m_gadgetId = QUuid::createUuid().toString();
         mutableAttributesAt(index)["**id"] = m_gadgetId;
+    }
+    else if ( tag == "state" )
+    {
+        AttributeList attribs = attributesAt(index);
+        setGadgetState( m_pos, m_gadgetId, attribs["name"], attribs["value"] );
     }
 }
 

@@ -38,7 +38,7 @@ GadgetHandler* GadgetHandler::initialize(QTextDocument* doc, Environment* enviro
     return iface;
 }
 
-void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url, const QString& id)
+GadgetView* GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url, const QString& id)
 {
     GadgetView* view = new GadgetView(m_textItem->adapter()->blip(), url, m_textItem->textWidth(), id, m_environment);
     bool check = connect( view, SIGNAL(sizeChangeRequired(GadgetView*)), SLOT(resizeGadget(GadgetView*)));
@@ -57,6 +57,8 @@ void GadgetHandler::insertGadget(QTextCursor* cursor, const QUrl& url, const QSt
     charFormat.setObjectType(GadgetFormat);
     charFormat.setProperty(Id, id);
     cursor->insertText(QString(QChar::ObjectReplacementCharacter), charFormat);
+
+    return view;
 }
 
 void GadgetHandler::setGadgetWidth( qreal width )
@@ -83,6 +85,11 @@ void GadgetHandler::resizeGadget( GadgetView* view )
         cursor.mergeCharFormat( cursor.charFormat() );
         m_textItem->adapter()->suspendContentsChange( false );
     }
+}
+
+GadgetView* GadgetHandler::gadget(const QString& id) const
+{
+    return m_gadgets[id];
 }
 
 QTextCursor GadgetHandler::findGadget(const QString& id)

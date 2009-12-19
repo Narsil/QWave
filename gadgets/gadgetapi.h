@@ -14,6 +14,10 @@ class GadgetAPI : public QObject
 public:
     GadgetAPI(GadgetView* view, QWebFrame* frame, QObject* parent = 0);
 
+    void setState( const QString& key, const QString& value );
+
+    bool isInitialized() const { return m_initialized; }
+
 public slots:
     void testme(const QVariant& text);
     void testme2(const QVariantMap& text);
@@ -48,6 +52,7 @@ private:
     QWebFrame* m_frame;
     QHash<QString,QString> m_state;
     GadgetView* m_view;
+    bool m_initialized;
 
     static QString* s_gadgetLib;
     static QString* s_ostemplatesLib;

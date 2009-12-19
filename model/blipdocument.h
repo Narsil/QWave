@@ -45,6 +45,7 @@ signals:
     void insertedLineBreak(int pos);
     void insertImage( int pos, const QString& attachmentId, const QImage& image, const QString& caption );
     void insertGadget( int pos, const QString& url, const QString& author, const QString& id );
+    void setGadgetState( int pos, const QString& gadgetId, const QString& name, const QString& value );
     void setStyle( const QString& style, const QString& value, int startPos, int endPos );
     void setCursor(int pos, const QString& author);
     void mutationEnd();

@@ -30,12 +30,14 @@ public:
     QSizeF intrinsicSize(QTextDocument *doc, int posInDocument, const QTextFormat &format);
     void drawObject(QPainter *painter, const QRectF &rect, QTextDocument *doc, int posInDocument, const QTextFormat &format);
 
-    void insertGadget(QTextCursor* cursor, const QUrl& url, const QString& id);
+    GadgetView* insertGadget(QTextCursor* cursor, const QUrl& url, const QString& id);
     /**
       * Called when the containing text document is resized.
       */
     void setGadgetWidth( qreal width );
     QTextCursor findGadget(const QString& id);
+
+    GadgetView* gadget(const QString& id) const;
 
     static GadgetHandler* initialize(QTextDocument* doc, Environment* environment, GraphicsTextItem* parent);
 
