@@ -227,15 +227,17 @@ void Blip::insertGadgetState( int gadgetIndex, const QString& name, const QStrin
                     // This terminate the while loop
                     tagCount = 0;
                 }
+                else
+                    index++;
                 break;
             case StructuredDocument::End:
+                index++;
                 tagCount--;
                 break;
             case StructuredDocument::Char:
-                // Do nothing by intention
+                index++;
                 break;
         }
-        index++;
     }
 
     DocumentMutation m1;
@@ -255,6 +257,7 @@ void Blip::insertGadgetState( int gadgetIndex, const QString& name, const QStrin
             QHash<QString,StructuredDocument::StringPair> changes;
             changes["value"].first = attribs["value"];
             changes["value"].second = value;
+            m1.updateAttributes(changes);
             m1.retain( remain - 1 );
         }
     }

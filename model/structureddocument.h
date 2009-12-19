@@ -114,7 +114,9 @@ protected:
     virtual void onInsertElementEnd(int index);
     virtual void onAnnotationUpdate(int index, const AnnotationChange& updates);
     virtual void onUpdateAttributes(int index, const AttributeList& updates);
+    virtual void onUpdatedAttributes(int index);
     virtual void onReplaceAttributes(int index, const AttributeList& updates);
+    virtual void onReplacedAttributes(int index);
     virtual void onMutationEnd();
 
 private:

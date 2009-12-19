@@ -60,7 +60,10 @@ void GadgetAPI::loadFinished( bool ok )
 
 void GadgetAPI::setState( const QString& key, const QString& value )
 {
-    m_state[key] = value;
+    if ( value.isNull() )
+        m_state.remove(key);
+    else
+        m_state[key] = value;
     if ( isInitialized() )
         updateState();
 }
