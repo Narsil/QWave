@@ -2,6 +2,7 @@
 #define GRAPHICSTEXTITEM_H
 
 #include <QGraphicsTextItem>
+#include <QList>
 
 class OTAdapter;
 class CaretInterface;
@@ -42,6 +43,7 @@ public:
     OTAdapter* adapter() const { return m_adapter; }
 
     GadgetView* gadget( const QString& id ) const;
+    QList<GadgetView*> gadgets() const;
 
     static GraphicsTextItem* cast( QGraphicsItem* item );
 

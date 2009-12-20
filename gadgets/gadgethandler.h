@@ -38,6 +38,7 @@ public:
     QTextCursor findGadget(const QString& id);
 
     GadgetView* gadget(const QString& id) const;
+    QList<GadgetView*> gadgets() const;
 
     static GadgetHandler* initialize(QTextDocument* doc, Environment* environment, GraphicsTextItem* parent);
 

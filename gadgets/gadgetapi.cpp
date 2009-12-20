@@ -73,6 +73,18 @@ void GadgetAPI::updateState()
     m_frame->evaluateJavaScript("wave.updateState_();");
 }
 
+void GadgetAPI::addParticipant(Participant* participant)
+{
+    Q_UNUSED(participant)
+    updateParticipants();
+}
+
+void GadgetAPI::removeParticipant(Participant* participant)
+{
+    Q_UNUSED(participant)
+    updateParticipants();
+}
+
 void GadgetAPI::updateParticipants()
 {
     m_frame->evaluateJavaScript("wave.updateWaveParticipants_();");
