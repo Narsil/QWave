@@ -153,33 +153,48 @@ wave.setModeCallback = function(b, c) {
 };
 wave.updateWaveParticipants_ = function()
 {
-  b = gadgetAPI.participants_getAll();
-  wave.viewer_ = null;
-  wave.host_ = null;
-  wave.participants_ = [];
-  wave.participantMap_ = {};
-  var c = b.myId, e = b.authorId;
-  b = b.participants;
-  for(var d in b) {
-    var f = wave.Participant.fromJson_(b[d]);
-    if(d == c)wave.viewer_ = f;
-    if(d == e)wave.host_ = f;
-    wave.participants_.push(f);
-    wave.participantMap_[d] = f
-  }if(!wave.viewer_ && c) {
-    f = new wave.Participant(c, c);
-    wave.viewer_ = f;
-    wave.participants_.push(f);
-    wave.participantMap_[c] = f
-  }wave.participantCallback_.invoke(wave.participants_)
+    b = gadgetAPI.participants_getAll();
+    gadgetAPI.testme({'Party': JSON.stringify(b)});
+    wave.viewer_ = null;
+    wave.host_ = null;
+    wave.participants_ = [];
+    wave.participantMap_ = {};
+    var c = b.myId, e = b.authorId;
+    b = b.participants;
+    for(var d in b) {
+        var f = wave.Participant.fromJson_(b[d]);
+        if(d == c)wave.viewer_ = f;
+        if(d == e)wave.host_ = f;
+        wave.participants_.push(f);
+        wave.participantMap_[d] = f
+    }
+    if(!wave.viewer_ && c) {
+        f = new wave.Participant(c, c);
+        wave.viewer_ = f;
+        wave.participants_.push(f);
+        wave.participantMap_[c] = f
+    }
+    try
+    {
+        if ( wave.participantCallback_ )
+            wave.participantCallback_.invoke(wave.participants_)
+    } catch( e ) {
+        gadgetAPI.testme({'Err updateWaveParticipants': e.toString()});
+    }
 };
 wave.updateState_ = function()
 {
-        wave.currentState_ = {};
-        var s = gadgetAPI.state_getAll();
-        for( key in s )
-                wave.currentState_[key] = s[key];
-        wave.stateCallback_.invoke(wave.currentState_)
+    wave.currentState_ = {};
+    var s = gadgetAPI.state_getAll();
+    for( key in s )
+        wave.currentState_[key] = s[key];
+    try
+    {
+        if ( wave.stateCallback_ )
+            wave.stateCallback_.invoke(wave.currentState_)
+    } catch( e ) {
+        gadgetAPI.testme({'Err updateState': e.toString()});
+    }
 };
 wave.receiveMode_ = function(b) {
   wave.mode_ = b || {};
@@ -197,21 +212,19 @@ gadgets.util = { };
 gadgets.util.onLoadHandlers_ = [];
 gadgets.util.registerOnLoadHandler = function( handler )
 {
-        gadgetAPI.testme({'Hallo': 'RegisterInit'});
-        gadgets.util.onLoadHandlers_.push( handler );
+//    gadgetAPI.testme({'Hallo': 'RegisterInit'});
+    gadgets.util.onLoadHandlers_.push( handler );
 };
 gadgets.util.callOnLoadHandlers_ = function()
 {
-        for( var i = 0; i < gadgets.util.onLoadHandlers_.length; ++i )
-        {
-                gadgetAPI.testme({'Hallo': 'Init'});
-                try {
-                gadgets.util.onLoadHandlers_[i]();
+    for( var i = 0; i < gadgets.util.onLoadHandlers_.length; ++i )
+    {
+        try {
+            gadgets.util.onLoadHandlers_[i]();
         } catch( e ) {
-                gadgetAPI.testme({'Err': e.toString()});
+            gadgetAPI.testme({'Err': e.toString()});
         }
-                gadgetAPI.testme({'Hallo': 'AfterInit'});
-        }
+    }
 };
 gadgets.json = {};
 gadgets.json.stringify = wave.util.printJson;
@@ -228,4 +241,4 @@ gadgets.window.adjustHeight = function()
 JSON = {};
 JSON.stringify = gadgets.json.stringify;
 JSON.parse = gadgets.json.parse;
-gadgetAPI.testme({'Hallo': 'Wave API'})
+// gadgetAPI.testme({'Hallo': 'Wave API'})

@@ -52,9 +52,9 @@ void GadgetAPI::loadFinished( bool ok )
         return;
     }
     qDebug("Load succeeded");
+    m_frame->evaluateJavaScript("gadgets.util.callOnLoadHandlers_();");
     updateParticipants();
     updateState();
-    m_frame->evaluateJavaScript("gadgets.util.callOnLoadHandlers_();");
     m_initialized = true;
 }
 
@@ -172,6 +172,7 @@ QString GadgetAPI::state_toString()
 
 int GadgetAPI::wave_getMode()
 {
+    return 0; // Unknown
 }
 
 bool GadgetAPI::wave_isInWaveContainer()
@@ -193,22 +194,24 @@ QVariantMap GadgetAPI::participants_getAll()
     result["authorId"] = QVariant("Autor");
     // Add the local user
     result["myId"] = QVariant(en->localUser()->address());
-    QVariantList participants;
-    participants.append( en->localUser()->address() );
-    QVariantMap lmap;
-    lmap["id"] = QVariant(en->localUser()->address());
-    lmap["displayName"] = QVariant(en->localUser()->name());
-    lmap["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
-    result[en->localUser()->address()] = lmap;
+    QVariantMap participants;
+//    participants.append( en->localUser()->address() );
+//    QVariantMap lmap;
+//    lmap["id"] = QVariant(en->localUser()->address());
+//    lmap["displayName"] = QVariant(en->localUser()->name());
+//    lmap["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
+//    result[en->localUser()->address()] = lmap;
 
     foreach( Participant* p, m_view->blip()->wavelet()->participants() )
     {
-        participants.append( p->address() );
+        // participants.append( p->address() );
         QVariantMap map;
         map["id"] = QVariant(p->address());
         map["displayName"] = QVariant(p->name());
         map["thumbnailUrl"] = QVariant("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/unknown.jpg");
-        result[p->address()] = map;
+        // participants.append( QVariant(map) );
+        participants[p->address()] = QVariant(map);
+        // result[p->address()] = map;
     }
     result["participants"] = QVariant( participants );
     return result;
