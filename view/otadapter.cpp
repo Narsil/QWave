@@ -50,6 +50,10 @@ OTAdapter::OTAdapter(BlipGraphicsItem* parent )
     Q_ASSERT(check);
     check = connect( blip()->document(), SIGNAL(setStyle(QString,QString,int,int)), SLOT(setStyle(QString,QString,int,int)));
     Q_ASSERT(check);
+    check = connect( blip()->wavelet(), SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));
+    Q_ASSERT(check);
+    check = connect( blip()->wavelet(), SIGNAL(participantRemoved(Participant*)), SLOT(removeParticipant(Participant*)));
+    Q_ASSERT(check);
 }
 
 OTAdapter::~OTAdapter()
@@ -879,6 +883,26 @@ void OTAdapter::removeOldCursors()
     {
         delete m_timer;
         m_timer = 0;
+    }
+}
+
+void OTAdapter::addParticipant(Participant* participant)
+{
+    Q_UNUSED(participant)
+
+    foreach( GadgetView* view, textItem()->gadgets() )
+    {
+        view->gadgetAPI()->addParticipant(participant);
+    }
+}
+
+void OTAdapter::removeParticipant(Participant* participant)
+{
+    Q_UNUSED(participant)
+
+    foreach( GadgetView* view, textItem()->gadgets() )
+    {
+        view->gadgetAPI()->removeParticipant(participant);
     }
 }
 

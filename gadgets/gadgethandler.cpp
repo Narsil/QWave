@@ -92,6 +92,16 @@ GadgetView* GadgetHandler::gadget(const QString& id) const
     return m_gadgets[id];
 }
 
+QList<GadgetView*> GadgetHandler::gadgets() const
+{
+    QList<GadgetView*> result;
+    foreach( GadgetView* view, m_gadgets.values() )
+    {
+        result.append(view);
+    }
+    return result;
+}
+
 QTextCursor GadgetHandler::findGadget(const QString& id)
 {
     QTextCursor cursor( m_textItem->document() );

@@ -7,6 +7,7 @@
 
 class QWebFrame;
 class GadgetView;
+class Participant;
 
 class GadgetAPI : public QObject
 {
@@ -14,8 +15,22 @@ class GadgetAPI : public QObject
 public:
     GadgetAPI(GadgetView* view, QWebFrame* frame, QObject* parent = 0);
 
+    /**
+      * Called when the wavelet changes.
+      */
     void setState( const QString& key, const QString& value );
+    /**
+      * Called when the wavelet changes.
+      */
+    void addParticipant(Participant* participant);
+    /**
+      * Called when the wavelet changes.
+      */
+    void removeParticipant(Participant* participant);
 
+    /**
+      * @return true if the gadget's javascript has been loaded and executed successfully.
+      */
     bool isInitialized() const { return m_initialized; }
 
 public slots:

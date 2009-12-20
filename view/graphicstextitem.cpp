@@ -79,6 +79,11 @@ GadgetView* GraphicsTextItem::gadget( const QString& id ) const
     return m_gadgetHandler->gadget(id);
 }
 
+QList<GadgetView*> GraphicsTextItem::gadgets() const
+{
+    return m_gadgetHandler->gadgets();
+}
+
 void GraphicsTextItem::focusInEvent( QFocusEvent* event )
 {
     QGraphicsTextItem::focusInEvent(event);

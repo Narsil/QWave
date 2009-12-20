@@ -142,6 +142,15 @@ private slots:
       */
     void removeOldCursors();
 
+    /**
+      * Called when the wavelet changes.
+      */
+    void addParticipant(Participant* participant);
+    /**
+      * Called when the wavelet changes.
+      */
+    void removeParticipant(Participant* participant);
+
 private:
     void startOldCursorsTimer();
 
