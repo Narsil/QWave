@@ -23,6 +23,7 @@ class OTAdapter;
 class BlipGraphicsItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
 public:
     BlipGraphicsItem(WaveletView* view, Blip* blip, qreal x, qreal y, qreal width);
 
