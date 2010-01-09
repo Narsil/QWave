@@ -12,6 +12,9 @@ class QGraphicsScene;
 
 class Blip;
 
+/**
+  * Shows the content of a wavelet (i,e, its blips) as a series of BlipGraphicsItems.
+  */
 class WaveletView : public QGraphicsView
 {
     Q_OBJECT
@@ -20,22 +23,31 @@ public:
     ~WaveletView();
 
     Wavelet* wavelet() { return m_wavelet; }
-//    QGraphicsScene* scene();
-//    QGraphicsScene* headScene();
 
-//    void fitToWidth( qreal headWidth, qreal width );
-
-    void setTitle( const QString& title );
     void setWavelet( Wavelet* wavelet );
     BlipGraphicsItem* focusBlipItem() const;
 
-    void focusInEvent( BlipGraphicsItem* item );
-
 public slots:
+    /**
+      * Called from BlipGraphicsItem when the first line of the blip changes.
+      */
+    void setTitle( const QString& title );
+    /**
+      * Called from BlipGraphicsItem when the height of the blip changes or when the
+      * view is resized or initialized.
+      */
     void layoutBlips();
 
 protected:
     virtual void resizeEvent( QResizeEvent* event );
+
+private slots:
+    /**
+      * Called when a BlipGraphicsItem receives focus.
+      * This function uses the sender() property, thus, it may only be called as a slot from a BlipGraphicsItem.
+      * Everything else will crash and would not make much sense anyway.
+      */
+    void focusIn();
 
 private:
     void layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal width);

@@ -23,8 +23,8 @@
 #include <QImage>
 #include <QUrl>
 
-BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal x, qreal y, qreal width)
-        : m_blip(blip), m_replyItem( 0 ), m_view(view), m_lastWidth(width)
+BlipGraphicsItem::BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width)
+        : m_blip(blip), m_replyItem( 0 ), m_lastWidth(width)
 {
     setAcceptHoverEvents(true);
     setPos( x, y );
@@ -38,11 +38,11 @@ BlipGraphicsItem::BlipGraphicsItem(WaveletView* view, Blip* blip, qreal x, qreal
     else
         m_text->setPos(44,2);
     m_text->setTextWidth(width - m_text->x());
-    connect( m_text, SIGNAL(focusIn()), SLOT(focusInEvent()));
+    connect( m_text, SIGNAL(focusIn()), SIGNAL(focusIn()));
 
-    view->scene()->addItem(this);
+    // view->scene()->addItem(this);
 
-    QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SLOT(titleChanged(const QString&)));
+    QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SIGNAL(titleChanged(const QString&)));
     // Show the contents of the document
     m_adapter->setGraphicsText();
 
@@ -149,7 +149,8 @@ void BlipGraphicsItem::onContentsChanged()
     {
         m_lastTextRect = r;
         prepareGeometryChange();
-        m_view->layoutBlips();
+        // m_view->layoutBlips();
+        emit sizeChanged();
     }
 }
 
@@ -194,10 +195,10 @@ void BlipGraphicsItem::hoverMoveEvent ( QGraphicsSceneHoverEvent* )
     }
 }
 
-void BlipGraphicsItem::titleChanged(const QString& title)
-{
-    m_view->setTitle(title);
-}
+//void BlipGraphicsItem::titleChanged(const QString& title)
+//{
+//    m_view->setTitle(title);
+//}
 
 void BlipGraphicsItem::toggleBold()
 {
@@ -317,10 +318,10 @@ void BlipGraphicsItem::toggleStrikeout()
     m_adapter->suspendContentsChange(false);
 }
 
-void BlipGraphicsItem::focusInEvent()
-{
-    m_view->focusInEvent( this );
-}
+//void BlipGraphicsItem::focusInEvent()
+//{
+//    m_view->focusInEvent( this );
+//}
 
 void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption )
 {

@@ -25,12 +25,12 @@ class BlipGraphicsItem : public QObject, public QGraphicsItem
     Q_OBJECT
     Q_INTERFACES(QGraphicsItem)
 public:
-    BlipGraphicsItem(WaveletView* view, Blip* blip, qreal x, qreal y, qreal width);
+    BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width);
 
     QTextDocument* document();
     Blip* blip() const { return m_blip; }
     GraphicsTextItem* textItem() const { return m_text; }
-    WaveletView* view() const { return m_view; }    
+//    WaveletView* view() const { return m_view; }
 
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     virtual QRectF boundingRect() const;
@@ -63,6 +63,14 @@ public:
       */
     void insertGadget( const QUrl& url );
 
+signals:
+    /**
+      * Called from GraphicsTextItem when it receives keyboard focus.
+      */
+    void focusIn();
+    void sizeChanged();
+    void titleChanged(const QString& title);
+
 protected:
     virtual void hoverEnterEvent ( QGraphicsSceneHoverEvent * event );
     virtual void hoverLeaveEvent ( QGraphicsSceneHoverEvent * event );
@@ -70,22 +78,56 @@ protected:
     virtual void mousePressEvent ( QGraphicsSceneMouseEvent * event );
 
 private slots:
+    /**
+      * Called from QTextDocument is the text changes.
+      */
     void onContentsChanged();
-    void titleChanged(const QString& title);
-    void focusInEvent();
+//    /**
+//      * Called from the OT adapter when the first line of the blib (i.e. it's title) changes.
+//      */
+//    void titleChanged(const QString& title);
+    /**
+      * Called from the Blip if, for example, the read-state changes and if this requires a visual update, i.e. repaint.
+      * Internally, this slot simply invokes update().
+      */
     void repaint();
 
 private:
+    /**
+      * The Blip displayed here.
+      */
     Blip* m_blip;
+    /**
+      * The text editor
+      */
     GraphicsTextItem* m_text;
+    /**
+      * Allows the user to create a reply blip.
+      */
     BlipReplyGraphicsItem* m_replyItem;
+    /**
+      * Pixmap of the user who created this blip.
+      */
     QPixmap m_userPixmap;
+    /**
+      * Last known size of the text.
+      * When the text changes this is used to determine if the height of the text has changed.
+      */
     QRectF m_lastTextRect;
-    WaveletView* m_view;
+    /**
+      * Last width of the entire blip.
+      * When a new width is set (setWidth) this value is used to check whether any updates are required.
+      */
     qreal m_lastWidth;
+    /**
+      * Connects this graphics item with the OT mechanisms.
+      */
     OTAdapter* m_adapter;
 };
 
+/**
+  * Creates a visual element which allows users to create a reply to some blip.
+  */
 class BlipReplyGraphicsItem : public QGraphicsItem
 {
 public:
