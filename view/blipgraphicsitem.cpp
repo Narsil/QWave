@@ -1,5 +1,4 @@
 #include "blipgraphicsitem.h"
-#include "waveletview.h"
 #include "model/blip.h"
 #include "caret.h"
 #include "model/participant.h"
@@ -15,7 +14,6 @@
 #include <QLinearGradient>
 #include <QRadialGradient>
 #include <QPainter>
-#include <QPixmapCache>
 #include <QPixmap>
 #include <QTextBlock>
 #include <QCursor>
