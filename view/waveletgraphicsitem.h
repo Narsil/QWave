@@ -15,6 +15,7 @@ class QGraphicsSimpleTextItem;
 class WaveletGraphicsItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
 public:
     WaveletGraphicsItem(WaveView* view);
 

@@ -10,6 +10,7 @@ class Participant;
 class ParticipantGraphicsItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
 public:
     ParticipantGraphicsItem(Participant* participant, int size, bool showName, QGraphicsItem* parent = 0);
 

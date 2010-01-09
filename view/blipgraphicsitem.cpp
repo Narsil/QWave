@@ -149,8 +149,8 @@ void BlipGraphicsItem::onContentsChanged()
     {
         m_lastTextRect = r;
         prepareGeometryChange();
+        m_view->layoutBlips();
     }
-    m_view->layoutBlips();
 }
 
 QRectF BlipGraphicsItem::boundingRect() const
