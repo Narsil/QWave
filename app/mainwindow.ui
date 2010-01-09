@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>601</width>
-    <height>401</height>
+    <width>599</width>
+    <height>399</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -21,7 +21,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>601</width>
+     <width>599</width>
      <height>22</height>
     </rect>
    </property>
@@ -31,7 +31,7 @@
     </property>
     <addaction name="actionNewWave"/>
     <addaction name="separator"/>
-    <addaction name="actionQuit"/>
+    <addaction name="actionExit"/>
    </widget>
    <widget class="QMenu" name="menu_Edit">
     <property name="title">
@@ -43,9 +43,12 @@
    <addaction name="menu_Edit"/>
   </widget>
   <widget class="QStatusBar" name="statusBar"/>
-  <action name="actionQuit">
+  <action name="actionExit">
    <property name="text">
-    <string>Quit</string>
+    <string>Exit</string>
+   </property>
+   <property name="toolTip">
+    <string>Exit</string>
    </property>
   </action>
   <action name="actionServerSettings">

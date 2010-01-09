@@ -26,6 +26,7 @@ MainWindow::MainWindow(Environment* environment, QWidget *parent)
     m_connectionStatus = new QLabel();
     ui->statusBar->addWidget(m_connectionStatus);
 
+    connect( ui->actionExit, SIGNAL(triggered()), SLOT(close()));
     connect( ui->actionServerSettings, SIGNAL(triggered()), SLOT(showServerSettings()));
     connect( ui->actionNewWave, SIGNAL(triggered()), SLOT(newWave()));
 }
