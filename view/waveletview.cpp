@@ -72,24 +72,24 @@ void WaveletView::layoutBlips(qreal width)
 
 void WaveletView::layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal width )
 {
-//    bool created = false;
     BlipGraphicsItem* b = m_blipItems[blip->id()];
     if ( !b )
     {
-        b = new BlipGraphicsItem( this, blip, xoffset, yoffset, width - xoffset );
+        b = new BlipGraphicsItem( blip, xoffset, yoffset, width - xoffset );
+        bool ok = connect( b, SIGNAL(focusIn()), SLOT(focusIn()));
+        Q_ASSERT(ok);
+        ok = connect( b, SIGNAL(sizeChanged()), SLOT(layoutBlips()));
+        Q_ASSERT(ok);
+        ok = connect( b, SIGNAL(titleChanged(const QString&)), SLOT(setTitle(const QString&)));
+        Q_ASSERT(ok);
+        scene()->addItem(b);
         m_blipItems[blip->id()] = b;
-//        created = true;
     }
     else
     {
         b->setWidth(width - xoffset);
         b->setPos( xoffset, yoffset );
     }
-    // b->setZValue( m_gfx->zValue() + 1 );
-    // scene()->addItem(b);
-    // b->setPos( xoffset, yoffset );
-    // if ( created )
-    //    scene()->addItem(b);
     yoffset += b->boundingRect().height();
 
     qreal dx = xoffset + 42;
@@ -102,17 +102,6 @@ void WaveletView::layoutBlip(Blip* blip, qreal& xoffset, qreal& yoffset, qreal w
     }
 }
 
-//QGraphicsScene* WaveletView::headScene()
-//{
-//    return ((WaveView*)parent())->headScene();
-//}
-
-//void WaveletView::fitToWidth( qreal headWidth, qreal width )
-//{
-//    m_gfx->setWidth(headWidth);
-//    layoutBlips(width);
-//}
-
 void WaveletView::setTitle( const QString& title )
 {
     ((WaveView*)parent())->setTitle(title);
@@ -120,23 +109,16 @@ void WaveletView::setTitle( const QString& title )
 
 void WaveletView::resizeEvent( QResizeEvent* )
 {
-//    setSceneRect( 0, 0, frameRect().width(), sceneRect().height() );
     layoutBlips();
 }
 
 BlipGraphicsItem* WaveletView::focusBlipItem() const
 {
-//    QGraphicsItem* item = m_scene->focusItem();
-//    if ( item == 0 )
-//        return 0;
-//    GraphicsTextItem* t = GraphicsTextItem::cast(item);
-//    if ( t == 0 )
-//        return 0;
-//    return static_cast<BlipGraphicsItem*>( t->parentItem() );
     return m_focusItem;
 }
 
-void WaveletView::focusInEvent( BlipGraphicsItem* item )
+void WaveletView::focusIn()
 {
-    m_focusItem = item;
+    Q_ASSERT( qobject_cast<BlipGraphicsItem*>(sender()) != 0 );
+    m_focusItem = qobject_cast<BlipGraphicsItem*>(sender());
 }
