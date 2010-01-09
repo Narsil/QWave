@@ -14,6 +14,7 @@ class QGraphicsTextItem;
 class WaveDigestGraphicsItem : public QObject, public QGraphicsItem
 {
     Q_OBJECT
+    Q_INTERFACES(QGraphicsItem)
 public:
     WaveDigestGraphicsItem(Wave* wave, int width, QGraphicsItem* parent = 0);
 
