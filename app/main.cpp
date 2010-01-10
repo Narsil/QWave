@@ -41,6 +41,7 @@
 
 int main(int argc, char *argv[])
 {
+    // Initialize the random number generator
     qsrand( QDateTime::currentDateTime().toTime_t());
 
     QApplication a(argc, argv);

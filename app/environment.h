@@ -13,9 +13,17 @@ class WaveList;
 class Contacts;
 class Settings;
 
+/**
+  * This class is an anchor for the most important objects in a QWave environment.
+  */
 class Environment : public QObject
 {
 public:
+    /**
+      * @param profile is the name for the instance of QWave.
+      *                The name determines the settings object.
+      *                This way QWave can be started with different settings.
+      */
     Environment(const QString& profile);
 
     /**
@@ -25,7 +33,17 @@ public:
 
     Participant* localUser() const;
     NetworkAdapter* networkAdapter() const;
-    Wavelet* wavelet( const QString& id ) const { return m_wavelets[id]; }
+    /**
+      * Searches for an existing wavelet object.
+      * If this function returns 0 this does not imply that such a wavelet does not exist.
+      */
+    Wavelet* wavelet( const QString& url ) const { return m_wavelets[url]; }
+    /**
+      * The returned list is always automatically populated with all waves in
+      * the user's inbox.
+      *
+      * The population of this list is done via NetworkAdapter.
+      */
     WaveList* inbox() const { return m_inbox; }
     Contacts* contacts() const { return m_contacts; }
     Settings* settings() const { return m_settings; }
@@ -40,6 +58,12 @@ public:
       * Creates a new wave and registers it. Thus, it can be lookedup later on by
       * querying for its id and domain.
       * @see wave
+      */
+    Wave* createWave( const QString& id );
+    /**
+      * In this version of the function you can choose the domain, but
+      * there are little sensible reasons for doing so.
+      * This is only required internally.
       */
     Wave* createWave( const QString& domain, const QString& id );
 

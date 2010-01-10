@@ -25,10 +25,22 @@ public:
     /**
       * A ordered list of all thread belonging to the blip.
       */
-    const QList<BlipThread*>& threads() const { return m_threads; }
+    QList<BlipThread*> threads() const { return m_threads; }
+    /**
+      * The blip's ID.
+      */
     QString id() const { return this->m_id; }
+    /**
+      * The content of the blip.
+      */
     BlipDocument* document() { return m_doc; }
+    /**
+      * The thread to which this blip belongs or 0 if it is a top-level blip.
+      */
     BlipThread* parentThread() const;
+    /**
+      * The wavelet to which this blip belongs.
+      */
     Wavelet* wavelet() const;
     Environment* environment() const;
     bool isRootBlip() const;
@@ -38,15 +50,26 @@ public:
       * Resembles the authors as given by the contributor tags.
       * Enlisting an author here is not mandatory. The list can even be empty.
       */
-    const QList<QString>& authors() const;
+    QList<QString> authors() const;
     /**
       * The user who created the blip.
       */
     Participant* creator() const { return m_creator; }
     /**
+      * @internal
+      *
       * The position in the conversation document where this blip is located.
+      * This information is required for creating reply blips.
+      * Called by the Wavelet.
       */
     void setConversationStartIndex( int index ) { m_convStartIndex = index; }
+    /**
+      * @internal
+      *
+      * The position in the conversation document where this blip ends.
+      * This information is required for creating reply blips.
+      * Called by the Wavelet.
+      */
     void setConversationEndIndex( int index ) { m_convEndIndex = index; }
     /**
       * @internal
@@ -63,8 +86,14 @@ public:
     void setUnread( bool unread );
     void setChildrenUnread(bool unread);
 
+    /**
+      * @debug
+      */
     void print_(int indent);
 
+    /**
+      * Applies the document mutation to the blip's document.
+      */
     void receive( const DocumentMutation& mutation, const QString& author );
 
     void createFollowUpBlip();
@@ -100,6 +129,9 @@ signals:
     void unreadChanged();
 
 private:
+    /**
+      * Used by the constructors
+      */
     void setup();
 
     /**

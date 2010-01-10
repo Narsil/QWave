@@ -21,6 +21,9 @@ public:
     QString id() const { return this->m_id; }
     QString domain() const { return this->m_domain; }
 
+    /**
+      * @return a summar object for the wave's contents.
+      */
     WaveDigest* digest() const { return m_digest; }
 
     Wavelet* wavelet() const;

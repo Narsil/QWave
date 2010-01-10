@@ -29,7 +29,7 @@ public:
     QString domain() const { return this->m_domain; }
     Wave* wave() const { return this->m_wave; }
     StructuredDocument* document() const { return m_doc; }
-    const QList<Blip*>& rootBlips() const { return m_rootBlips; }
+    QList<Blip*> rootBlips() const { return m_rootBlips; }
     Blip* blip(const QString& id);
     Environment* environment() const;
     OTProcessor* processor() const { return m_processor; }
