@@ -50,6 +50,11 @@ Wave* Environment::wave( const QString& domain, const QString& id ) const
     return m_waves[domain + "$" + id];
 }
 
+Wave* Environment::createWave( const QString& id )
+{
+    return createWave( settings()->waveDomain(), id );
+}
+
 Wave* Environment::createWave( const QString& domain, const QString& id )
 {
     Wave* wave = m_waves[id];

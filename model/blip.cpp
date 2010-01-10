@@ -85,7 +85,7 @@ bool Blip::isLastBlipInThread() const
     return ( t->blips().last() == this );
 }
 
-const QList<QString>& Blip::authors() const
+QList<QString> Blip::authors() const
 {
     return m_doc->authors();
 }

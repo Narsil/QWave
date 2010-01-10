@@ -90,6 +90,9 @@ public:
       */
     QString tagAt( int index ) const;
 
+    /**
+      * @return a concatenation of all printable characters in the document.
+      */
     QString toPlainText() const;
 
     void print_() const;

@@ -16,7 +16,7 @@ public:
     QString id() const { return this->m_id; }
     Blip* parentBlip() const;
     Wavelet* wavelet() const;
-    const QList<Blip*>& blips() const { return m_blips; }
+    QList<Blip*> blips() const { return m_blips; }
 
     int blipCount() const;
     int unreadBlipCount() const;
