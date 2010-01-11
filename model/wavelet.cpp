@@ -34,15 +34,16 @@ Wavelet::~Wavelet()
     environment()->removeWavelet(this);
 }
 
-QUrl Wavelet::url() const
+WaveUrl Wavelet::url() const
 {
-    QUrl url;
-    url.setScheme("wave");
-    url.setHost( domain() );
-    // TODO: This is only true for local wavelets!
-    url.setPath( "/" + wave()->id() + "/" + m_id );
-    qDebug()<<url;
+    WaveUrl url( m_wave->domain(), m_wave->id(), m_domain, m_id );
     return url;
+//    url.setScheme("wave");
+//    url.setHost( domain() );
+//    // TODO: This is only true for local wavelets!
+//    url.setPath( "/" + wave()->id() + "/" + m_id );
+//    qDebug()<<url;
+//    return url;
 }
 
 void Wavelet::updateConversation(const QString& author)
