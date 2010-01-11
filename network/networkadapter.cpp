@@ -9,10 +9,9 @@
 #include "model/waveletdelta.h"
 #include "model/otprocessor.h"
 #include "model/wavedigest.h"
+#include "model/waveurl.h"
 #include "rpc.h"
 #include "converter.h"
-
-#include <QUrl>
 
 // Includes for protobuf
 #include "waveclient-rpc.pb.h"
@@ -98,26 +97,26 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
         update.ParseFromArray(data.constData(), data.length());
         qDebug("msg<< %s", update.DebugString().data());
 
-        QUrl url( QString::fromStdString( update.wavelet_name() ) );
-        // Extract the wave name
-        QString path = url.path();
-        int index = path.indexOf('/', 1);
-        if ( path.length() < 4 || path[0] != '/' || index == -1 )
-        {
-            qDebug("URL too short");
-            return;
-        }
-        QString waveid = path.mid(1, index - 1);
-        QString waveletid = path.mid(index+1);
+        WaveUrl url( QString::fromStdString( update.wavelet_name() ) );
+//        // Extract the wave name
+//        QString path = url.path();
+//        int index = path.indexOf('/', 1);
+//        if ( path.length() < 4 || path[0] != '/' || index == -1 )
+//        {
+//            qDebug("URL too short");
+//            return;
+//        }
+//        QString waveid = path.mid(1, index - 1);
+//        QString waveletid = path.mid(index+1);
 
         // Digest?
-        if ( waveid == "!indexwave" )
+        if ( url.waveId() == "!indexwave" )
         {
-            Wave* wave = environment()->wave(url.host(), waveletid);
+            Wave* wave = environment()->wave(url.waveDomain(), url.waveletId());
             // If the wave does not yet exist, then create it in the inbox
             if ( !wave )
             {
-                wave = environment()->createWave(url.host(), waveletid);
+                wave = environment()->createWave(url.waveDomain(), url.waveletId());
                 environment()->inbox()->addWave(wave);
             }
 

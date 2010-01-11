@@ -96,5 +96,7 @@ bool WaveUrl::parse(const QString& url)
         m_waveDomain = m_waveId.left(index);
         m_waveId = m_waveId.mid(index+1);
     }
+    else
+        m_waveDomain = m_waveletDomain;
     return true;
 }

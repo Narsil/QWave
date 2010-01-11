@@ -5,6 +5,7 @@
 #include <QHash>
 #include <QList>
 #include <QUrl>
+#include "waveurl.h"
 
 class Wave;
 class Blip;
@@ -33,7 +34,7 @@ public:
     Blip* blip(const QString& id);
     Environment* environment() const;
     OTProcessor* processor() const { return m_processor; }
-    QUrl url() const;
+    WaveUrl url() const;
     Attachment* attachment( const QString& id ) const;
 
     void addParticipant( Participant* participant);
