@@ -26,8 +26,11 @@ public:
       */
     WaveDigest* digest() const { return m_digest; }
 
+    /**
+      * @return the conv+root wavelet.
+      */
     Wavelet* wavelet() const;
-    Wavelet* wavelet(const QString& id) const;
+    Wavelet* wavelet(const QString& domain, const QString& id) const;
     Environment* environment() const;
 
     QDateTime lastChange() const { return m_lastChange; }

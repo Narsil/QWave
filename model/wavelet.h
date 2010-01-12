@@ -31,7 +31,8 @@ public:
     Wave* wave() const { return this->m_wave; }
     StructuredDocument* document() const { return m_doc; }
     QList<Blip*> rootBlips() const { return m_rootBlips; }
-    Blip* blip(const QString& id);
+    Blip* rootBlip( const QString& id ) const;
+    Blip* blip(const QString& id) const;
     Environment* environment() const;
     OTProcessor* processor() const { return m_processor; }
     WaveUrl url() const;

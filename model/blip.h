@@ -38,6 +38,7 @@ public:
       * The thread to which this blip belongs or 0 if it is a top-level blip.
       */
     BlipThread* parentThread() const;
+    BlipThread* thread( const QString& id ) const;
     /**
       * The wavelet to which this blip belongs.
       */
@@ -96,8 +97,8 @@ public:
       */
     void receive( const DocumentMutation& mutation, const QString& author );
 
-    void createFollowUpBlip();
-    void createReplyBlip();
+    Blip* createFollowUpBlip(const QString& text = QString::null);
+    Blip* createReplyBlip(const QString& text = QString::null);
     /**
       * Inserts an image into the blip, i.e. it inserts am <image> and <caption> tag. Before calling this function you must add the image itself
       * as an attachmen to the wavelet.

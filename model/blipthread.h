@@ -22,6 +22,8 @@ public:
     int unreadBlipCount() const;
     void setUnread(bool unread);
 
+    Blip* blip( const QString& id ) const;
+
     /**
       * @internal
       */

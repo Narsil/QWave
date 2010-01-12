@@ -194,9 +194,17 @@ void Wavelet::print_()
     }
 }
 
-Blip* Wavelet::blip(const QString& id)
+Blip* Wavelet::blip(const QString& id) const
 {
     return m_blips[id];
+}
+
+Blip* Wavelet::rootBlip( const QString& id ) const
+{
+    Blip* b = blip(id);
+    if ( b->isRootBlip() )
+        return b;
+    return 0;
 }
 
 void Wavelet::addParticipant( Participant* participant)

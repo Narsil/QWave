@@ -25,17 +25,27 @@ class BlipGraphicsItem : public QObject, public QGraphicsItem
     Q_OBJECT
     Q_INTERFACES(QGraphicsItem)
 public:
-    BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width);
+    BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width, QGraphicsItem* parent = 0);
 
     QTextDocument* document();
     Blip* blip() const { return m_blip; }
     GraphicsTextItem* textItem() const { return m_text; }
-//    WaveletView* view() const { return m_view; }
 
     virtual void paint(QPainter *painter, const QStyleOptionGraphicsItem *option, QWidget *widget);
     virtual QRectF boundingRect() const;
+    /**
+      * Changes the size of the blip graphics.
+      *
+      * This method is called for example when the containing window (i.e. QGraphicsView) is resized.
+      */
     void setWidth(qreal width);
 
+    /**
+      * Sets the icon shown in the top left corner of the blip.
+      * This is meant to be the image of the blip owner.
+      *
+      * Called from OTAdapter.
+      */
     void setAuthorPixmap(const QPixmap& pixmap);
 
     /**
@@ -65,10 +75,20 @@ public:
 
 signals:
     /**
-      * Called from GraphicsTextItem when it receives keyboard focus.
+      * Called from GraphicsTextItem when it receives keyboard focus, i.e. this
+      * signal is simply passed through.
       */
     void focusIn();
+    /**
+      * Emitted when the size of the blip graphics changes.
+      */
     void sizeChanged();
+    /**
+      * Emitted if this blip is the first root blip and if the first line
+      * of this blip has changed.
+      *
+      * This signal is created inside OTAdapter and then simply passed through.
+      */
     void titleChanged(const QString& title);
 
 protected:
@@ -82,10 +102,6 @@ private slots:
       * Called from QTextDocument is the text changes.
       */
     void onContentsChanged();
-//    /**
-//      * Called from the OT adapter when the first line of the blib (i.e. it's title) changes.
-//      */
-//    void titleChanged(const QString& title);
     /**
       * Called from the Blip if, for example, the read-state changes and if this requires a visual update, i.e. repaint.
       * Internally, this slot simply invokes update().

@@ -18,18 +18,18 @@ Wavelet* Wave::wavelet() const
     for( QObjectList::const_iterator it = children().begin(); it != children().end(); ++it )
     {
         Wavelet* w = qobject_cast<Wavelet*>(*it);
-        if ( w )
+        if ( w && w->id() == "conv+root" )
             return w;
     }
     return 0;
 }
 
-Wavelet* Wave::wavelet(const QString& id) const
+Wavelet* Wave::wavelet(const QString& domain, const QString& id) const
 {
     for( QObjectList::const_iterator it = children().begin(); it != children().end(); ++it )
     {
         Wavelet* w = qobject_cast<Wavelet*>(*it);
-        if ( w && w->id() == id )
+        if ( w && w->id() == id && w->domain() == domain )
             return w;
     }
     return 0;
