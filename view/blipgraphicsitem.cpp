@@ -21,8 +21,8 @@
 #include <QImage>
 #include <QUrl>
 
-BlipGraphicsItem::BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width)
-        : m_blip(blip), m_replyItem( 0 ), m_lastWidth(width)
+BlipGraphicsItem::BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width, QGraphicsItem* parent)
+        : QObject(), QGraphicsItem(parent), m_blip(blip), m_replyItem( 0 ), m_lastWidth(width)
 {
     setAcceptHoverEvents(true);
     setPos( x, y );
@@ -37,8 +37,6 @@ BlipGraphicsItem::BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width)
         m_text->setPos(44,2);
     m_text->setTextWidth(width - m_text->x());
     connect( m_text, SIGNAL(focusIn()), SIGNAL(focusIn()));
-
-    // view->scene()->addItem(this);
 
     QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SIGNAL(titleChanged(const QString&)));
     // Show the contents of the document
@@ -60,7 +58,6 @@ void BlipGraphicsItem::setWidth(qreal width)
     if ( m_lastWidth == width )
         return;
     m_lastWidth = width;
-    // m_text->setTextWidth(width - m_text->x());
     m_text->updateWidth(width - m_text->x());
 }
 
@@ -162,8 +159,9 @@ QRectF BlipGraphicsItem::boundingRect() const
 
 void BlipGraphicsItem::setAuthorPixmap(const QPixmap& pixmap)
 {
-    // Get the image of the first author
+    // scale the pixmap
     m_userPixmap = pixmap.scaledToWidth(28, Qt::SmoothTransformation);
+    // draw it
     update();
 }
 

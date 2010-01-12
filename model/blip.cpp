@@ -49,6 +49,16 @@ BlipThread* Blip::parentThread() const
     return qobject_cast<BlipThread*>(parent());
 }
 
+BlipThread* Blip::thread( const QString& id ) const
+{
+    foreach( BlipThread* t, m_threads )
+    {
+        if ( t->id() == id )
+            return t;
+    }
+    return 0;
+}
+
 Wavelet* Blip::wavelet() const
 {
     Wavelet* w = qobject_cast<Wavelet*>(parent());
@@ -118,7 +128,7 @@ void Blip::addThread(BlipThread* thread)
     m_threads.append(thread);
 }
 
-void Blip::createFollowUpBlip()
+Blip* Blip::createFollowUpBlip(const QString& text)
 {
     QString rand;
     rand.setNum( qrand() );
@@ -132,6 +142,8 @@ void Blip::createFollowUpBlip()
     m2.insertStart("body", map);
     m2.insertStart("line", map);
     m2.insertEnd();
+    if ( !text.isNull() )
+        m2.insertChars( text );
     m2.insertEnd();
     wavelet()->processor()->handleSend( m2, "b+" + rand );
 
@@ -143,9 +155,17 @@ void Blip::createFollowUpBlip()
     m1.insertEnd();
     m1.retain( wavelet()->document()->count() - m_convEndIndex - 1 );
     wavelet()->processor()->handleSend( m1, "conversation" );
+
+    Blip* b = 0;
+    if ( isRootBlip() )
+        b = wavelet()->rootBlip("b+" + rand);
+    else
+        b = parentThread()->blip("b+" + rand);
+    Q_ASSERT(b);
+    return b;
 }
 
-void Blip::createReplyBlip()
+Blip* Blip::createReplyBlip(const QString& text)
 {
     QString rand;
     rand.setNum( qrand() );
@@ -161,6 +181,8 @@ void Blip::createReplyBlip()
     m2.insertStart("body", map);
     m2.insertStart("line", map);
     m2.insertEnd();
+    if ( !text.isNull() )
+        m2.insertChars( text );
     m2.insertEnd();
     wavelet()->processor()->handleSend( m2, "b+" + rand );
 
@@ -176,6 +198,12 @@ void Blip::createReplyBlip()
     m1.insertEnd();
     m1.retain( wavelet()->document()->count() - m_convStartIndex - 1 );
     wavelet()->processor()->handleSend( m1, "conversation" );
+
+    BlipThread* t = thread( "t+" + rand2 );
+    Q_ASSERT(t);
+    Blip* b = t->blip("b+" + rand);
+    Q_ASSERT(b);
+    return b;
 }
 
 void Blip::insertImage(int index, const QString& attachmentId, const QString& caption)
