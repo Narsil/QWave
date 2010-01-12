@@ -9,6 +9,7 @@
 #include "buttongraphicsitem.h"
 #include "blipgraphicsitem.h"
 #include "insertimagedialog.h"
+#include "insertgadgetdialog.h"
 #include "bigbar.h"
 
 #include <QGraphicsScene>
@@ -151,8 +152,10 @@ void WaveView::gadgetClicked()
     if ( !item )
         return;
 
-    // TODO: Show a proper dialog
-    item->insertGadget( QUrl("http://secowela.googlecode.com/svn/trunk/Web/Gadget3/gadget.xml" ) );
-
+    InsertGadgetDialog dlg( m_wave->environment(), topLevelWidget() );
+	if ( dlg.exec() == QDialog::Accepted )
+	{
+		item->insertGadget( dlg.url() );
+	}
     m_waveletView->setFocus();
 }
