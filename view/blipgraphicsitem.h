@@ -40,38 +40,30 @@ public:
       */
     void setWidth(qreal width);
 
-    /**
-      * Sets the icon shown in the top left corner of the blip.
-      * This is meant to be the image of the blip owner.
-      *
-      * Called from OTAdapter.
-      */
-    void setAuthorPixmap(const QPixmap& pixmap);
-
-    /**
-      * Called from the GUI.
-      */
-    void toggleBold();
-    /**
-      * Called from the GUI.
-      */
-    void toggleItalic();
-    /**
-      * Called from the GUI.
-      */
-    void toggleUnderline();
-    /**
-      * Called from the GUI.
-      */
-    void toggleStrikeout();
-    /**
-      * Called from the GUI.
-      */
-    void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
-    /**
-      * Called from the GUI.
-      */
-    void insertGadget( const QUrl& url );
+//    /**
+//      * Called from the GUI.
+//      */
+//    void toggleBold();
+//    /**
+//      * Called from the GUI.
+//      */
+//    void toggleItalic();
+//    /**
+//      * Called from the GUI.
+//      */
+//    void toggleUnderline();
+//    /**
+//      * Called from the GUI.
+//      */
+//    void toggleStrikeout();
+//    /**
+//      * Called from the GUI.
+//      */
+//    void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
+//    /**
+//      * Called from the GUI.
+//      */
+//    void insertGadget( const QUrl& url );
 
 signals:
     /**
@@ -107,6 +99,13 @@ private slots:
       * Internally, this slot simply invokes update().
       */
     void repaint();
+    /**
+      * Sets the icon shown in the top left corner of the blip.
+      * This is meant to be the image of the blip owner.
+      *
+      * Called from OTAdapter.
+      */
+    void setAuthorPixmap(const QPixmap& pixmap);
 
 private:
     /**
@@ -135,10 +134,10 @@ private:
       * When a new width is set (setWidth) this value is used to check whether any updates are required.
       */
     qreal m_lastWidth;
-    /**
-      * Connects this graphics item with the OT mechanisms.
-      */
-    OTAdapter* m_adapter;
+//    /**
+//      * Connects this graphics item with the OT mechanisms.
+//      */
+//    OTAdapter* m_adapter;
 };
 
 /**
