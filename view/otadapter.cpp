@@ -24,8 +24,8 @@
 #include <QTextBlock>
 #include <QTimer>
 
-OTAdapter::OTAdapter(BlipGraphicsItem* parent )
-        : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false), m_timer(0)
+OTAdapter::OTAdapter(GraphicsTextItem* parent )
+        : QObject( parent ), m_suspendContentsChange(false), m_blockUpdate(false), m_timer(0), m_showAuthorName(true)
 {
     // Connect to changes made to the BlipDocument. In response the slots will update the GUI.
     bool check = connect( blip()->document(), SIGNAL(deletedLineBreak(int)), SLOT(deleteLineBreak(int)));
@@ -66,17 +66,12 @@ OTAdapter::~OTAdapter()
 
 Blip* OTAdapter::blip() const
 {
-    return blipItem()->blip();
+    return textItem()->blip();
 }
 
 GraphicsTextItem* OTAdapter::textItem() const
 {
-    return blipItem()->textItem();
-}
-
-BlipGraphicsItem* OTAdapter::blipItem() const
-{
-    return (BlipGraphicsItem*)parent();
+    return (GraphicsTextItem*)parent();
 }
 
 void OTAdapter::onStyleChange( int position, int charsFormatted, const QString& style, const QString& value )
@@ -354,25 +349,28 @@ void OTAdapter::setGraphicsText()
 
     // Get user names    
     m_authorNames = "";
-    foreach( QString name, blip()->authors() )
+    if ( m_showAuthorName )
     {
-        if ( m_authorNames != "" )
-            m_authorNames += ",";
-        if ( name == blip()->wavelet()->wave()->environment()->localUser()->address() )
-            m_authorNames += tr("me");
+        foreach( QString name, blip()->authors() )
+        {
+            if ( m_authorNames != "" )
+                m_authorNames += ",";
+            if ( name == blip()->wavelet()->wave()->environment()->localUser()->address() )
+                m_authorNames += tr("me");
+            else
+                m_authorNames += name;
+        }
+        m_authorNames += ": ";
+        if ( blip()->authors().count() > 0 )
+            emit authorPixmapChanged( blip()->wavelet()->environment()->contacts()->addParticipant( blip()->authors().first() )->pixmap() );
         else
-            m_authorNames += name;
-    }
-    m_authorNames += ": ";
-    if ( blip()->authors().count() > 0 )
-        blipItem()->setAuthorPixmap(blip()->wavelet()->environment()->contacts()->addParticipant( blip()->authors().first() )->pixmap());
-    else
-    {
-        if ( blip()->creator() == blip()->wavelet()->wave()->environment()->localUser() )
-            m_authorNames = "me:";
-        else
-            m_authorNames = blip()->creator()->name() + m_authorNames;
-        blipItem()->setAuthorPixmap(blip()->creator()->pixmap());
+        {
+            if ( blip()->creator() == blip()->wavelet()->wave()->environment()->localUser() )
+                m_authorNames = "me:";
+            else
+                m_authorNames = blip()->creator()->name() + m_authorNames;
+            emit authorPixmapChanged( blip()->creator()->pixmap() );
+        }
     }
 
     m_suspendContentsChange = true;
@@ -513,7 +511,7 @@ void OTAdapter::setGraphicsText()
                 // </image>
                 else if ( t == 4 )
                 {
-                    Attachment* attachment = blipItem()->blip()->wavelet()->attachment(attachmentId);
+                    Attachment* attachment = textItem()->blip()->wavelet()->attachment(attachmentId);
                     if ( attachment )
                         textItem()->insertImage( &cursor, attachmentId, attachment->thumbnail(), text );
                     else
@@ -929,4 +927,9 @@ void OTAdapter::gadgetSubmit( GadgetView* view, const QHash<QString,QString>& de
     }
 
     m_blockUpdate = false;
+}
+
+void OTAdapter::enableAuthorName( bool enable )
+{
+    m_showAuthorName = enable;
 }

@@ -27,10 +27,10 @@ BlipGraphicsItem::BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width, QG
     setAcceptHoverEvents(true);
     setPos( x, y );
 
-    m_adapter = new OTAdapter(this);
+//    m_adapter = new OTAdapter(this);
 
-    m_text = new GraphicsTextItem(m_adapter, this);
-    m_text->setTextInteractionFlags( Qt::TextEditorInteraction);
+    m_text = new GraphicsTextItem(blip, this);
+    // m_text->setTextInteractionFlags( Qt::TextEditorInteraction);
     if ( m_blip->isRootBlip() )
         m_text->setPos(40,2);
     else
@@ -38,12 +38,19 @@ BlipGraphicsItem::BlipGraphicsItem(Blip* blip, qreal x, qreal y, qreal width, QG
     m_text->setTextWidth(width - m_text->x());
     connect( m_text, SIGNAL(focusIn()), SIGNAL(focusIn()));
 
-    QObject::connect(m_adapter, SIGNAL(titleChanged(const QString&)), SIGNAL(titleChanged(const QString&)));
+    bool ok = QObject::connect(m_text->adapter(), SIGNAL(authorPixmapChanged(const QPixmap&)), SLOT(setAuthorPixmap(const QPixmap&)));
+    Q_ASSERT(ok);
+
+    m_text->adapter()->setGraphicsText();
+
+    ok = QObject::connect(m_text->adapter(), SIGNAL(titleChanged(const QString&)), SIGNAL(titleChanged(const QString&)));
+    Q_ASSERT(ok);
     // Show the contents of the document
-    m_adapter->setGraphicsText();
+    // m_adapter->setGraphicsText();
 
     m_lastTextRect = m_text->boundingRect();
-    QObject::connect(m_text->document(), SIGNAL(contentsChanged()), SLOT(onContentsChanged()));
+    ok = QObject::connect(m_text->document(), SIGNAL(contentsChanged()), SLOT(onContentsChanged()));
+    Q_ASSERT(ok);
 
     connect( blip, SIGNAL(unreadChanged()), SLOT(repaint()));
 }
@@ -191,161 +198,139 @@ void BlipGraphicsItem::hoverMoveEvent ( QGraphicsSceneHoverEvent* )
     }
 }
 
-//void BlipGraphicsItem::titleChanged(const QString& title)
+//void BlipGraphicsItem::toggleBold()
 //{
-//    m_view->setTitle(title);
+//    // Find out wether to turn the style on or off
+//    QTextCursor cursor = m_text->textCursor();
+//    QTextCharFormat format = cursor.charFormat();
+//    QString value;
+//    if ( format.fontWeight() == QFont::Normal )
+//    {
+//        format.setFontWeight( QFont::Bold );
+//        value = "bold";
+//    }
+//    else
+//    {
+//        format.setFontWeight( QFont::Normal );
+//        value = QString::null;
+//    }
+//
+//    // Tell the wave server that something has been formatted (if there is a selection).
+//    if ( cursor.selectionEnd() != cursor.selectionStart() )
+//    {
+//        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/fontWeight", value );
+//    }
+//
+//    // Change the format for the cursor or the selection.
+//    m_adapter->suspendContentsChange(true);
+//    cursor.mergeCharFormat( format );
+//    m_adapter->suspendContentsChange(false);
 //}
-
-void BlipGraphicsItem::toggleBold()
-{
-    // Find out wether to turn the style on or off
-    QTextCursor cursor = m_text->textCursor();
-    QTextCharFormat format = cursor.charFormat();
-    QString value;
-    if ( format.fontWeight() == QFont::Normal )
-    {
-        format.setFontWeight( QFont::Bold );
-        value = "bold";
-    }
-    else
-    {
-        format.setFontWeight( QFont::Normal );
-        value = QString::null;
-    }
-
-    // Tell the wave server that something has been formatted (if there is a selection).
-    if ( cursor.selectionEnd() != cursor.selectionStart() )
-    {
-        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/fontWeight", value );
-    }
-
-    // Change the format for the cursor or the selection.
-    m_adapter->suspendContentsChange(true);
-    cursor.mergeCharFormat( format );
-    m_adapter->suspendContentsChange(false);
-}
-
-void BlipGraphicsItem::toggleItalic()
-{
-    // Find out wether to turn the style on or off
-    QTextCursor cursor = m_text->textCursor();
-    QTextCharFormat format = cursor.charFormat();
-    QString value;
-    if ( !format.fontItalic() )
-    {
-        format.setFontItalic(true);
-        value = "italic";
-    }
-    else
-    {
-        format.setFontItalic( false );
-        value = QString::null;
-    }
-
-    // Tell the wave server that something has been formatted (if there is a selection).
-    if ( cursor.selectionEnd() != cursor.selectionStart() )
-    {
-        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/fontStyle", value );
-    }
-
-    // Change the format for the cursor or the selection.
-    m_adapter->suspendContentsChange(true);
-    cursor.mergeCharFormat( format );
-    m_adapter->suspendContentsChange(false);
-}
-
-void BlipGraphicsItem::toggleUnderline()
-{
-    // Find out wether to turn the style on or off
-    QTextCursor cursor = m_text->textCursor();
-    QTextCharFormat format = cursor.charFormat();
-    QString value;
-    if ( !format.fontUnderline() )
-    {
-        format.setFontUnderline(true);
-        format.setFontStrikeOut(false);
-        value = "underline";
-    }
-    else
-    {
-        format.setFontUnderline( false );
-        value = QString::null;
-    }
-
-    // Tell the wave server that something has been formatted (if there is a selection).
-    if ( cursor.selectionEnd() != cursor.selectionStart() )
-    {
-        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/textDecoration", value );
-    }
-
-    // Change the format for the cursor or the selection.
-    m_adapter->suspendContentsChange(true);
-    cursor.mergeCharFormat( format );
-    m_adapter->suspendContentsChange(false);
-}
-
-void BlipGraphicsItem::toggleStrikeout()
-{
-    // Find out wether to turn the style on or off
-    QTextCursor cursor = m_text->textCursor();
-    QTextCharFormat format = cursor.charFormat();
-    QString value;
-    if ( !format.fontStrikeOut() )
-    {
-        format.setFontStrikeOut(true);
-        format.setFontUnderline(false);
-        value = "line-through";
-    }
-    else
-    {
-        format.setFontStrikeOut( false );
-        value = QString::null;
-    }
-
-    // Tell the wave server that something has been formatted (if there is a selection).
-    if ( cursor.selectionEnd() != cursor.selectionStart() )
-    {
-        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/textDecoration", value );
-    }
-
-    // Change the format for the cursor or the selection.
-    m_adapter->suspendContentsChange(true);
-    cursor.mergeCharFormat( format );
-    m_adapter->suspendContentsChange(false);
-}
-
-//void BlipGraphicsItem::focusInEvent()
+//
+//void BlipGraphicsItem::toggleItalic()
 //{
-//    m_view->focusInEvent( this );
+//    // Find out wether to turn the style on or off
+//    QTextCursor cursor = m_text->textCursor();
+//    QTextCharFormat format = cursor.charFormat();
+//    QString value;
+//    if ( !format.fontItalic() )
+//    {
+//        format.setFontItalic(true);
+//        value = "italic";
+//    }
+//    else
+//    {
+//        format.setFontItalic( false );
+//        value = QString::null;
+//    }
+//
+//    // Tell the wave server that something has been formatted (if there is a selection).
+//    if ( cursor.selectionEnd() != cursor.selectionStart() )
+//    {
+//        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/fontStyle", value );
+//    }
+//
+//    // Change the format for the cursor or the selection.
+//    m_adapter->suspendContentsChange(true);
+//    cursor.mergeCharFormat( format );
+//    m_adapter->suspendContentsChange(false);
 //}
-
-void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption )
-{
-    // Create an attachment
-    QString attachmentId = blip()->wavelet()->insertImageAttachment( url, image, thumbnail );
-    // Insert the image tag
-    int index = m_adapter->mapToBlip( m_text->textCursor().position() );
-    blip()->insertImage( index, attachmentId, caption );
-
-    // Display the image in the QTextDocument
+//
+//void BlipGraphicsItem::toggleUnderline()
+//{
+//    // Find out wether to turn the style on or off
+//    QTextCursor cursor = m_text->textCursor();
+//    QTextCharFormat format = cursor.charFormat();
+//    QString value;
+//    if ( !format.fontUnderline() )
+//    {
+//        format.setFontUnderline(true);
+//        format.setFontStrikeOut(false);
+//        value = "underline";
+//    }
+//    else
+//    {
+//        format.setFontUnderline( false );
+//        value = QString::null;
+//    }
+//
+//    // Tell the wave server that something has been formatted (if there is a selection).
+//    if ( cursor.selectionEnd() != cursor.selectionStart() )
+//    {
+//        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/textDecoration", value );
+//    }
+//
+//    // Change the format for the cursor or the selection.
 //    m_adapter->suspendContentsChange(true);
-//    QTextCursor cursor( m_text->textCursor() );
-//    m_text->insertImage( &cursor, attachmentId, thumbnail, caption );
+//    cursor.mergeCharFormat( format );
 //    m_adapter->suspendContentsChange(false);
-}
-
-void BlipGraphicsItem::insertGadget( const QUrl& url )
-{
-    // Insert the gadget tag
-    int index = m_adapter->mapToBlip( m_text->textCursor().position() );
-    blip()->insertGadget( index, url );
-
-    // Display the image in the QTextDocument
+//}
+//
+//void BlipGraphicsItem::toggleStrikeout()
+//{
+//    // Find out wether to turn the style on or off
+//    QTextCursor cursor = m_text->textCursor();
+//    QTextCharFormat format = cursor.charFormat();
+//    QString value;
+//    if ( !format.fontStrikeOut() )
+//    {
+//        format.setFontStrikeOut(true);
+//        format.setFontUnderline(false);
+//        value = "line-through";
+//    }
+//    else
+//    {
+//        format.setFontStrikeOut( false );
+//        value = QString::null;
+//    }
+//
+//    // Tell the wave server that something has been formatted (if there is a selection).
+//    if ( cursor.selectionEnd() != cursor.selectionStart() )
+//    {
+//        m_adapter->onStyleChange( cursor.selectionStart(), cursor.selectionEnd() - cursor.selectionStart(), "style/textDecoration", value );
+//    }
+//
+//    // Change the format for the cursor or the selection.
 //    m_adapter->suspendContentsChange(true);
-//    QTextCursor cursor( m_text->textCursor() );
-//    m_text->insertGadget( &cursor, url );
+//    cursor.mergeCharFormat( format );
 //    m_adapter->suspendContentsChange(false);
-}
+//}
+//
+//void BlipGraphicsItem::insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption )
+//{
+//    // Create an attachment
+//    QString attachmentId = blip()->wavelet()->insertImageAttachment( url, image, thumbnail );
+//    // Insert the image tag
+//    int index = m_adapter->mapToBlip( m_text->textCursor().position() );
+//    blip()->insertImage( index, attachmentId, caption );
+//}
+//
+//void BlipGraphicsItem::insertGadget( const QUrl& url )
+//{
+//    // Insert the gadget tag
+//    int index = m_adapter->mapToBlip( m_text->textCursor().position() );
+//    blip()->insertGadget( index, url );
+//}
 
 void BlipGraphicsItem::mousePressEvent ( QGraphicsSceneMouseEvent* )
 {

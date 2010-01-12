@@ -25,12 +25,11 @@ class OTAdapter : public QObject
 {
     Q_OBJECT
 public:
-    OTAdapter(BlipGraphicsItem* parent );
+    OTAdapter(GraphicsTextItem* parent );
     ~OTAdapter();
 
     Blip* blip() const;
     GraphicsTextItem* textItem() const;
-    BlipGraphicsItem* blipItem() const;
 
     /**
       * Called when the blip text has been edited by the user.
@@ -60,6 +59,11 @@ public:
     int mapToBlip(int charIndex);
 
     Environment* environment() const;
+
+    void enableAuthorName( bool enable );
+
+signals:
+    void authorPixmapChanged( const QPixmap& pixmap );
 
 private:
     /**
@@ -162,6 +166,7 @@ private:
     bool m_blockUpdate;
     QHash<QString,Cursor*> m_cursors;
     QTimer* m_timer;
+    bool m_showAuthorName;
 };
 
 #endif // OTADAPTER_H

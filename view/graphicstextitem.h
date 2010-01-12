@@ -9,6 +9,7 @@ class CaretInterface;
 class ImageHandler;
 class GadgetHandler;
 class GadgetView;
+class Blip;
 class QImage;
 class QUrl;
 
@@ -19,10 +20,36 @@ class GraphicsTextItem : public QGraphicsTextItem
 {
     Q_OBJECT
 public:
-    GraphicsTextItem(OTAdapter* adapter, QGraphicsItem* parent = 0);
+    GraphicsTextItem(Blip* blip, QGraphicsItem* parent = 0);
 
     void setForbiddenTextRange( int length ) { m_forbiddenTextRange = length; }
     int forbiddenTextRange() const { return m_forbiddenTextRange; }
+
+    /**
+      * Called from the GUI.
+      */
+    void toggleBold();
+    /**
+      * Called from the GUI.
+      */
+    void toggleItalic();
+    /**
+      * Called from the GUI.
+      */
+    void toggleUnderline();
+    /**
+      * Called from the GUI.
+      */
+    void toggleStrikeout();
+    /**
+      * Called from the GUI.
+      */
+    void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
+    /**
+      * Called from the GUI.
+      */
+    void insertGadget( const QUrl& url );
+
 
     void insertCaret( QTextCursor* cursor, const QString& text, const QColor& color, const QString& owner );
     /**
@@ -41,6 +68,7 @@ public:
     void updateWidth( qreal width );
 
     OTAdapter* adapter() const { return m_adapter; }
+    Blip* blip() const { return m_blip; }
 
     GadgetView* gadget( const QString& id ) const;
     QList<GadgetView*> gadgets() const;
@@ -62,10 +90,14 @@ private:
     void checkCursor();
 
     int m_forbiddenTextRange;
+    /**
+      * Connects this graphics item with the OT mechanisms.
+      */
     OTAdapter* m_adapter;
     CaretInterface* m_caretIface;
     ImageHandler* m_imageHandler;
     GadgetHandler* m_gadgetHandler;
+    Blip* m_blip;
 };
 
 #endif // GRAPHICSTEXTITEM_H

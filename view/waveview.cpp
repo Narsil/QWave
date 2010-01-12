@@ -11,6 +11,7 @@
 #include "insertimagedialog.h"
 #include "insertgadgetdialog.h"
 #include "bigbar.h"
+#include "graphicstextitem.h"
 
 #include <QGraphicsScene>
 #include <QGraphicsView>
@@ -101,7 +102,7 @@ void WaveView::boldClicked()
     BlipGraphicsItem* item = focusBlipItem();
     if ( !item )
         return;
-    item->toggleBold();
+    item->textItem()->toggleBold();
     m_waveletView->setFocus();
 }
 
@@ -110,7 +111,7 @@ void WaveView::italicCicked()
     BlipGraphicsItem* item = focusBlipItem();
     if ( !item )
         return;
-    item->toggleItalic();
+    item->textItem()->toggleItalic();
     m_waveletView->setFocus();
 }
 
@@ -119,7 +120,7 @@ void WaveView::underlineClicked()
     BlipGraphicsItem* item = focusBlipItem();
     if ( !item )
         return;
-    item->toggleUnderline();
+    item->textItem()->toggleUnderline();
     m_waveletView->setFocus();
 }
 
@@ -128,7 +129,7 @@ void WaveView::strikeoutClicked()
     BlipGraphicsItem* item = focusBlipItem();
     if ( !item )
         return;
-    item->toggleStrikeout();
+    item->textItem()->toggleStrikeout();
     m_waveletView->setFocus();
 }
 
@@ -141,7 +142,7 @@ void WaveView::imageClicked()
     InsertImageDialog dlg( m_wave->environment(), topLevelWidget() );
     if ( dlg.exec() == QDialog::Accepted )
     {
-        item->insertImage( dlg.url(), dlg.image(), dlg.thumbnail(), dlg.caption() );
+        item->textItem()->insertImage( dlg.url(), dlg.image(), dlg.thumbnail(), dlg.caption() );
     }
     m_waveletView->setFocus();
 }
@@ -153,9 +154,9 @@ void WaveView::gadgetClicked()
         return;
 
     InsertGadgetDialog dlg( m_wave->environment(), topLevelWidget() );
-	if ( dlg.exec() == QDialog::Accepted )
-	{
-		item->insertGadget( dlg.url() );
-	}
+    if ( dlg.exec() == QDialog::Accepted )
+    {
+        item->textItem()->insertGadget( dlg.url() );
+    }
     m_waveletView->setFocus();
 }
