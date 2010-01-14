@@ -16,6 +16,7 @@
 #include <QImage>
 #include <QByteArray>
 #include <QBuffer>
+#include <QtGlobal>
 
 Wavelet::Wavelet(Wave* wave, const QString& domain, const QString &id)
         : QObject(wave), m_id(id), m_domain(domain), m_wave(wave)
@@ -38,12 +39,6 @@ WaveUrl Wavelet::url() const
 {
     WaveUrl url( m_wave->domain(), m_wave->id(), m_domain, m_id );
     return url;
-//    url.setScheme("wave");
-//    url.setHost( domain() );
-//    // TODO: This is only true for local wavelets!
-//    url.setPath( "/" + wave()->id() + "/" + m_id );
-//    qDebug()<<url;
-//    return url;
 }
 
 void Wavelet::updateConversation(const QString& author)
@@ -366,10 +361,46 @@ int Wavelet::unreadBlipCount() const
 
 void Wavelet::setUnread(bool unread)
 {
-	foreach( Blip* blip, rootBlips() )
-	{
-		if ( blip->isUnread()!=unread )
-			blip->setUnread(unread);
-		blip->setChildrenUnread(unread);
-	}
+    foreach( Blip* blip, rootBlips() )
+    {
+        if ( blip->isUnread()!=unread )
+            blip->setUnread(unread);
+        blip->setChildrenUnread(unread);
+    }
+}
+
+Blip* Wavelet::createRootBlip(const QString& text)
+{
+    if ( m_rootBlips.count() == 0 )
+    {        
+        QString rand;
+        rand.setNum( qrand() );
+
+        DocumentMutation m2;
+        QHash<QString,QString> map;
+        map["name"] = environment()->localUser()->address();
+        m2.insertStart("contributor", map);
+        m2.insertEnd();
+        map.clear();
+        m2.insertStart("body", map);
+        m2.insertStart("line", map);
+        m2.insertEnd();
+        if ( !text.isNull() )
+            m2.insertChars( text );
+        m2.insertEnd();
+        processor()->handleSend( m2, "b+" + rand );
+
+        DocumentMutation m1;
+        m1.retain(1);
+        map.clear();
+        map["id"] = "b+" + rand;
+        m1.insertStart("blip", map);
+        m1.insertEnd();
+        m1.retain( document()->count() - 1 );
+        processor()->handleSend( m1, "conversation" );
+
+        Q_ASSERT( m_rootBlips.count() > 0 );
+        return this->rootBlip("b+" + rand);
+    }
+    return m_rootBlips.last()->createFollowUpBlip(text);
 }

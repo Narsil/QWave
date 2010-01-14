@@ -19,7 +19,7 @@ class WaveletView : public QGraphicsView
 {
     Q_OBJECT
 public:
-    WaveletView(WaveView* parent, Wavelet* wavelet);
+    WaveletView(WaveView* parent, Wavelet* wavelet = 0);
     ~WaveletView();
 
     Wavelet* wavelet() { return m_wavelet; }

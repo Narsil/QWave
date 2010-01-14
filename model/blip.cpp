@@ -347,3 +347,24 @@ int Blip::unreadChildBlipCount() const
     }
     return result;
 }
+
+void Blip::setAttribute( const QString& attrib, const QString& value )
+{
+    QString old = attribute(attrib);
+    if ( old == value )
+        return;
+
+    DocumentMutation m1;
+    m1.retain( m_convStartIndex );
+    QHash<QString,StructuredDocument::StringPair> changes;
+    changes[attrib] = StructuredDocument::StringPair( old, value );
+    m1.updateAttributes( changes );
+    m1.retain( document()->count() - m_convStartIndex - 1 );
+
+    wavelet()->processor()->handleSend( m1, "conversation" );
+}
+
+QString Blip::attribute( const QString& attrib ) const
+{
+    return wavelet()->document()->attributesAt(m_convStartIndex)[attrib];
+}

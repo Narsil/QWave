@@ -27,7 +27,7 @@ class WaveView : public QWidget
 {
     Q_OBJECT
 public:
-    WaveView(Wave* wave, QWidget* parent = 0);
+    WaveView(Wave* wave = 0, QWidget* parent = 0);
     ~WaveView();
 
     Wave* wave() const { return m_wave; }

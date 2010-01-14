@@ -23,9 +23,11 @@ WaveletView::WaveletView( WaveView* parent, Wavelet* wavelet )
     m_scene = new QGraphicsScene();
     setScene( m_scene );
 
-    layoutBlips();
-
-    connect( wavelet, SIGNAL(conversationChanged()), SLOT(layoutBlips()));
+    if ( wavelet )
+    {
+        layoutBlips();
+        connect( wavelet, SIGNAL(conversationChanged()), SLOT(layoutBlips()));
+    }
 }
 
 WaveletView::~WaveletView()
@@ -49,11 +51,15 @@ void WaveletView::setWavelet( Wavelet* wavelet )
 
 void WaveletView::layoutBlips()
 {
-    layoutBlips( frameRect().width() );
+    if ( m_wavelet )
+        layoutBlips( frameRect().width() );
 }
 
 void WaveletView::layoutBlips(qreal width)
 {
+    if ( !m_wavelet )
+        return;
+
     QGraphicsItem* focus = m_scene->focusItem();
 
 //    m_lastWidth = width;
