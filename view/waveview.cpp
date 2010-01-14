@@ -43,7 +43,10 @@ WaveView::WaveView(Wave* wave, QWidget* parent )
     m_verticalLayout->addWidget(m_bigBar);
     m_verticalLayout->addWidget(m_toolBar);
 
-    m_waveletView = new WaveletView(this, wave->wavelet());
+    if ( wave )
+        m_waveletView = new WaveletView(this, wave->wavelet());
+    else
+        m_waveletView = new WaveletView(this);
     m_waveletView->setSizePolicy( QSizePolicy::MinimumExpanding, QSizePolicy::Expanding );
 
     m_verticalLayout->addWidget(m_waveletView);

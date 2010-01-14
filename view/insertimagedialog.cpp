@@ -88,7 +88,7 @@ void InsertImageDialog::showImage()
 {
     QImageReader reader( m_reply );
     m_image = reader.read();
-    delete m_reply;
+    m_reply->deleteLater();
     m_reply = 0;
 
     if ( m_image.isNull() )

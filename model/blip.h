@@ -57,6 +57,15 @@ public:
       */
     Participant* creator() const { return m_creator; }
     /**
+      * Retrieves an attribute from the blip's tag in the conversation document.
+      */
+    QString attribute( const QString& attrib ) const;
+    /**
+      * Sets an attribute on the blip's tag in the conversation document.
+      */
+    void setAttribute( const QString& attrib, const QString& value );
+
+    /**
       * @internal
       *
       * The position in the conversation document where this blip is located.

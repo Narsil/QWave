@@ -29,7 +29,8 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveView* view)
     int dy = 42 + 2 * 5;
     m_rect = QRectF( 0, 0, 100, dy);
 
-    setWavelet(view->wave()->wavelet());
+    if ( view->wave() )
+        setWavelet(view->wave()->wavelet());
 }
 
 void WaveletGraphicsItem::setWavelet( Wavelet* wavelet )
