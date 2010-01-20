@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QList>
+#include <QHash>
 
 class BlipThread;
 class Wavelet;
@@ -64,7 +65,7 @@ public:
       * Sets an attribute on the blip's tag in the conversation document.
       */
     void setAttribute( const QString& attrib, const QString& value );
-
+    void setAttributes( const QHash<QString,QString> changes );
     /**
       * @internal
       *
@@ -73,6 +74,7 @@ public:
       * Called by the Wavelet.
       */
     void setConversationStartIndex( int index ) { m_convStartIndex = index; }
+    int conversationStartIndex() const { return m_convStartIndex; }
     /**
       * @internal
       *
@@ -81,6 +83,7 @@ public:
       * Called by the Wavelet.
       */
     void setConversationEndIndex( int index ) { m_convEndIndex = index; }
+    int conversationEndIndex() const { return m_convEndIndex; }
     /**
       * @internal
       */

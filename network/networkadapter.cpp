@@ -45,14 +45,15 @@ bool NetworkAdapter::openWavelet(Wavelet* wavelet)
 {
     QString waveId = wavelet->wave()->domain() + "!" + wavelet->wave()->id();
     QString waveletId = wavelet->domain() + "!" + wavelet->id();
-    QString id = waveId + "/" + waveletId;
-    if ( m_openWaves.contains(id) )
+    // QString id = waveId + "/" + waveletId;
+    QString key = wavelet->url().toString();
+    if ( m_openWaves.contains(key) )
         return true;
 
     if ( m_rpc && m_isOnline )
     {
         sendOpenWave(waveId, waveletId);
-        m_openWaves.append(id);
+        m_openWaves.append(key);
         return true;
     }
     return false;

@@ -359,7 +359,29 @@ void Blip::setAttribute( const QString& attrib, const QString& value )
     QHash<QString,StructuredDocument::StringPair> changes;
     changes[attrib] = StructuredDocument::StringPair( old, value );
     m1.updateAttributes( changes );
-    m1.retain( document()->count() - m_convStartIndex - 1 );
+    m1.retain( wavelet()->document()->count() - m_convStartIndex - 1 );
+
+    wavelet()->processor()->handleSend( m1, "conversation" );
+}
+
+void Blip::setAttributes( const QHash<QString,QString> changes )
+{
+    QHash<QString,StructuredDocument::StringPair> c;
+
+    foreach( QString key, changes.keys() )
+    {
+        QString old = attribute(key);
+        if ( old == changes[key] )
+            continue;
+        c[key] = StructuredDocument::StringPair( old, changes[key] );
+    }
+    if ( c.count() == 0 )
+        return;
+
+    DocumentMutation m1;
+    m1.retain( m_convStartIndex );
+    m1.updateAttributes( c );
+    m1.retain( wavelet()->document()->count() - m_convStartIndex - 1 );
 
     wavelet()->processor()->handleSend( m1, "conversation" );
 }
