@@ -46,6 +46,7 @@ void RemoteOT::initTestCase()
     Settings* settings = m_environment1->settings();
     settings->setServerName("localhost");
     settings->setServerPort(9876);
+    // settings->setServerPort(9123);
     settings->setUserAddress( "joedoe@" + settings->serverName() );
     settings->setUserName("JoeDoe");
     m_environment1->configure();
@@ -62,6 +63,7 @@ void RemoteOT::initTestCase()
     settings = m_environment2->settings();
     settings->setServerName("localhost");
     settings->setServerPort(9876);
+    // settings->setServerPort(9123);
     settings->setUserAddress( "jane@" + settings->serverName() );
     settings->setUserName("Jane");
     m_environment2->configure();
