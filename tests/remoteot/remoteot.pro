@@ -27,6 +27,7 @@ SOURCES += main.cpp \
     ../../model/unknowndocument.cpp \
     ../../model/blipdocument.cpp \
     ../../model/attachment.cpp \
+    ../../model/waveurl.cpp \
     ../../protocol/waveclient-rpc.pb.cc \
     ../../protocol/common.pb.cc
 HEADERS += ../../model/wavelet.h \
@@ -50,6 +51,7 @@ HEADERS += ../../model/wavelet.h \
     ../../model/unknowndocument.h \
     ../../model/blipdocument.h \
     ../../model/attachment.h \
+    ../../model/waveurl.h \
     ../../protocol/waveclient-rpc.pb.h \
     ../../protocol/common.pb.h
 unix:LIBS += -lprotobuf
