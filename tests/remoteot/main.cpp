@@ -42,6 +42,7 @@ void RemoteOT::initTestCase()
     m_wavename = QString("w+%1").arg( QDateTime::currentDateTime().toTime_t() );
     // m_wavename = "w+testwave";
 
+    // Connect JoeDoe to the server
     m_environment1 = new Environment("remoteot1");
     Settings* settings = m_environment1->settings();
     settings->setServerName("localhost");
@@ -59,6 +60,7 @@ void RemoteOT::initTestCase()
     if ( net->hasConnectionError() )
         QFAIL("Connection error");
 
+    // Connect Jane to the server
     m_environment2 = new Environment("remoteot2");
     settings = m_environment2->settings();
     settings->setServerName("localhost");
@@ -82,8 +84,8 @@ void RemoteOT::initTestCase()
     m_environment1->inbox()->addWave(wave1);
     // Get the root wavelet
     Wavelet* wavelet1 = wave1->wavelet();
-	//Turn off the gathering flag of this processor
-	wavelet1->processor()->setGatheringDeltas(false);
+    //Turn off the gathering flag of this processor
+    wavelet1->processor()->setGatheringDeltas(false);
     // Tell the server about the new wave
     wavelet1->processor()->handleSendAddParticipant(m_environment1->localUser());
     // Add user 2 to the wave
@@ -158,9 +160,9 @@ void RemoteOT::initTestCase()
     m_environment2->inbox()->addWave(wave2);
     // Get the root wavelet
     Wavelet* wavelet2 = wave2->wavelet();
-	//Turn off the gathering flag of this processor
-	wavelet2->processor()->setGatheringDeltas(false);
-	// Open the wavelet and receive the initial deltas
+    //Turn off the gathering flag of this processor
+    wavelet2->processor()->setGatheringDeltas(false);
+    // Open the wavelet and receive the initial deltas
     m_environment2->networkAdapter()->openWavelet(wavelet2);
 
     // Wait until user 2 got all deltas
@@ -170,24 +172,29 @@ void RemoteOT::initTestCase()
 
 void RemoteOT::concurrentEdit()
 {
+    // Get the wavelet for user1 we just created
     Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
-    // Create an empty blip
+    // Write 'Hallo' to the blip
     DocumentMutation m1;
     m1.retain(5);
     m1.insertChars("Hallo");
     m1.retain(1);
+    // Do not send the delta to the server yet
     wavelet1->processor()->setSuspendSending(true);
     wavelet1->processor()->handleSend( m1, "b+" + m_rand + "1" );
 
+    // Get the same wavelet for user2
     Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
-    // Create an empty blip
+    // Concurrently write 'Welt' to the same blip
     DocumentMutation m2;
     m2.retain(5);
     m2.insertChars("Welt");
     m2.retain(1);
+    // Do not send the delta to the server yet
     wavelet2->processor()->setSuspendSending(true);
     wavelet2->processor()->handleSend( m2, "b+" + m_rand + "1" );
 
+    // Let client1 send its delta to the server
     wavelet1->processor()->setSuspendSending(false);
     // Wait until this has been processed
     while( wavelet1->processor()->queuedDeltaCount() > 0 )
@@ -197,6 +204,7 @@ void RemoteOT::concurrentEdit()
     while( wavelet2->processor()->serverVersion() < 7 )
         QTest::qWait(250);
 
+    // User 2 will have transformed its delta. Now send the transformed delta to the server.
     wavelet2->processor()->setSuspendSending(false);
 
     // Wait until user 1 and 2 got all deltas
@@ -205,6 +213,7 @@ void RemoteOT::concurrentEdit()
     while( wavelet2->processor()->serverVersion() < 8 )
         QTest::qWait(250);
 
+    // Both clients should now have the same blip.
     wavelet1->rootBlips()[0]->document()->print_();
     wavelet2->rootBlips()[0]->document()->print_();
 
@@ -214,6 +223,7 @@ void RemoteOT::concurrentEdit()
 
 void RemoteOT::concurrentEdit2()
 {
+    // Get the wavelets for both users
     Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
     Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
 
@@ -233,12 +243,14 @@ void RemoteOT::concurrentEdit2()
     while( wavelet2->processor()->serverVersion() < v2 + 1 )
         QTest::qWait(250);
 
+    // User1 deleta 'll' from 'Hallo' leading to 'Hao'
     DocumentMutation m1b;
     m1b.retain(5+2);
     m1b.deleteChars("ll");
     m1b.retain(2);
     wavelet1->processor()->handleSend( m1b, "b+" + m_rand + "2" );
 
+    // User2 inserts 'XZY' in the middle of the two 'll' leading to 'HalXZYlo'
     DocumentMutation m2;
     m2.retain(5 + 2 + 1);
     m2.insertChars("XZY");
@@ -251,6 +263,7 @@ void RemoteOT::concurrentEdit2()
     while( wavelet2->processor()->serverVersion() < v1 + 3 )
         QTest::qWait(250);
 
+    // Both users should now have the same document, in particular 'HaXZYo'
     wavelet1->rootBlips()[1]->document()->print_();
     wavelet2->rootBlips()[1]->document()->print_();
 
@@ -260,6 +273,7 @@ void RemoteOT::concurrentEdit2()
 
 void RemoteOT::concurrentEdit3()
 {
+    // Get the wavelets for both users
     Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
     Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
 
@@ -279,6 +293,7 @@ void RemoteOT::concurrentEdit3()
     while( wavelet2->processor()->serverVersion() < v2 + 1 )
         QTest::qWait(250);
 
+    // Format the entire 'Hallo' with font-size 20
     DocumentMutation m1b;
     m1b.retain(5);
     StructuredDocument::AnnotationChange format;
@@ -291,6 +306,7 @@ void RemoteOT::concurrentEdit3()
     m1b.retain(1);
     wavelet1->processor()->handleSend( m1b, "b+" + m_rand + "3" );
 
+    // Between the 'll' insert 'ZWOELF' and set its font size to 12
     DocumentMutation m2;
     m2.retain(5 + 3);
     StructuredDocument::AnnotationChange format2;
@@ -301,12 +317,14 @@ void RemoteOT::concurrentEdit3()
     m2.retain(3);
     wavelet2->processor()->handleSend( m2, "b+" + m_rand + "3" );
 
+    // Show how the code transforms
     bool ok = false;
     QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( m1b, m2, &ok );
     QVERIFY(ok == true);
     pair.first.print_();
     pair.second.print_();
 
+    // Show how the code transforms
     ok = false;
     pair = DocumentMutation::xform( m2, m1b, &ok );
     QVERIFY(ok == true);
@@ -319,6 +337,7 @@ void RemoteOT::concurrentEdit3()
     while( wavelet2->processor()->serverVersion() < v1 + 3 )
         QTest::qWait(250);
 
+    // Now both users should see the same document
     wavelet1->rootBlips()[2]->document()->print_();
     wavelet2->rootBlips()[2]->document()->print_();
 

@@ -197,7 +197,7 @@ Blip* Wavelet::blip(const QString& id) const
 Blip* Wavelet::rootBlip( const QString& id ) const
 {
     Blip* b = blip(id);
-    if ( b->isRootBlip() )
+    if ( b && b->isRootBlip() )
         return b;
     return 0;
 }
