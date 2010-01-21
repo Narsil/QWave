@@ -24,6 +24,7 @@
     void concurrentEdit();
     void concurrentEdit2();
     void concurrentEdit3();
+    void concurrentEdit4();
     void cleanupTestCase();
 
 private:
@@ -345,6 +346,48 @@ void RemoteOT::concurrentEdit3()
     QCOMPARE( wavelet1->rootBlips()[2]->document()->toString(), wavelet2->rootBlips()[2]->document()->toString() );
 }
 
+void RemoteOT::concurrentEdit4()
+{
+    // Get the wavelets for both users
+    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+
+    int v1 = wavelet1->processor()->serverVersion();
+    int v2 = wavelet2->processor()->serverVersion();
+
+    // Insert "Test1" in the blip1
+    DocumentMutation m1;
+    m1.retain(5);
+    m1.insertChars("Test1");
+    m1.retain(10);
+    wavelet1->processor()->setSuspendSending(true);
+    wavelet1->processor()->handleSend( m1, "b+" + m_rand + "1" );
+
+    // Insert "Test2" in the blip2
+    DocumentMutation m2;
+    m2.retain(5);
+    m2.insertChars("Test2");
+    m2.retain(7);
+    wavelet2->processor()->setSuspendSending(true);
+    wavelet2->processor()->handleSend( m2, "b+" + m_rand + "2" );
+
+    wavelet1->processor()->setSuspendSending(false);
+    wavelet2->processor()->setSuspendSending(false);
+
+    // Wait until user 1 and 2 got all deltas
+    while( wavelet1->processor()->serverVersion() < v1 + 2 )
+        QTest::qWait(250);
+    while( wavelet2->processor()->serverVersion() < v2 + 2 )
+        QTest::qWait(250);
+
+    // Now both users should see the same document
+    wavelet1->rootBlips()[0]->document()->print_();
+    wavelet2->rootBlips()[1]->document()->print_();
+
+    // Now compare the document of both users. It must be the same
+    QCOMPARE( wavelet1->rootBlips()[0]->document()->toPlainText().left(5), QString("Test1") );
+    QCOMPARE( wavelet1->rootBlips()[1]->document()->toPlainText().left(5), QString("Test2") );
+}
 
 void RemoteOT::cleanupTestCase()
 {

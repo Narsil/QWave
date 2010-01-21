@@ -773,24 +773,24 @@ QPair<DocumentMutation,DocumentMutation> DocumentMutation::xform( const Document
     QList<Item>::const_iterator it2 = m2.begin();
     Item item1 = *it1;
     Item item2 = *it2;
-    while( it1 != m1.end() || it2 != m2.end() )
+    while( it1 != m1.end() && it2 != m2.end() )
     {
-        if ( it1 == m1.end() )
-        {
-            r2.m_items.append( item2 );
-            it2++;
-            if ( it2 != m2.end() )
-                item2 = *it2;
-            continue;
-        }
-        if ( it2 == m2.end() )
-        {
-            r1.m_items.append( item2 );
-            it1++;
-            if ( it1 != m1.end() )
-                item1 = *it1;
-            continue;
-        }
+//        if ( it1 == m1.end() )
+//        {
+//            r2.m_items.append( item2 );
+//            it2++;
+//            if ( it2 != m2.end() )
+//                item2 = *it2;
+//            continue;
+//        }
+//        if ( it2 == m2.end() )
+//        {
+//            r1.m_items.append( item2 );
+//            it1++;
+//            if ( it1 != m1.end() )
+//                item1 = *it1;
+//            continue;
+//        }
 
         bool next1 = false;
         bool next2 = false;
@@ -828,6 +828,12 @@ QPair<DocumentMutation,DocumentMutation> DocumentMutation::xform( const Document
                 break;
         }
 
+        if ( *ok == false )
+        {
+            qDebug("Error while transforming deltas. Deltas are not compatible");
+            return QPair<DocumentMutation,DocumentMutation>();
+        }
+
         if ( next1 )
         {
             it1++;
@@ -842,7 +848,14 @@ QPair<DocumentMutation,DocumentMutation> DocumentMutation::xform( const Document
         }
     }
 
-    *ok = true;
+    if ( it1 != m1.end() || it2 != m2.end() )
+    {
+        qDebug("Length mismatch when transforming deltas.");
+        *ok = false;
+        return QPair<DocumentMutation,DocumentMutation>();
+    }
+
+    // *ok = true;
     return QPair<DocumentMutation,DocumentMutation>(r1, r2);
 }
 

@@ -54,11 +54,19 @@ QPair<WaveletDeltaOperation,WaveletDeltaOperation> WaveletDeltaOperation::xform(
         r1.setMutation(o1.mutation());
     else if ( o2.hasMutation() && !o1.hasMutation() )
         r2.setMutation(o2.mutation());
-    else
+    else if ( o1.hasMutation() && o2.hasMutation() )
     {
-        QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( o1.mutation(), o2.mutation(), ok );
-        r1.setMutation(pair.first);
-        r2.setMutation(pair.second);
+        if ( o1.documentId() == o2.documentId() )
+        {
+            QPair<DocumentMutation,DocumentMutation> pair = DocumentMutation::xform( o1.mutation(), o2.mutation(), ok );
+            r1.setMutation(pair.first);
+            r2.setMutation(pair.second);
+        }
+        else
+        {
+            r1.setMutation( o1.mutation() );
+            r2.setMutation( o2.mutation() );
+        }
     }
 
     return QPair<WaveletDeltaOperation,WaveletDeltaOperation>(r1,r2);
