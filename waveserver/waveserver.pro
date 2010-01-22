@@ -2,10 +2,10 @@
 # Project created by QtCreator 2009-11-13T00:20:42
 # -------------------------------------------------
 QT += network
+QT -= gui
 TARGET = waveserver
 TEMPLATE = app
 SOURCES += main.cpp \
-    mainwindow.cpp \
     ../model/waveletdeltaoperation.cpp \
     ../model/waveletdelta.cpp \
     ../model/structureddocument.cpp \
@@ -21,9 +21,11 @@ SOURCES += main.cpp \
     network/serversocket.cpp \
     network/clientconnection.cpp \
     ../network/rpc.cpp \
-    ../network/converter.cpp
-HEADERS += mainwindow.h \
-    ../model/waveletdeltaoperation.h \
+    ../network/converter.cpp \
+    persistence/commitlog.cpp \
+    app/settings.cpp \
+    protocol/commitlog.pb.cc
+HEADERS += ../model/waveletdeltaoperation.h \
     ../model/waveletdelta.h \
     ../model/structureddocument.h \
     ../model/documentmutation.h \
@@ -38,7 +40,12 @@ HEADERS += mainwindow.h \
     network/serversocket.h \
     network/clientconnection.h \
     ../network/rpc.h \
-    ../network/converter.h
+    ../network/converter.h \
+    persistence/commitlog.h \
+    app/settings.h \
+    protocol/commitlog.pb.h
 FORMS += mainwindow.ui
 unix:LIBS += -lprotobuf
-INCLUDEPATH += ./ ../
+INCLUDEPATH += ./ \
+    ../ \
+    ../protocol
