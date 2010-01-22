@@ -9,6 +9,8 @@
 #include "model/wave.h"
 #include "model/waveurl.h"
 #include "model/participant.h"
+#include "app/settings.h"
+#include "persistence/commitlog.h"
 
 #include <QTcpSocket>
 #include <QByteArray>
@@ -134,6 +136,9 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         waveserver::ProtocolSubmitRequest update;
         update.ParseFromArray(data.constData(), data.length());
         qDebug("msg<< %s", update.DebugString().data());
+
+        // Write it to the commit log
+        CommitLog::commitLog()->write(update);
 
         QString waveletId = QString::fromStdString( update.wavelet_name() );
         WaveletDelta delta = Converter::convert( update.delta() );
@@ -262,5 +267,5 @@ QList<ClientConnection*> ClientConnection::connectionsByParticipant( const QStri
 
 QString ClientConnection::domain() const
 {
-    return ((ServerSocket*)parent())->domain();
+    return Settings::settings()->domain();
 }

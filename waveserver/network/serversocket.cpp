@@ -4,8 +4,7 @@
 #include <QHostAddress>
 #include <QTcpSocket>
 
-ServerSocket::ServerSocket(const QString& domain)
-        : m_domain(domain)
+ServerSocket::ServerSocket()
 {
     m_socket = new QTcpServer(this);
 

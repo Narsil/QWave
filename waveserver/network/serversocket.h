@@ -12,9 +12,7 @@ class ServerSocket : public QObject
 {
     Q_OBJECT
 public:
-    ServerSocket(const QString& domain);
-
-    QString domain() const { return m_domain; }
+    ServerSocket();
 
 private slots:
     void newConnection();
