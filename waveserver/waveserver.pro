@@ -44,7 +44,6 @@ HEADERS += ../model/waveletdeltaoperation.h \
     persistence/commitlog.h \
     app/settings.h \
     protocol/commitlog.pb.h
-FORMS += mainwindow.ui
 unix:LIBS += -lprotobuf
 INCLUDEPATH += ./ \
     ../ \
