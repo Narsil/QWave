@@ -5,7 +5,7 @@
 #include <QHash>
 #include <QList>
 #include <QUrl>
-#include "waveurl.h"
+#include "model/waveurl.h"
 
 class Wave;
 class Blip;

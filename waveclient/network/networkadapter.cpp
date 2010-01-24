@@ -11,10 +11,10 @@
 #include "model/wavedigest.h"
 #include "model/waveurl.h"
 #include "rpc.h"
-#include "converter.h"
+#include "network/converter.h"
 
 // Includes for protobuf
-#include "waveclient-rpc.pb.h"
+#include "protocol/waveclient-rpc.pb.h"
 #include <sstream>
 #include <string>
 

@@ -4,7 +4,7 @@
 #include "blipdocument.h"
 #include "app/environment.h"
 #include "wave.h"
-#include "documentmutation.h"
+#include "model/documentmutation.h"
 #include "contacts.h"
 #include "participant.h"
 #include "otprocessor.h"

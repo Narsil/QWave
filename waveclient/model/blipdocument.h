@@ -1,7 +1,7 @@
 #ifndef BLIPDOCUMENT_H
 #define BLIPDOCUMENT_H
 
-#include "structureddocument.h"
+#include "model/structureddocument.h"
 #include <QStack>
 #include <QHash>
 

@@ -1,6 +1,6 @@
 #include "unknowndocument.h"
-#include "structureddocument.h"
-#include "documentmutation.h"
+#include "model/structureddocument.h"
+#include "model/documentmutation.h"
 
 UnknownDocument::UnknownDocument(const QString& id)
         : m_id(id)

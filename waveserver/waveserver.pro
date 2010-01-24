@@ -6,45 +6,46 @@ QT -= gui
 TARGET = waveserver
 TEMPLATE = app
 SOURCES += main.cpp \
-    ../model/waveletdeltaoperation.cpp \
-    ../model/waveletdelta.cpp \
-    ../model/structureddocument.cpp \
-    ../model/documentmutation.cpp \
+    ../core/model/waveletdeltaoperation.cpp \
+    ../core/model/waveletdelta.cpp \
+    ../core/model/structureddocument.cpp \
+    ../core/model/documentmutation.cpp \
     model/wavelet.cpp \
     model/waveletdocument.cpp \
     model/participant.cpp \
     model/waveusage.cpp \
     model/wave.cpp \
     model/waveurl.cpp \
-    ../protocol/waveclient-rpc.pb.cc \
-    ../protocol/common.pb.cc \
+    ../core/protocol/waveclient-rpc.pb.cc \
+    ../core/protocol/common.pb.cc \
     network/serversocket.cpp \
     network/clientconnection.cpp \
-    ../network/rpc.cpp \
-    ../network/converter.cpp \
+    ../core/network/rpc.cpp \
+    ../core/network/converter.cpp \
     persistence/commitlog.cpp \
     app/settings.cpp \
     protocol/commitlog.pb.cc
-HEADERS += ../model/waveletdeltaoperation.h \
-    ../model/waveletdelta.h \
-    ../model/structureddocument.h \
-    ../model/documentmutation.h \
+HEADERS += ../core/model/waveletdeltaoperation.h \
+    ../core/model/waveletdelta.h \
+    ../core/model/structureddocument.h \
+    ../core/model/documentmutation.h \
     model/wavelet.h \
     model/waveletdocument.h \
     model/participant.h \
     model/waveusage.h \
     model/wave.h \
     model/waveurl.h \
-    ../protocol/common.pb.h \
-    ../protocol/waveclient-rpc.pb.h \
+    ../core/protocol/common.pb.h \
+    ../core/protocol/waveclient-rpc.pb.h \
     network/serversocket.h \
     network/clientconnection.h \
-    ../network/rpc.h \
-    ../network/converter.h \
+    ../core/network/rpc.h \
+    ../core/network/converter.h \
     persistence/commitlog.h \
     app/settings.h \
     protocol/commitlog.pb.h
 unix:LIBS += -lprotobuf
 INCLUDEPATH += ./ \
     ../ \
-    ../protocol
+    ../core/ \
+	../core/protocol

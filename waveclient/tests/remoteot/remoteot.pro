@@ -11,48 +11,48 @@ SOURCES += main.cpp \
     ../../model/participant.cpp \
     ../../model/blip.cpp \
     ../../model/blipthread.cpp \
-    ../../model/structureddocument.cpp \
-    ../../model/documentmutation.cpp \
+    ../../../core/model/structureddocument.cpp \
+    ../../../core/model/documentmutation.cpp \
     ../../app/environment.cpp \
     ../../network/networkadapter.cpp \
     ../../network/rpc.cpp \
-    ../../network/converter.cpp \
+    ../../../core/network/converter.cpp \
     ../../model/wavelist.cpp \
-    ../../model/waveletdelta.cpp \
+    ../../../core/model/waveletdelta.cpp \
     ../../model/otprocessor.cpp \
-    ../../model/waveletdeltaoperation.cpp \
+    ../../../core/model/waveletdeltaoperation.cpp \
     ../../model/wavedigest.cpp \
     ../../model/contacts.cpp \
     ../../app/settings.cpp \
     ../../model/unknowndocument.cpp \
     ../../model/blipdocument.cpp \
     ../../model/attachment.cpp \
-    ../../model/waveurl.cpp \
-    ../../protocol/waveclient-rpc.pb.cc \
-    ../../protocol/common.pb.cc
+    ../../../core/model/waveurl.cpp \
+    ../../../core/protocol/waveclient-rpc.pb.cc \
+    ../../../core/protocol/common.pb.cc
 HEADERS += ../../model/wavelet.h \
     ../../model/wave.h \
     ../../model/participant.h \
     ../../model/blip.h \
     ../../model/blipthread.h \
-    ../../model/structureddocument.h \
-    ../../model/documentmutation.h \
+    ../../../core/model/structureddocument.h \
+    ../../../core/model/documentmutation.h \
     ../../app/environment.h \
     ../../network/networkadapter.h \
     ../../network/rpc.h \
-    ../../network/converter.h \
+    ../../../core/network/converter.h \
     ../../model/wavelist.h \
-    ../../model/waveletdelta.h \
+    ../../../core/model/waveletdelta.h \
     ../../model/otprocessor.h \
-    ../../model/waveletdeltaoperation.h \
+    ../../../core/model/waveletdeltaoperation.h \
     ../../model/wavedigest.h \
     ../../model/contacts.h \
     ../../app/settings.h \
     ../../model/unknowndocument.h \
     ../../model/blipdocument.h \
     ../../model/attachment.h \
-    ../../model/waveurl.h \
-    ../../protocol/waveclient-rpc.pb.h \
-    ../../protocol/common.pb.h
+    ../../../core/model/waveurl.h \
+    ../../../core/protocol/waveclient-rpc.pb.h \
+    ../../../core/protocol/common.pb.h
 unix:LIBS += -lprotobuf
-unix:INCLUDEPATH = ../../protocol ../../
+unix:INCLUDEPATH = ../../protocol ../../ ../../../core/

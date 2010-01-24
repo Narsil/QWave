@@ -1,6 +1,6 @@
 #include "blipdocument.h"
 #include "blip.h"
-#include "documentmutation.h"
+#include "model/documentmutation.h"
 #include "attachment.h"
 #include "wavelet.h"
 
