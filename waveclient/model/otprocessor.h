@@ -4,7 +4,7 @@
 #include <QObject>
 #include <QList>
 
-#include "waveletdelta.h"
+#include "model/waveletdelta.h"
 
 class Environment;
 class DocumentMutation;

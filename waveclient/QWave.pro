@@ -19,11 +19,11 @@ SOURCES += app/main.cpp \
     model/participant.cpp \
     model/blip.cpp \
     model/blipthread.cpp \
-    model/structureddocument.cpp \
+    ../core/model/structureddocument.cpp \
     view/waveletview.cpp \
     view/blipview.cpp \
     view/waveview.cpp \
-    model/documentmutation.cpp \
+    ../core/model/documentmutation.cpp \
     view/blipgraphicsitem.cpp \
     view/waveletgraphicsitem.cpp \
     view/participantgraphicsitem.cpp \
@@ -37,9 +37,9 @@ SOURCES += app/main.cpp \
     model/wavelist.cpp \
     view/wavedigestgraphicsitem.cpp \
     app/serversettingsdialog.cpp \
-    model/waveletdelta.cpp \
+    ../core/model/waveletdelta.cpp \
     model/otprocessor.cpp \
-    model/waveletdeltaoperation.cpp \
+    ../core/model/waveletdeltaoperation.cpp \
     model/wavedigest.cpp \
     model/contacts.cpp \
     view/contactsview.cpp \
@@ -59,30 +59,30 @@ SOURCES += app/main.cpp \
     view/imagehandler.cpp \
     model/attachment.cpp \
     view/toolbar.cpp \
-    network/converter.cpp \
+    ../core/network/converter.cpp \
     gadgets/gadgetmanifest.cpp \
     gadgets/gadgetapi.cpp \
     gadgets/gadgethandler.cpp \
     gadgets/gadgetview.cpp \
     gadgets/extensionmanifest.cpp \
     view/inboxbuttonview.cpp \
-    model/waveurl.cpp \
+    ../core/model/waveurl.cpp \
     view/insertgadgetdialog.cpp
-unix:SOURCES += protocol/waveclient-rpc.pb.cc \
-    protocol/common.pb.cc
-win32:SOURCES += winprotobuf/protocol/waveclient-rpc.pb.cc \
-    winprotobuf/protocol/common.pb.cc
+unix:SOURCES += ../core/protocol/waveclient-rpc.pb.cc \
+    ../core/protocol/common.pb.cc
+win32:SOURCES += ../core/winprotobuf/protocol/waveclient-rpc.pb.cc \
+    ../core/winprotobuf/protocol/common.pb.cc
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
     model/participant.h \
     model/blip.h \
     model/blipthread.h \
-    model/structureddocument.h \
+    ../core/model/structureddocument.h \
     view/waveletview.h \
     view/blipview.h \
     view/waveview.h \
-    model/documentmutation.h \
+    ../core/model/documentmutation.h \
     view/blipgraphicsitem.h \
     view/waveletgraphicsitem.h \
     view/participantgraphicsitem.h \
@@ -96,9 +96,9 @@ HEADERS += app/mainwindow.h \
     model/wavelist.h \
     view/wavedigestgraphicsitem.h \
     app/serversettingsdialog.h \
-    model/waveletdelta.h \
+    ../core/model/waveletdelta.h \
     model/otprocessor.h \
-    model/waveletdeltaoperation.h \
+    ../core/model/waveletdeltaoperation.h \
     model/wavedigest.h \
     model/contacts.h \
     view/contactsview.h \
@@ -118,25 +118,26 @@ HEADERS += app/mainwindow.h \
     view/imagehandler.h \
     model/attachment.h \
     view/toolbar.h \
-    network/converter.h \
+    ../core/network/converter.h \
     gadgets/gadgetmanifest.h \
     gadgets/gadgetapi.h \
     gadgets/gadgethandler.h \
     gadgets/gadgetview.h \
     gadgets/extensionmanifest.h \
     view/inboxbuttonview.h \
-    model/waveurl.h \
-    view/insertgadgetdialog.h \
-unix:HEADERS += protocol/waveclient-rpc.pb.h \
-    protocol/common.pb.h
-win32:HEADERS += winprotobuf/protocol/waveclient-rpc.pb.h \
-    winprotobuf/protocol/common.pb.h
+    ../core/model/waveurl.h \
+    view/insertgadgetdialog.h 
+unix:HEADERS += ../core/protocol/waveclient-rpc.pb.h \
+    ../core/protocol/common.pb.h
+win32:HEADERS += ../core/winprotobuf/protocol/waveclient-rpc.pb.h \
+    ../core/winprotobuf/protocol/common.pb.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf
-win32:INCLUDEPATH = winprotobuf/include \
-    winprotobuf/protocol
+win32:INCLUDEPATH = ../core/winprotobuf/include \
+    ../core/winprotobuf/protocol
 unix:INCLUDEPATH = protocol
+INCLUDEPATH+= ../core/ ../core/protocol
 debug:
 release { 
     win32:LIBS += MSVCPRT.LIB \

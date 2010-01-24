@@ -6,7 +6,7 @@
 #include <QUrl>
 #include <QString>
 
-#include "structureddocument.h"
+#include "model/structureddocument.h"
 
 class Attachment : public StructuredDocument
 {
