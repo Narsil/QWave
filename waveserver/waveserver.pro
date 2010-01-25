@@ -1,7 +1,8 @@
 # -------------------------------------------------
 # Project created by QtCreator 2009-11-13T00:20:42
 # -------------------------------------------------
-QT += network
+QT += network \
+    xml
 QT -= gui
 TARGET = waveserver
 TEMPLATE = app
@@ -20,6 +21,8 @@ SOURCES += main.cpp \
     ../core/protocol/common.pb.cc \
     network/serversocket.cpp \
     network/clientconnection.cpp \
+    network/xmppcomponent.cpp \
+    network/xmppstanza.cpp \
     ../core/network/rpc.cpp \
     ../core/network/converter.cpp \
     persistence/commitlog.cpp \
@@ -39,6 +42,8 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/protocol/waveclient-rpc.pb.h \
     network/serversocket.h \
     network/clientconnection.h \
+    network/xmppcomponent.h \
+    network/xmppstanza.h \
     ../core/network/rpc.h \
     ../core/network/converter.h \
     persistence/commitlog.h \
@@ -48,4 +53,4 @@ unix:LIBS += -lprotobuf
 INCLUDEPATH += ./ \
     ../ \
     ../core/ \
-	../core/protocol
+    ../core/protocol
