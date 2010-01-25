@@ -1,0 +1,15 @@
+To enable XMPP federation (currently not really working),
+copy the waveserver.conf.example file to waveserver.conf
+and edit it to match your settings.
+
+Without the config file the property "federationEnabled" is false
+and no XMPP connection is created. Thus, the server works as
+a stand-alone wave server.
+
+To test federation, make sure that FedOne instances do not insist
+on checking certificates. This server does not yet support this.
+
+PLEASE NOTE: Federation is work in progress and COMPLETELY BROKEN.
+Use this federation stuff only if you want to participate in development.
+
+Torben
