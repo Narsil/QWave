@@ -10,7 +10,7 @@
 #include "model/otprocessor.h"
 #include "model/wavedigest.h"
 #include "model/waveurl.h"
-#include "rpc.h"
+#include "network/rpc.h"
 #include "network/converter.h"
 
 // Includes for protobuf

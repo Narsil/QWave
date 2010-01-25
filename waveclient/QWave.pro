@@ -32,7 +32,7 @@ SOURCES += app/main.cpp \
     view/graphicstextitem.cpp \
     view/otadapter.cpp \
     network/networkadapter.cpp \
-    network/rpc.cpp \
+    ../core/network/rpc.cpp \
     view/wavelistview.cpp \
     model/wavelist.cpp \
     view/wavedigestgraphicsitem.cpp \
@@ -91,7 +91,7 @@ HEADERS += app/mainwindow.h \
     view/graphicstextitem.h \
     view/otadapter.h \
     network/networkadapter.h \
-    network/rpc.h \
+    ../core/network/rpc.h \
     view/wavelistview.h \
     model/wavelist.h \
     view/wavedigestgraphicsitem.h \

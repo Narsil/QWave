@@ -15,7 +15,7 @@ SOURCES += main.cpp \
     ../../../core/model/documentmutation.cpp \
     ../../app/environment.cpp \
     ../../network/networkadapter.cpp \
-    ../../network/rpc.cpp \
+    ../../../core/network/rpc.cpp \
     ../../../core/network/converter.cpp \
     ../../model/wavelist.cpp \
     ../../../core/model/waveletdelta.cpp \
@@ -39,7 +39,7 @@ HEADERS += ../../model/wavelet.h \
     ../../../core/model/documentmutation.h \
     ../../app/environment.h \
     ../../network/networkadapter.h \
-    ../../network/rpc.h \
+    ../../../core/network/rpc.h \
     ../../../core/network/converter.h \
     ../../model/wavelist.h \
     ../../../core/model/waveletdelta.h \
