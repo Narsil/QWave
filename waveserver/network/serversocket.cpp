@@ -1,5 +1,6 @@
 #include "serversocket.h"
 #include "clientconnection.h"
+#include "app/settings.h"
 #include <QTcpServer>
 #include <QHostAddress>
 #include <QTcpSocket>
@@ -11,8 +12,8 @@ ServerSocket::ServerSocket()
     bool check = connect( m_socket, SIGNAL(newConnection()), SLOT(newConnection()));
     Q_ASSERT(check);
 
-    // List on any interface
-    check = m_socket->listen( QHostAddress::Any, 9876);
+    // Listen on any interface
+    check = m_socket->listen( QHostAddress::Any, Settings::settings()->clientPort());
     if ( !check )
     {
         qDebug("Failed to bind to port");

@@ -1,0 +1,7 @@
+[General]
+federationEnabled=true
+domain=mycompany.com
+xmppComponentSecret=PutYourSecretHere
+xmppComponentName=wave.mycompany.com
+xmppComponentPort=5275
+xmppServerName=wave.mycompany.com

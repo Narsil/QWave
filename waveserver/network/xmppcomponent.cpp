@@ -1,12 +1,13 @@
 #include "xmppcomponent.h"
+#include "app/settings.h"
 #include <QByteArray>
 #include <QXmlStreamAttributes>
 #include <QXmlStreamWriter>
 #include <QCryptographicHash>
 #include <QtGlobal>
 
-XmppComponentConnection::XmppComponentConnection(const QString& domain, const QString& secret, const QString& host, int port, QObject* parent)
-        : QObject(parent), m_state( Init ), m_connected(false), m_writer(0), m_domain(domain), m_secret( secret ), m_host(host), m_idCount(0), m_currentTag(0)
+XmppComponentConnection::XmppComponentConnection(QObject* parent)
+        : QObject(parent), m_state( Init ), m_connected(false), m_writer(0), m_idCount(0), m_currentTag(0)
 {
     m_socket = new QTcpSocket(this);
 
@@ -19,7 +20,7 @@ XmppComponentConnection::XmppComponentConnection(const QString& domain, const QS
     ok = connect( m_socket, SIGNAL(readyRead()), SLOT(readBytes()));
     Q_ASSERT(ok);
 
-    m_socket->connectToHost(host, port);
+    m_socket->connectToHost( Settings::settings()->xmppServerName(), Settings::settings()->xmppComponentPort());
 }
 
 XmppComponentConnection::~XmppComponentConnection()
@@ -30,40 +31,54 @@ XmppComponentConnection::~XmppComponentConnection()
         delete m_currentTag;
     m_virtualConnections.clear();
     m_socket->deleteLater();
+    m_state = Delete;
 }
 
 void XmppComponentConnection::stop()
 {
+    if ( m_state == Delete )
+        return;
     m_connected = false;
     qDebug("Disconnected");
-    deleteLater();
 }
 
 void XmppComponentConnection::stopOnError(QAbstractSocket::SocketError error)
 {
+    if ( m_state == Delete )
+        return;
     Q_UNUSED(error);
     qDebug("Socket error");
-    deleteLater();
+    m_state = Delete;
 }
 
 void XmppComponentConnection::xmppError()
 {
+    if ( m_state == Delete )
+        return;
     qDebug("XMPP error");
-    deleteLater();
+    m_state = Delete;
 }
 
 void XmppComponentConnection::start()
 {
+    if ( m_state == Delete )
+        return;
+
     m_connected = true;
     qDebug("Connected");
     m_writer = new QTextStream(m_socket);
     m_writer->setCodec("UTF-8");
-    (*m_writer) << "<stream:stream xmlns=\"jabber:component:accept\" xmlns:stream=\"http://etherx.jabber.org/streams\" to=\"" + domain() + "\">";
+    QString stream = "<stream:stream xmlns=\"jabber:component:accept\" xmlns:stream=\"http://etherx.jabber.org/streams\" to=\"" + domain() + "\">";
+    qDebug("msg>>> %s", stream.toAscii().constData() );
+    (*m_writer) << stream;
     m_writer->flush();
 }
 
 void XmppComponentConnection::readBytes()
 {
+    if ( m_state == Delete )
+        return;
+
     qint64 len = m_socket->bytesAvailable();
     qDebug("Got %i bytes", (int)len);
     QByteArray data = m_socket->readAll();
@@ -93,15 +108,16 @@ void XmppComponentConnection::readBytes()
                 }
                 QXmlStreamAttributes attribs = m_reader.attributes();
                 if ( !attribs.hasAttribute("id") )
+                {
                     xmppError();
+                    return;
+                }
                 m_streamId = attribs.value("id").toString();
 
-//                m_streamId = "27ab7966-769e-4ed6-8865-f37ba40abed0";
-
-                // Send the handshak<iq type="get" id="5354-0" to="wave2.vs.uni-due.de" from="wave.wave1.vs.uni-due.de"><query xmlns="http://jabber.org/protocol/disco#items"/></iq>e
+                // Send the handshak
                 QCryptographicHash hash( QCryptographicHash::Sha1 );
                 hash.addData( m_streamId.toAscii().constData() );
-                hash.addData( m_secret.toAscii().constData() );
+                hash.addData( Settings::settings()->xmppComponentSecret().toAscii().constData() );
                 QByteArray result = hash.result();
                 QString key = "";
                 QString format = "%1";
@@ -262,6 +278,16 @@ QString XmppComponentConnection::nextId()
 {
     int id = qrand() % 10000;
     return QString("%1-%2").arg(id).arg( m_idCount++ );
+}
+
+QString XmppComponentConnection::domain() const
+{
+    return Settings::settings()->domain();
+}
+
+QString XmppComponentConnection::host() const
+{
+    return Settings::settings()->xmppComponentName();
 }
 
 /***********************************************
