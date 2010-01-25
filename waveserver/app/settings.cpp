@@ -3,15 +3,15 @@
 
 Settings* Settings::s_settings = 0;
 
-Settings::Settings(const QString& profile, QObject* parent)
-        : QSettings( "T.Weis", profile, parent)
+Settings::Settings(const QString& filename, QObject* parent)
+        : QSettings(filename, QSettings::NativeFormat, parent)
 {
 }
 
 Settings* Settings::settings()
 {
     if ( !s_settings )
-        s_settings = new Settings( "QWaveServer" );
+        s_settings = new Settings( "./waveserver.conf" );
     return s_settings;
 }
 
@@ -35,13 +35,69 @@ QString Settings::domain() const
     return value("domain", QVariant("localhost") ).toString();
 }
 
-void Settings::setPort( int port )
+void Settings::setClientPort( int port )
 {
-    setValue( "serverPort", QVariant( port ) );
+    setValue( "clientPort", QVariant( port ) );
 }
 
-int Settings::port() const
+int Settings::clientPort() const
 {
-    return value("serverPort", QVariant((int)9876) ).toInt();
+    return value("clientPort", QVariant((int)9876) ).toInt();
+}
+
+void Settings::setXmppComponentPort( int port )
+{
+    setValue( "xmppComponentPort", QVariant( port ) );
+}
+
+int Settings::xmppComponentPort() const
+{
+    return value("xmppComponentPort", QVariant((int)5275) ).toInt();
+}
+
+void Settings::setXmppServerName( const QString& domain )
+{
+    setValue( "xmppServerName", QVariant( domain ) );
+}
+
+QString Settings::xmppServerName() const
+{
+    QString name = value("xmppServerName", QVariant("localhost") ).toString();
+    if ( name.isEmpty() )
+        return xmppComponentName();
+    return name;
+}
+
+void Settings::setXmppComponentSecret( const QString& secret )
+{
+    setValue( "xmppComponentSecret", QVariant( secret ) );
+}
+
+QString Settings::xmppComponentSecret() const
+{
+    return value("xmppComponentSecret", QVariant("") ).toString();
+}
+
+void Settings::setXmppComponentName( const QString& name )
+{
+    setValue( "xmppComponentName", QVariant( name ) );
+}
+
+QString Settings::xmppComponentName() const
+{
+    QString name = value("xmppComponentName", QVariant("") ).toString();
+    if ( name.isEmpty() )
+        return "wave." + domain();
+    return name;
+}
+
+bool Settings::federationEnabled() const
+{
+    return value("federationEnabled", QVariant(false) ).toBool();
+}
+
+void Settings::setFederationEabled( bool enabled )
+{
+    setValue( "federationEnabled", QVariant( enabled ) );
 }
 

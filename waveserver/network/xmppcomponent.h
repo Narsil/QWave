@@ -23,17 +23,17 @@ class XmppComponentConnection : public QObject
 {
     Q_OBJECT
 public:
-    XmppComponentConnection(const QString& domain, const QString& secret, const QString& host, int port, QObject* parent = 0);
+    XmppComponentConnection(QObject* parent = 0);
     ~XmppComponentConnection();
 
     /**
       * Something like "mycompany.com".
       */
-    QString domain() const { return m_domain; }
+    QString domain() const;
     /**
       * Something like "wave.mycompany.com".
       */
-    QString host() const { return m_host; }
+    QString host() const;
     bool isConnected() const { return m_connected; }
 
     XmppVirtualConnection* virtualConnection( const QString& domain, bool resolve = true );
@@ -73,9 +73,6 @@ private:
     QTcpSocket* m_socket;
     QXmlStreamReader m_reader;
     QTextStream* m_writer;
-    QString m_domain;
-    QString m_secret;
-    QString m_host;
     QString m_streamId;
     QHash<QString,XmppVirtualConnection*> m_virtualConnections;
     int m_idCount;

@@ -1,5 +1,6 @@
 #include <QCoreApplication>
 #include "network/serversocket.h"
+#include "network/xmppcomponent.h"
 #include "app/settings.h"
 #include "persistence/commitlog.h"
 
@@ -8,10 +9,43 @@ int main(int argc, char *argv[])
     QCoreApplication a(argc, argv);
 
     // Get the settings
-    QString profile = "QWaveServer";
+    QString profile = "./waveserver.conf";
     if ( argc == 2 )
         profile = QString(argv[1]);
     Settings settings( profile );
+
+    if ( Settings::settings()->federationEnabled() )
+    {
+        // Check that XMPP parameters are set correctly
+        if ( Settings::settings()->xmppComponentPort() == 0 )
+        {
+            qDebug("You must specify a xmpp component port.");
+            return 2;
+        }
+        if ( Settings::settings()->xmppServerName().isEmpty() )
+        {
+            qDebug("You must specify a xmpp server name.");
+            return 2;
+        }
+        if ( Settings::settings()->domain().isEmpty() )
+        {
+            qDebug("You must specify a domain name.");
+            return 2;
+        }
+        if ( Settings::settings()->xmppComponentName().isEmpty() )
+        {
+            qDebug("You must specify a xmpp component name.");
+            return 2;
+        }
+        if ( Settings::settings()->xmppComponentSecret().isEmpty() )
+        {
+            qDebug("You must specify a xmpp component secret.");
+            return 2;
+        }
+
+        // Connect to the XMPP component
+        new XmppComponentConnection( &a );
+    }
 
     // Recover by reading the commit log
     bool ok = CommitLog::commitLog()->applyAll();
