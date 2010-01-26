@@ -67,11 +67,9 @@ SOURCES += app/main.cpp \
     gadgets/extensionmanifest.cpp \
     view/inboxbuttonview.cpp \
     ../core/model/waveurl.cpp \
-    view/insertgadgetdialog.cpp
-unix:SOURCES += ../core/protocol/waveclient-rpc.pb.cc \
+    view/insertgadgetdialog.cpp \
+	../core/protocol/waveclient-rpc.pb.cc \
     ../core/protocol/common.pb.cc
-win32:SOURCES += ../core/winprotobuf/protocol/waveclient-rpc.pb.cc \
-    ../core/winprotobuf/protocol/common.pb.cc
 HEADERS += app/mainwindow.h \
     model/wavelet.h \
     model/wave.h \
@@ -126,22 +124,16 @@ HEADERS += app/mainwindow.h \
     gadgets/extensionmanifest.h \
     view/inboxbuttonview.h \
     ../core/model/waveurl.h \
-    view/insertgadgetdialog.h 
-unix:HEADERS += ../core/protocol/waveclient-rpc.pb.h \
+    view/insertgadgetdialog.h \
+	../core/protocol/waveclient-rpc.pb.h \
     ../core/protocol/common.pb.h
-win32:HEADERS += ../core/winprotobuf/protocol/waveclient-rpc.pb.h \
-    ../core/winprotobuf/protocol/common.pb.h
 FORMS += app/mainwindow.ui \
     app/serversettingsdialog.ui
 unix:LIBS += -lprotobuf
-win32:INCLUDEPATH = ../core/winprotobuf/include \
-    ../core/winprotobuf/protocol
-unix:INCLUDEPATH = protocol
-INCLUDEPATH+= ../core/ ../core/protocol
+INCLUDEPATH+= ../core/ ../core/protocol/ 
 debug:
 release { 
     win32:LIBS += MSVCPRT.LIB \
         msvcrt.lib
-    win32:LIBS += winprotobuf/lib/release/libprotobuf.lib
 }
 OTHER_FILES += javascript/gadget.js
