@@ -133,12 +133,15 @@ Blip* Blip::createFollowUpBlip(const QString& text)
     QString rand;
     rand.setNum( qrand() );
 
+    wavelet()->processor()->setSuspendSending(true);
+
     DocumentMutation m2;
     QHash<QString,QString> map;
-    map["name"] = environment()->localUser()->address();
-    m2.insertStart("contributor", map);
-    m2.insertEnd();
-    map.clear();
+    // WaveSandBox crashes when this is enabled
+    // map["name"] = environment()->localUser()->address();
+    //    m2.insertStart("contributor", map);
+    //    m2.insertEnd();
+    // map.clear();
     m2.insertStart("body", map);
     m2.insertStart("line", map);
     m2.insertEnd();
@@ -156,6 +159,8 @@ Blip* Blip::createFollowUpBlip(const QString& text)
     m1.retain( wavelet()->document()->count() - m_convEndIndex - 1 );
     wavelet()->processor()->handleSend( m1, "conversation" );
 
+    wavelet()->processor()->setSuspendSending(false);
+
     Blip* b = 0;
     if ( isRootBlip() )
         b = wavelet()->rootBlip("b+" + rand);
@@ -172,12 +177,15 @@ Blip* Blip::createReplyBlip(const QString& text)
     QString rand2;
     rand2.setNum( qrand() );
 
+    wavelet()->processor()->setSuspendSending(true);
+
     DocumentMutation m2;
     QHash<QString,QString> map;
-    map["name"] = environment()->localUser()->address();
-    m2.insertStart("contributor", map);
-    m2.insertEnd();
-    map.clear();
+    // WaveSandBox crashes when this is enabled
+    // map["name"] = environment()->localUser()->address();
+    // m2.insertStart("contributor", map);
+    // m2.insertEnd();
+    // map.clear();
     m2.insertStart("body", map);
     m2.insertStart("line", map);
     m2.insertEnd();
@@ -198,6 +206,8 @@ Blip* Blip::createReplyBlip(const QString& text)
     m1.insertEnd();
     m1.retain( wavelet()->document()->count() - m_convStartIndex - 1 );
     wavelet()->processor()->handleSend( m1, "conversation" );
+
+    wavelet()->processor()->setSuspendSending(false);
 
     BlipThread* t = thread( "t+" + rand2 );
     Q_ASSERT(t);
