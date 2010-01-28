@@ -259,7 +259,7 @@ QList<ClientConnection*> ClientConnection::connectionsByParticipant( const QStri
     if ( s_connectionsByParticipant )
     {
         QMultiHash<QString,ClientConnection*>::iterator it = s_connectionsByParticipant->find( participant );
-        for( ; it != s_connectionsByParticipant->end(); ++it )
+        for( ; it != s_connectionsByParticipant->end() && it.key() == participant; ++it )
             result.append(*it);
     }
     return result;
