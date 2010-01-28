@@ -28,8 +28,7 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
     indexDelta.setAuthor( "digest-author" );
     indexDelta.version().version = 0;
 
-    QSet<QString> participants( m_participants );
-    bool textChanged = false;
+//    QSet<QString> participants( m_participants );
 
     // This is a delta from the future? -> error
     if ( delta.version().version > m_version )
@@ -102,6 +101,8 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
         }
     }
 
+    QSet<QString> newParticipants;
+
     // TODO: Rollback if something went wrong, or report that only a subset of ops succeeded
 
     for( QList<WaveletDeltaOperation>::const_iterator it = clientDelta.operations().begin(); it != clientDelta.operations().end(); it++ )
@@ -124,13 +125,19 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
                 return 0;
             }
             // Remember that the digest will need an update
-            textChanged = true;
         }
         if ( (*it).hasAddParticipant() )
         {
-            m_participants.insert( (*it).addParticipant() );
-            // Add the wavelet to the participant
-            Participant::participant( (*it).addParticipant(), true )->addWavelet(this);
+            if ( !m_participants.contains( (*it).addParticipant() ) )
+            {
+                QString p = (*it).addParticipant();
+                m_participants.insert( p );
+                // Add the wavelet to the participant (and  make sure that such a participant exists.
+                // TODO: Error if we know that this participant is not known?
+                Participant::participant( p, true )->addWavelet(this);
+                // Send the new participant an index wave entry
+                newParticipants.insert( p );
+            }
             // The digest needs an update
             WaveletDeltaOperation op;
             op.setAddParticipant( (*it).addParticipant() );
@@ -170,25 +177,33 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
             c->sendWaveletUpdate( this, deltas, m_version, m_hash );
     }
 
-    // If some text changed, we need to send out a new digest
-    if ( textChanged )
-    {
-        DocumentMutation m;
-        if ( !m_lastDigest.isEmpty() )
-            m.deleteChars( m_lastDigest );
-        m_lastDigest = digest();
-        m.insertChars( m_lastDigest );
-        WaveletDeltaOperation op;
-        op.setMutation(m);
-        indexDelta.addOperation(op);
-    }
+    // Prepare a digest update
+    DocumentMutation m;
+    if ( !m_lastDigest.isEmpty() )
+        m.deleteChars( m_lastDigest );
+    m_lastDigest = digest();
+    m.insertChars( m_lastDigest );
+    WaveletDeltaOperation op;
+    op.setMutation(m);
+    indexDelta.addOperation(op);
 
     // Send the index delta to all connected participants
     foreach( QString p, m_participants )
     {
-        foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
+        if ( newParticipants.contains(p) )
         {
-            c->sendIndexUpdate(this, indexDelta);
+            WaveletDelta digest = initialDigest();
+            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
+            {
+                c->sendIndexUpdate(this, digest);
+            }
+        }
+        else
+        {
+            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
+            {
+                c->sendIndexUpdate(this, indexDelta);
+            }
         }
     }
 
