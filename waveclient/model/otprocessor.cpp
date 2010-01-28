@@ -46,6 +46,7 @@ void OTProcessor::setResultingHash(int version, const QByteArray& hash)
 
 void OTProcessor::submitNext()
 {
+    // TODO: This is a strange way of handling offline scenarios
     if ( !m_environment->networkAdapter()->isOnline() )
         return;
     Q_ASSERT( !m_submitPending );
@@ -70,13 +71,14 @@ void OTProcessor::handleSendAddParticipant( Participant* p )
     handleSend(delta);
 }
 
-void OTProcessor::handleSendRemoveParticipant(const QString& address){
-	Q_ASSERT(m_wavelet !=0);
-	WaveletDelta delta;
-	WaveletDeltaOperation op;
-	op.setRemoveParticipant(address);
-	delta.addOperation(op);
-	handleSend(delta);
+void OTProcessor::handleSendRemoveParticipant(const QString& address)
+{
+    Q_ASSERT(m_wavelet !=0);
+    WaveletDelta delta;
+    WaveletDeltaOperation op;
+    op.setRemoveParticipant(address);
+    delta.addOperation(op);
+    handleSend(delta);
 }
 
 void OTProcessor::handleSend( const DocumentMutation& mutation, const QString& documentId )
@@ -110,7 +112,7 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
     m_clientMsgCount++;
 
     // Send it to the server via the network
-    if ( !m_submitPending )
+    if ( !m_submitPending && !m_suspendSending )
         submitNext();
     else if(m_gatherDeltas)
     	gatherOutgoingDeltas();
@@ -118,10 +120,13 @@ void OTProcessor::handleSend( WaveletDelta& outgoing )
 
 void OTProcessor::gatherOutgoingDeltas()
 {
+    // Nothing to gather here
+    if (m_outgoingDeltas.size() <= 1 )
+        return;
     // First element is waiting for acknowledgment so
     // we gather the two last deltas. The number of deltas should not
     // go above 3 as when a third delta is given it is automatically gathered
-    if (m_outgoingDeltas.size()<=2)
+    if (m_outgoingDeltas.size() <= 2 && m_submitPending )
         return;
     else if (m_outgoingDeltas.size()>3)
         qDebug("Ooops we shouldn't have accumulated more than 3 deltas");

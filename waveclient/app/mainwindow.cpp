@@ -53,6 +53,8 @@ void MainWindow::newWave()
     m_environment->inbox()->addWave(wave);
     Wavelet* wavelet = wave->wavelet();
 
+    wavelet->processor()->setSuspendSending(true);
+
     // Tell the server about the new wave
     // TODO: This is not final and ugly
     wavelet->processor()->handleSendAddParticipant(m_environment->localUser());
@@ -61,26 +63,30 @@ void MainWindow::newWave()
     // m_environment->networkAdapter()->sendAddParticipant(wavelet, m_environment->localUser());
 
     //StructuredDocument* doc = wavelet->document();
+
+    DocumentMutation m2;
+    QHash<QString,QString> map;
+    // WaveSandBox crashes when this is enabled
+    // map["name"] = m_environment->localUser()->address();
+    // m2.insertStart("contributor", map);
+    // m2.insertEnd();
+    // map.clear();
+    m2.insertStart("body", map);
+    m2.insertStart("line", map);
+    m2.insertEnd();
+    m2.insertEnd();
+    wavelet->processor()->handleSend( m2, "b+b1" );
+
     DocumentMutation m1;
     m1.insertStart("conversation");
-    QHash<QString,QString> map;
+    map.clear();
     map["id"] = "b+b1";
     m1.insertStart("blip", map);
     m1.insertEnd();
     m1.insertEnd();
     wavelet->processor()->handleSend( m1, "conversation" );
 
-    DocumentMutation m2;
-    map.clear();
-    map["name"] = m_environment->localUser()->address();
-    m2.insertStart("contributor", map);
-    m2.insertEnd();
-    map.clear();
-    m2.insertStart("body", map);
-    m2.insertStart("line", map);
-    m2.insertEnd();
-    m2.insertEnd();
-    wavelet->processor()->handleSend( m2, "b+b1" );
+    wavelet->processor()->setSuspendSending(false);
 
     m_inboxView->select(wave);
 }
@@ -96,6 +102,8 @@ void MainWindow::newWave(Participant* p)
     m_environment->inbox()->addWave(wave);
     Wavelet* wavelet = wave->wavelet();
 
+    wavelet->processor()->setSuspendSending(true);
+
     // Tell the server about the new wave
     wavelet->processor()->handleSendAddParticipant(m_environment->localUser());
     wavelet->processor()->handleSendAddParticipant(p);
@@ -110,16 +118,19 @@ void MainWindow::newWave(Participant* p)
     wavelet->processor()->handleSend( m1, "conversation" );
 
     DocumentMutation m2;
-    map.clear();
-    map["name"] = m_environment->localUser()->address();
-    m2.insertStart("contributor", map);
-    m2.insertEnd();
+    // WaveSandBox crashes when this is enabled
+    // map.clear();
+    // map["name"] = m_environment->localUser()->address();
+    // m2.insertStart("contributor", map);
+    // m2.insertEnd();
     map.clear();
     m2.insertStart("body", map);
     m2.insertStart("line", map);
     m2.insertEnd();
     m2.insertEnd();
     wavelet->processor()->handleSend( m2, "b+b1" );
+
+    wavelet->processor()->setSuspendSending(false);
 
     m_inboxView->select(wave);
 }
