@@ -2,6 +2,7 @@
 #define XmppComponentConnection_H
 
 #include "xmppstanza.h"
+#include "network/servercertificate.h"
 
 #include <QObject>
 #include <QString>
@@ -61,6 +62,8 @@ public:
       */
     QString nextId();
 
+    const ServerCertificate& certificate() const { return m_certificate; }
+
     /**
       * @return null if no XMPP is configured.
       */
@@ -93,6 +96,7 @@ private:
     int m_idCount;
     QQueue<QString> m_stanzaQueue;    
     XmppTag* m_currentTag;
+    ServerCertificate m_certificate;
 
     static XmppComponentConnection* s_connection;
 };

@@ -28,7 +28,8 @@ SOURCES += main.cpp \
     persistence/commitlog.cpp \
     app/settings.cpp \
     protocol/commitlog.pb.cc \
-    model/jid.cpp
+    model/jid.cpp \
+    network/servercertificate.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -50,7 +51,8 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     persistence/commitlog.h \
     app/settings.h \
     protocol/commitlog.pb.h \
-    model/jid.h
+    model/jid.h \
+    network/servercertificate.h
 unix:LIBS += -lprotobuf
 INCLUDEPATH += ./ \
     ../ \

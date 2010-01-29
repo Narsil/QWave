@@ -491,7 +491,8 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
     signedDelta->set_delta( ba.constData(), ba.length() );
     protocol::ProtocolSignature* signature = signedDelta->add_signature();
     signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
-    signature->set_signer_id( "This is a fake" );
+    QByteArray signerInfo = m_connection->certificate().signerInfo();
+    signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
     signature->set_signature_bytes( "This is a fake" );
 
     QByteArray ba2;

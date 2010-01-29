@@ -101,3 +101,12 @@ void Settings::setFederationEabled( bool enabled )
     setValue( "federationEnabled", QVariant( enabled ) );
 }
 
+QString Settings::certificateFile() const
+{
+    return value("certificateFile", QVariant("waveserver.crt") ).toString();
+}
+
+void Settings::setCertificateFile( const QString& file )
+{
+    setValue( "certificateFile", QVariant( file ) );
+}
