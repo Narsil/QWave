@@ -1,14 +1,24 @@
 #include "xmppcomponent.h"
 #include "app/settings.h"
+#include "model/waveletdelta.h"
+#include "network/converter.h"
+#include "protocol/common.pb.h"
+#include "protocol/waveclient-rpc.pb.h"
+
 #include <QByteArray>
 #include <QXmlStreamAttributes>
 #include <QXmlStreamWriter>
 #include <QCryptographicHash>
 #include <QtGlobal>
+#include <QDateTime>
+
+XmppComponentConnection* XmppComponentConnection::s_connection = 0;
 
 XmppComponentConnection::XmppComponentConnection(QObject* parent)
         : QObject(parent), m_state( Init ), m_connected(false), m_writer(0), m_idCount(0), m_currentTag(0)
 {
+    s_connection = this;
+
     m_socket = new QTcpSocket(this);
 
     bool ok = connect( m_socket, SIGNAL(connected()), SLOT(start()));
@@ -68,7 +78,7 @@ void XmppComponentConnection::start()
     qDebug("Connected");
     m_writer = new QTextStream(m_socket);
     m_writer->setCodec("UTF-8");
-    QString stream = "<stream:stream xmlns=\"jabber:component:accept\" xmlns:stream=\"http://etherx.jabber.org/streams\" to=\"" + domain() + "\">";
+    QString stream = "<stream:stream xmlns=\"jabber:component:accept\" xmlns:stream=\"http://etherx.jabber.org/streams\" to=\"" + Settings::settings()->xmppComponentName() + "\">";
     qDebug("msg>>> %s", stream.toAscii().constData() );
     (*m_writer) << stream;
     m_writer->flush();
@@ -308,7 +318,7 @@ XmppVirtualConnection::XmppVirtualConnection( XmppComponentConnection* connectio
             writer.writeAttribute("type", "get" );
             writer.writeAttribute("id", m_connection->nextId() );
             writer.writeAttribute("to", m_domain );
-            writer.writeAttribute("from", m_connection->domain() );
+            writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
             writer.writeStartElement("query");
             writer.writeAttribute("xmlns", "http://jabber.org/protocol/disco#items" );
             writer.writeEndElement();
@@ -364,11 +374,12 @@ void XmppVirtualConnection::process( const XmppStanza& stanza )
                                     XmppVirtualConnection* con = m_connection->renameVirtualConnection( this, m_domain, waveHost );
                                     if ( con != this )
                                     {
+                                        // TODO: Can  this happen at all?
                                         // Forward all
                                         while( !m_stanzaQueue.isEmpty() )
                                         {
                                             XmppStanza* stanza = m_stanzaQueue.dequeue();
-                                            (*stanza)["to"] = waveHost;
+                                            stanza->setAttribute("to", waveHost);
                                             con->send( stanza );
                                         }
                                         m_state = Delete;
@@ -383,7 +394,7 @@ void XmppVirtualConnection::process( const XmppStanza& stanza )
                                         writer.writeAttribute("type", "get" );
                                         writer.writeAttribute("id", m_connection->nextId() );
                                         writer.writeAttribute("to", waveHost );
-                                        writer.writeAttribute("from", m_connection->domain() );
+                                        writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
                                         writer.writeStartElement("query");
                                         writer.writeAttribute("xmlns", "http://jabber.org/protocol/disco#info" );
                                         writer.writeEndElement();
@@ -408,8 +419,16 @@ void XmppVirtualConnection::process( const XmppStanza& stanza )
                             XmppTag* ident = query->child("identity");
                             if ( ident && (*ident)["type"] == "google-wave" )
                             {
-                                m_state = DiscoItems;
+                                m_state = Established;
                                 qDebug("Found a wave server");
+
+                                // Forward all queued messages
+                                while( !m_stanzaQueue.isEmpty() )
+                                {
+                                    XmppStanza* stanza = m_stanzaQueue.dequeue();
+                                    stanza->setAttribute("to", m_domain);
+                                    send( stanza );
+                                }
                             }
                         }
 
@@ -438,6 +457,12 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
 
 void XmppVirtualConnection::processMessage( const XmppStanza& stanza )
 {
+    if ( stanza["type"] == "error" )
+    {
+        xmppError();
+        return;
+    }
+
     // TODO
 }
 
@@ -447,32 +472,59 @@ void XmppVirtualConnection::xmppError()
     m_state = Error;
 }
 
-void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const QByteArray& data)
+void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const WaveletDelta& waveletDelta)
 {
+    protocol::ProtocolWaveletDelta delta;
+    Converter::convert( &delta, waveletDelta);
+    QByteArray ba;
+    ba.resize( delta.ByteSize() );
+    delta.SerializeToArray( ba.data(), ba.count() );
+
+    protocol::ProtocolAppliedWaveletDelta appliedDelta;
+    appliedDelta.set_operations_applied( waveletDelta.operations().count() );
+    appliedDelta.set_application_timestamp( QDateTime::currentDateTime().toTime_t() );
+    protocol::ProtocolHashedVersion* hashed = appliedDelta.mutable_hashed_version_applied_at();
+    hashed->set_version( waveletDelta.version().version );
+    QByteArray hash = waveletDelta.version().hash;
+    hashed->set_history_hash( hash.constData(), hash.length() );
+    protocol::ProtocolSignedDelta* signedDelta = appliedDelta.mutable_signed_original_delta();
+    signedDelta->set_delta( ba.constData(), ba.length() );
+    protocol::ProtocolSignature* signature = signedDelta->add_signature();
+    signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
+    signature->set_signer_id( "This is a fake" );
+    signature->set_signature_bytes( "This is a fake" );
+
+    QByteArray ba2;
+    ba2.resize( appliedDelta.ByteSize() );
+    appliedDelta.SerializeToArray( ba2.data(), ba2.count() );
+
+    QByteArray base64 = ba2.toBase64();
+    QString str64 = QString::fromAscii( base64.constData(), base64.length() );
+
     if ( m_state != Established )
     {
         XmppStanza* stanza = new XmppStanza("message");
-        (*stanza)["type"] = "normal";
-        (*stanza)["id"] = m_connection->nextId();
-        (*stanza)["from"] = m_connection->domain();
-        (*stanza)["to"] = m_domain;
+        stanza->setAttribute("type", "normal");
+        stanza->setAttribute("id", m_connection->nextId());
+        stanza->setAttribute("from", Settings::settings()->xmppComponentName());
+//        stanza->setAttribute("to", m_domain);
         XmppTag* request = new XmppTag( "request", XmppTag::Element );
         stanza->add(request);
-        (*request)["xmlns"] = "urn:xmpp:receipts";
+        request->setAttribute("xmlns", "urn:xmpp:receipts");
         XmppTag* event = new XmppTag( "event", XmppTag::Element );
         stanza->add(event);
-        (*event)["xmlns"] = "http://jabber.org/protocol/pubsub#event";
+        event->setAttribute("xmlns", "http://jabber.org/protocol/pubsub#event");
         XmppTag* items = new XmppTag( "items", XmppTag::Element );
         event->add(items);
         XmppTag* item = new XmppTag( "item", XmppTag::Element );
         items->add(item);
         XmppTag* update = new XmppTag( "wavelet-update", XmppTag::Element );
         item->add(update);
-        (*update)["xmlns"] = "http://waveprotocol.org/protocol/0.2/waveserver";
-        (*update)["wavelet-name"] = waveletName;
+        update->setAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver");
+        update->setAttribute("wavelet-name", waveletName);
         XmppTag* delta = new XmppTag( "applied-delta", XmppTag::Element );
         update->add(delta);
-        XmppTag* cdata = new XmppTag( QString::fromAscii( data.toBase64() ), XmppTag::CData );
+        XmppTag* cdata = new XmppTag( str64, XmppTag::CData );
         delta->add(cdata);
 
         send( stanza );
@@ -487,7 +539,7 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
             writer.writeAttribute("type", "normal" );
             writer.writeAttribute("id", m_connection->nextId() );
             writer.writeAttribute("to", m_domain );
-            writer.writeAttribute("from", m_connection->domain() );
+            writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
             writer.writeStartElement("request");
             writer.writeAttribute("xmlns", "urn:xmpp:receipts" );
             writer.writeEndElement();
@@ -499,7 +551,7 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
             writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
             writer.writeAttribute("wavelet-name", waveletName );
             writer.writeStartElement("applied-delta");
-            writer.writeCDATA( QString::fromAscii( data.toBase64() ) );
+            writer.writeCDATA( str64 );
             writer.writeEndElement();
             writer.writeEndElement();
             writer.writeEndElement();

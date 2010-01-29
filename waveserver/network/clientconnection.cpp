@@ -47,7 +47,7 @@ ClientConnection::ClientConnection(QTcpSocket* socket, ServerSocket* parent)
 ClientConnection::~ClientConnection()
 {
     if ( m_participant )
-        s_connectionsByParticipant->remove( m_participant->id(), this );
+        s_connectionsByParticipant->remove( m_participant->toString(), this );
     s_connectionsById->remove( m_id );
 }
 
@@ -63,21 +63,33 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
 
         // This is a chance of getting the client participant ID. A bit strange place, but well ...
         QString participantId = QString::fromStdString( open.participant_id() );
+        JID jid( participantId );
+        if ( !jid.isValid() )
+        {
+            qDebug("Malformed JID");
+            getOffline();
+            return;
+        }
+        if ( !jid.isLocal() )
+        {
+            qDebug("Not a local user");
+            getOffline();
+            return;
+        }
+
         // No participant or a different one than before? -> not allowed
-        if ( m_participant && m_participant->id() != participantId )
+        if ( m_participant && m_participant->toString() != participantId )
         {
             qDebug("Cannot change user for open connection");
             getOffline();
             return;
         }
 
-        // TODO: Check that this is a local participant
-
-        // This is the first time to encounter the ID of our client?
+        // This is the first time to encounter the JID of our client?
         if ( !m_participant )
         {
             m_participant = Participant::participant( participantId, true );
-            s_connectionsByParticipant->insert( m_participant->id(), this );
+            s_connectionsByParticipant->insert( m_participant->toString(), this );
         }
 
         QString waveId = QString::fromStdString( open.wave_id() );

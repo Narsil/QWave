@@ -34,6 +34,11 @@ QString XmppTag::operator[] ( const QString& qualifiedName ) const
     return m_attributes.value(qualifiedName).toString();
 }
 
+void XmppTag::setAttribute( const QString& qualifiedName, const QString& value )
+{
+    return m_attributes.append( qualifiedName, value );
+}
+
 void XmppTag::write( QXmlStreamWriter& writer ) const
 {
     switch( m_type )

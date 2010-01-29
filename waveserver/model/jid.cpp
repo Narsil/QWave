@@ -1,6 +1,12 @@
 #include "jid.h"
+#include "app/settings.h"
 
 JID::JID()
+{
+}
+
+JID::JID( const JID& jid )
+        : m_name(jid.m_name), m_domain(jid.m_domain)
 {
 }
 
@@ -24,4 +30,9 @@ QString JID::toString() const
     if ( isNull() )
         return QString::null;
     return m_name + "@" + m_domain;
+}
+
+bool JID::isLocal() const
+{
+    return ( m_domain == Settings::settings()->domain() );
 }

@@ -37,6 +37,7 @@ public:
     QXmlStreamAttributes& attributes() { return m_attributes; }
     const QXmlStreamAttributes& attributes() const { return m_attributes; }
     void setAttributes( const QXmlStreamAttributes& attributes ) { m_attributes = attributes; }
+    void setAttribute( const QString& qualifiedName, const QString& value );
     QString operator[] ( const QString& qualifiedName ) const;
     bool hasAttribute(const QString& qualifiedName ) const { return m_attributes.hasAttribute( qualifiedName ); }
 
