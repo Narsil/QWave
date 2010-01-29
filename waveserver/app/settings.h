@@ -56,6 +56,9 @@ public:
     bool federationEnabled() const;
     void setFederationEabled( bool enabled );
 
+    QString certificateFile() const;
+    void setCertificateFile( const QString& file );
+
 private:
     static Settings* s_settings;
 };
