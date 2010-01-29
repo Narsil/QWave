@@ -2,6 +2,7 @@
 #include "wave.h"
 #include "waveletdocument.h"
 #include "network/clientconnection.h"
+#include "network/xmppcomponent.h"
 #include "participant.h"
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
@@ -128,28 +129,50 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
         }
         if ( (*it).hasAddParticipant() )
         {
-            if ( !m_participants.contains( (*it).addParticipant() ) )
+            QString p = (*it).addParticipant();
+            JID jid(p);
+            // Is this a valid participant name?
+            if ( jid.isValid() )
             {
-                QString p = (*it).addParticipant();
-                m_participants.insert( p );
-                // Add the wavelet to the participant (and  make sure that such a participant exists.
-                // TODO: Error if we know that this participant is not known?
-                Participant::participant( p, true )->addWavelet(this);
-                // Send the new participant an index wave entry
-                newParticipants.insert( p );
+                if ( !m_participants.contains( p ) )
+                {
+                    m_participants.insert( p );
+                    // Add the wavelet to the participant (and  make sure that such a participant exists.
+                    // TODO: Error if we know that this participant is not known?
+                    Participant::participant( p, true )->addWavelet(this);
+                    // Send the new participant an index wave entry
+                    newParticipants.insert( p );
+
+                    // Is this a remote user?
+                    if ( !jid.isLocal() )
+                        subscribeRemote( jid );
+                }
+                // The digest needs an update
+                WaveletDeltaOperation op;
+                op.setAddParticipant( (*it).addParticipant() );
+                indexDelta.addOperation(op);
             }
-            // The digest needs an update
-            WaveletDeltaOperation op;
-            op.setAddParticipant( (*it).addParticipant() );
-            indexDelta.addOperation(op);
         }
         if ( (*it).hasRemoveParticipant() )
         {
-            m_participants.remove( (*it).removeParticipant() );
-            // Remove the wavelet from the participant
-            Participant* p = Participant::participant((*it).removeParticipant() );
-            if ( p )
-                p->removeWavelet(this);
+            QString p = (*it).removeParticipant();
+            JID jid(p);
+            // Is this a valid participant name?
+            if ( jid.isValid() )
+            {
+                if ( m_participants.contains( p ) )
+                {
+                    m_participants.remove( p );
+                    // Remove the wavelet from the participant
+                    Participant* pptr = Participant::participant( p, false );
+                    if ( pptr )
+                        pptr->removeWavelet(this);
+
+                    // Is it a remote user?
+                    if ( !jid.isLocal() )
+                        unsubscribeRemote( jid );
+                }
+            }
             // The digest needs an update
             WaveletDeltaOperation op;
             op.setRemoveParticipant( (*it).removeParticipant() );
@@ -167,7 +190,7 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
     QList<WaveletDelta> deltas;
     deltas.append( clientDelta );
 
-    // Send the delta to all subscribers
+    // Send the delta to all local subscribers
     foreach( QString cid, m_subscribers )
     {
         ClientConnection* c = ClientConnection::connectionById(cid);
@@ -175,6 +198,18 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
             m_subscribers.remove(cid);
         else
             c->sendWaveletUpdate( this, deltas, m_version, m_hash );
+    }    
+    // Send the delta to all remote subscribers
+    XmppComponentConnection* comcon = XmppComponentConnection::connection();
+    if ( comcon )
+    {
+        foreach( QString rid, m_remoteSubscribers.keys() )
+        {
+            XmppVirtualConnection* con = comcon->virtualConnection( rid );
+            if ( !con )
+                continue;
+            con->sendWaveletUpdate( url().toString(), delta );
+        }
     }
 
     // Prepare a digest update
@@ -187,9 +222,14 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
     op.setMutation(m);
     indexDelta.addOperation(op);
 
-    // Send the index delta to all connected participants
+    // Send the digest delta to all connected participants
     foreach( QString p, m_participants )
     {
+        // Digest deltas go only to local users
+        JID jid(p);
+        if ( !jid.isLocal() )
+            continue;
+        // A new participant? Send him an initial digest
         if ( newParticipants.contains(p) )
         {
             WaveletDelta digest = initialDigest();
@@ -198,6 +238,7 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
                 c->sendIndexUpdate(this, digest);
             }
         }
+        // An old participant -> send him a digest update
         else
         {
             foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
@@ -221,6 +262,26 @@ void Wavelet::subscribe( ClientConnection* connection )
 void Wavelet::unsubscribe( ClientConnection* connection )
 {
     m_subscribers.remove( connection->id() );
+}
+
+void Wavelet::subscribeRemote( const JID& remoteJid )
+{
+    if ( !m_remoteSubscribers.contains( remoteJid.domain() ) )
+        m_remoteSubscribers[ remoteJid.domain() ] = 1;
+    else
+        m_remoteSubscribers[ remoteJid.domain() ] = m_remoteSubscribers[ remoteJid.domain() ] + 1;
+}
+
+void Wavelet::unsubscribeRemote( const JID& remoteJid )
+{
+    if ( m_remoteSubscribers.contains( remoteJid.domain() ) )
+    {
+        int count = m_remoteSubscribers[ remoteJid.domain() ];
+        if ( count == 1 )
+            m_remoteSubscribers.remove( remoteJid.domain() );
+        else
+            m_remoteSubscribers[ remoteJid.domain() ] = m_remoteSubscribers[ remoteJid.domain() ] - 1;
+    }
 }
 
 QString Wavelet::firstRootBlipId() const

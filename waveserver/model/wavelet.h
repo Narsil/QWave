@@ -12,6 +12,7 @@
 class Wave;
 class WaveletDocument;
 class ClientConnection;
+class JID;
 
 class Wavelet
 {
@@ -44,6 +45,9 @@ public:
     void unsubscribe( ClientConnection* connection );
 
 private:
+    void subscribeRemote( const JID& remoteJid );
+    void unsubscribeRemote( const JID& remoteJid );
+
     Wave* m_wave;
     QString m_domain;
     QString m_id;
@@ -68,6 +72,11 @@ private:
       * A set of ClientConnection Ids.
       */
     QSet<QString> m_subscribers;
+    /**
+      * A set of all remote wave domains which need updates of this wave.
+      * The integer is the number of participants in this domain who are participating in this wave.
+      */
+    QHash<QString,int> m_remoteSubscribers;
     /**
       * The current digest text.
       */
