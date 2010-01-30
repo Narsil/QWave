@@ -20,6 +20,7 @@ private:
     QList<QSslCertificate> m_certificates;
     RSA* m_publicKey;
     RSA* m_privateKey;
+    QByteArray m_signerInfo;
 };
 
 #endif // SERVERCERTIFICATE_H

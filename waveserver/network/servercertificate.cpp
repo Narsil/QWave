@@ -12,7 +12,7 @@
 #include <openssl/sha.h>
 
 ServerCertificate::ServerCertificate()
-        : m_publicKey(0), m_privateKey(0)
+        : m_publicKey(0), m_privateKey(0), m_signerInfo( 32, 0 )
 {
     QFile file( Settings::settings()->certificateFile() );
     bool ok = file.open( QFile::ReadOnly );
@@ -72,6 +72,9 @@ ServerCertificate::~ServerCertificate()
 
 QByteArray ServerCertificate::signerInfo() const
 {
+    if ( !m_signerInfo.isNull() )
+        return m_signerInfo;
+
     int len = 0;
     // Get a sequence of DER encoded certificates
     QList<QByteArray> certs;
@@ -111,31 +114,9 @@ QByteArray ServerCertificate::signerInfo() const
         }
     }
 
-    QByteArray hash( 32, 0 );
-    SHA256( (const unsigned char*)seq.data(), seq.length(), (unsigned char*)hash.data() );
+    SHA256( (const unsigned char*)seq.data(), seq.length(), (unsigned char*)m_signerInfo.constData() );
 
-    return hash;
-//
-//    QByteArray ba = m_certificates[0].toDer();
-//
-//    int balen = ba.length();
-//    QByteArray fake( ba.length() + 4, 0 );
-//    unsigned char* ptr = (unsigned char*) fake.data();
-//    ptr[0] = 0b110000;
-//    ptr[1] = 0b10000010;
-//    ptr[2] = 0b11;
-//    ptr[3] = 0b10011101;
-//    for( int i = 0; i < ba.length(); ++i )
-//    {
-//        fake.data()[4 + i] = ba.data()[i];
-//    }
-//    int fakelen = fake.length();
-//    qDebug("Fakelen = %i", fakelen );
-
-//    QByteArray mist( 32, 0 );
-//    SHA256( (const unsigned char*)fake.data(), fake.length(), (unsigned char*)mist.data() );
-
-//    return mist;
+    return m_signerInfo;
 }
 
 QList<QByteArray> ServerCertificate::toBase64() const
