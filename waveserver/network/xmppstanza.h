@@ -5,6 +5,7 @@
 #include <QXmlStreamReader>
 #include <QXmlStreamAttributes>
 #include <QList>
+#include <QHash>
 #include <QSharedPointer>
 
 class XmppTag;
@@ -21,7 +22,7 @@ public:
     };
 
     XmppTag(TagType type, XmppTag* parent = 0 ) : m_parent(parent), m_type(type) { }
-    XmppTag(const QString& qualifiedName, const QXmlStreamAttributes& attribs, XmppTag* parent = 0 ) : m_parent(parent), m_type(Element), m_qualifiedName( qualifiedName ), m_attributes( attribs ) { }
+    XmppTag(const QString& qualifiedName, const QXmlStreamAttributes& attribs, XmppTag* parent = 0 );
     XmppTag(const QString& text, XmppTag* parent = 0) : m_parent(parent), m_type(Text), m_qualifiedName(text) { }
     XmppTag(const QString& text, TagType type, XmppTag* parent = 0) : m_parent(parent), m_type(type), m_qualifiedName(text) { }
 
@@ -34,12 +35,11 @@ public:
     QString qualifiedName() const { return m_qualifiedName; }
     void setQualifiedName( const QString& name ) { m_qualifiedName = name; }
 
-    QXmlStreamAttributes& attributes() { return m_attributes; }
-    const QXmlStreamAttributes& attributes() const { return m_attributes; }
-    void setAttributes( const QXmlStreamAttributes& attributes ) { m_attributes = attributes; }
+    QHash<QString,QString>& attributes() { return m_attributes; }
+    const QHash<QString,QString>& attributes() const { return m_attributes; }
     void setAttribute( const QString& qualifiedName, const QString& value );
     QString operator[] ( const QString& qualifiedName ) const;
-    bool hasAttribute(const QString& qualifiedName ) const { return m_attributes.hasAttribute( qualifiedName ); }
+    bool hasAttribute(const QString& qualifiedName ) const { return m_attributes.contains( qualifiedName ); }
 
     QList<XmppTagPtr>* children() { return &m_children; }
     const QList<XmppTagPtr>* children() const { return &m_children; }
@@ -59,7 +59,7 @@ private:
     XmppTag* m_parent;
     TagType m_type;
     QString m_qualifiedName;
-    QXmlStreamAttributes m_attributes;
+    QHash<QString,QString> m_attributes;
     QList<XmppTagPtr> m_children;
 };
 
@@ -69,9 +69,9 @@ public:
     XmppStanza( const QString& qualifiedName ) : XmppTag( qualifiedName, Element ) { }
     XmppStanza( const QString& qualifiedName, const QXmlStreamAttributes& attribs ) : XmppTag( qualifiedName, attribs ) { }
 
-    QString from() const { return attributes().value("from").toString(); }
-    QString to() const { return attributes().value("to").toString(); }
-    QString id() const { return attributes().value("id").toString(); }
+    QString from() const { return attributes()["from"]; }
+    QString to() const { return attributes()["to"]; }
+    QString id() const { return attributes()["id"]; }
 };
 
 

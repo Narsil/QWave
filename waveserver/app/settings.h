@@ -59,6 +59,9 @@ public:
     QString certificateFile() const;
     void setCertificateFile( const QString& file );
 
+    QString privateKeyFile() const;
+    void setPrivateKeyFile( const QString& file );
+
 private:
     static Settings* s_settings;
 };

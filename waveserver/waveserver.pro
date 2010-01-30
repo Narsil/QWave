@@ -53,7 +53,7 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     protocol/commitlog.pb.h \
     model/jid.h \
     network/servercertificate.h
-unix:LIBS += -lprotobuf
+unix:LIBS += -lprotobuf -lcrypto
 INCLUDEPATH += ./ \
     ../ \
     ../core/ \
