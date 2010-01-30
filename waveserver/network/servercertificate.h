@@ -3,17 +3,23 @@
 
 #include <QList>
 #include <QSslCertificate>
+#include <openssl/rsa.h>
 
 class ServerCertificate
 {
 public:
     ServerCertificate();
+    ~ServerCertificate();
 
     QByteArray signerInfo() const;
     QList<QByteArray> toBase64() const;
 
+    QByteArray sign( const QByteArray& data ) const;
+
 private:
     QList<QSslCertificate> m_certificates;
+    RSA* m_publicKey;
+    RSA* m_privateKey;
 };
 
 #endif // SERVERCERTIFICATE_H

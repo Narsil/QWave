@@ -1,4 +1,14 @@
 #include "xmppstanza.h"
+#include <QXmlStreamAttribute>
+
+XmppTag::XmppTag(const QString& qualifiedName, const QXmlStreamAttributes& attribs, XmppTag* parent )
+    : m_parent(parent), m_type(Element), m_qualifiedName( qualifiedName )
+{
+    foreach( QXmlStreamAttribute a, attribs )
+    {
+        m_attributes[ a.name().toString() ] = a.value().toString();
+    }
+}
 
 void XmppTag::add( const QString& text )
 {
@@ -31,12 +41,12 @@ QList<XmppTag*> XmppTag::children( const QString& qualifiedName ) const
 
 QString XmppTag::operator[] ( const QString& qualifiedName ) const
 {
-    return m_attributes.value(qualifiedName).toString();
+    return m_attributes.value(qualifiedName);
 }
 
 void XmppTag::setAttribute( const QString& qualifiedName, const QString& value )
 {
-    return m_attributes.append( qualifiedName, value );
+    m_attributes[ qualifiedName ] = value;
 }
 
 void XmppTag::write( QXmlStreamWriter& writer ) const
@@ -45,7 +55,10 @@ void XmppTag::write( QXmlStreamWriter& writer ) const
     {
         case Element:
             writer.writeStartElement( qualifiedName() );
-            writer.writeAttributes( m_attributes );
+            foreach( QString key, m_attributes.keys() )
+            {
+                writer.writeAttribute( key, m_attributes[key] );
+            }
             foreach( QSharedPointer<XmppTag> tag, m_children )
             {
                 tag->write( writer );

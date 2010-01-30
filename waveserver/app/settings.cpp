@@ -110,3 +110,14 @@ void Settings::setCertificateFile( const QString& file )
 {
     setValue( "certificateFile", QVariant( file ) );
 }
+
+QString Settings::privateKeyFile() const
+{
+    return value("privateKeyFile", QVariant("waveserver.key") ).toString();
+}
+
+void Settings::setPrivateKeyFile( const QString& file )
+{
+    setValue( "privateKeyFile", QVariant( file ) );
+}
+
