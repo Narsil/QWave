@@ -21,6 +21,7 @@ private:
     RSA* m_publicKey;
     RSA* m_privateKey;
     QByteArray m_signerInfo;
+    bool m_hasSignerInfo;
 };
 
 #endif // SERVERCERTIFICATE_H

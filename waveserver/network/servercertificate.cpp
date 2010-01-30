@@ -12,7 +12,7 @@
 #include <openssl/sha.h>
 
 ServerCertificate::ServerCertificate()
-        : m_publicKey(0), m_privateKey(0), m_signerInfo( 32, 0 )
+        : m_publicKey(0), m_privateKey(0), m_signerInfo( 32, 0 ), m_hasSignerInfo(false)
 {
     QFile file( Settings::settings()->certificateFile() );
     bool ok = file.open( QFile::ReadOnly );
@@ -72,7 +72,7 @@ ServerCertificate::~ServerCertificate()
 
 QByteArray ServerCertificate::signerInfo() const
 {
-    if ( !m_signerInfo.isNull() )
+    if ( m_hasSignerInfo )
         return m_signerInfo;
 
     int len = 0;
@@ -116,6 +116,7 @@ QByteArray ServerCertificate::signerInfo() const
 
     SHA256( (const unsigned char*)seq.data(), seq.length(), (unsigned char*)m_signerInfo.constData() );
 
+    ((ServerCertificate*)this)->m_hasSignerInfo = true;
     return m_signerInfo;
 }
 
