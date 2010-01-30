@@ -72,32 +72,70 @@ ServerCertificate::~ServerCertificate()
 
 QByteArray ServerCertificate::signerInfo() const
 {
-    // No idea what to do here
-    // return m_certificates[0].digest( QCryptographicHash::Sha1 ).toBase64();
-
-    QByteArray ba = m_certificates[0].toDer();
-
-    int balen = ba.length();
-    QByteArray fake( ba.length() + 4, 0 );
-    unsigned char* ptr = (unsigned char*) fake.data();
-    ptr[0] = 0b110000;
-    ptr[1] = 0b10000010;
-    ptr[2] = 0b11;
-    ptr[3] = 0b10011101;
-    for( int i = 0; i < ba.length(); ++i )
+    int len = 0;
+    // Get a sequence of DER encoded certificates
+    QList<QByteArray> certs;
+    foreach( QSslCertificate c, m_certificates )
     {
-        fake.data()[4 + i] = ba.data()[i];
+        QByteArray cba = c.toDer();
+        len += cba.length();
+        certs.append( cba );
     }
-    int fakelen = fake.length();
-    qDebug("Fakelen = %i", fakelen );
 
-    QByteArray mist( 32, 0 );
-    SHA256( (const unsigned char*)fake.data(), fake.length(), (unsigned char*)mist.data() );
+    Q_ASSERT( len < 0xFFFF );
 
-//    QByteArray mist = QCryptographicHash::hash( fake, QCryptographicHash::Sha1 );
-//    int len = mist.length();
-//    unsigned char* p = (unsigned char*)mist.data();
-    return mist;
+    // Construct an ASN.1 sequence of certificates
+    QByteArray seq( len + 3 + (len >= 256 ? 1 : 0), 0 );
+    unsigned char* ptr = (unsigned char*) seq.data();
+    ptr[0] = 0b110000;
+    int offset = 4;
+    if ( len < 256 )
+    {
+        ptr[1] = 0b10000001;
+        ptr[2] = len;
+        offset = 3;
+    }
+    else
+    {
+        ptr[1] = 0b10000010;
+        ptr[2] = (( len & 0xFF00 ) >> 8);
+        ptr[3] = ( len & 0xFF );
+    }
+    // Copy the certificates
+    for( int k = certs.length() - 1; k >= 0; --k )
+    {
+        QByteArray ba = certs[k];
+        for( int i = 0; i < ba.length(); ++i )
+        {
+            seq.data()[offset++] = ba.constData()[i];
+        }
+    }
+
+    QByteArray hash( 32, 0 );
+    SHA256( (const unsigned char*)seq.data(), seq.length(), (unsigned char*)hash.data() );
+
+    return hash;
+//
+//    QByteArray ba = m_certificates[0].toDer();
+//
+//    int balen = ba.length();
+//    QByteArray fake( ba.length() + 4, 0 );
+//    unsigned char* ptr = (unsigned char*) fake.data();
+//    ptr[0] = 0b110000;
+//    ptr[1] = 0b10000010;
+//    ptr[2] = 0b11;
+//    ptr[3] = 0b10011101;
+//    for( int i = 0; i < ba.length(); ++i )
+//    {
+//        fake.data()[4 + i] = ba.data()[i];
+//    }
+//    int fakelen = fake.length();
+//    qDebug("Fakelen = %i", fakelen );
+
+//    QByteArray mist( 32, 0 );
+//    SHA256( (const unsigned char*)fake.data(), fake.length(), (unsigned char*)mist.data() );
+
+//    return mist;
 }
 
 QList<QByteArray> ServerCertificate::toBase64() const
