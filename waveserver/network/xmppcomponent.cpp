@@ -7,6 +7,7 @@
 #include "protocol/common.pb.h"
 #include "protocol/waveclient-rpc.pb.h"
 #include "model/waveurl.h"
+#include "network/servercertificate.h"
 
 #include <QByteArray>
 #include <QXmlStreamAttributes>
@@ -612,7 +613,6 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                         const AppliedWaveletDelta& delta = wavelet->delta(v);
                         if ( !delta.isNull() )
                         {
-                            // QString str64 = appliedWaveletDeltaToBase64( delta );
                             QString str64 = delta.toBase64();
                             writer.writeStartElement("item");
                             writer.writeStartElement("applied-delta");
@@ -668,44 +668,8 @@ void XmppVirtualConnection::xmppError()
     m_state = Error;
 }
 
-//QString XmppVirtualConnection::appliedWaveletDeltaToBase64( const AppliedWaveletDelta& waveletDelta )
-//{
-//    protocol::ProtocolWaveletDelta delta;
-//    Converter::convert( &delta, waveletDelta.delta());
-//    QByteArray ba;
-//    ba.resize( delta.ByteSize() );
-//    delta.SerializeToArray( ba.data(), ba.count() );
-//
-//    protocol::ProtocolAppliedWaveletDelta appliedDelta;
-//    appliedDelta.set_operations_applied( waveletDelta.operationsApplied());
-//    appliedDelta.set_application_timestamp( waveletDelta.applicationTime() );
-//
-////    protocol::ProtocolHashedVersion* hashed = appliedDelta.mutable_hashed_version_applied_at();
-////    hashed->set_version( waveletDelta.delta().version().version );
-////    QByteArray hash = waveletDelta.delta().version().hash;
-////    hashed->set_history_hash( hash.constData(), hash.length() );
-//
-//    protocol::ProtocolSignedDelta* signedDelta = appliedDelta.mutable_signed_original_delta();
-//    signedDelta->set_delta( ba.constData(), ba.length() );
-//    protocol::ProtocolSignature* signature = signedDelta->add_signature();
-//    signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
-//    QByteArray signerInfo = ServerCertificate::certificate()->signerInfo();
-//    signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
-//    QByteArray sig = ServerCertificate::certificate()->sign(ba);
-//    signature->set_signature_bytes( sig.constData(), sig.length() );
-//
-//    QByteArray ba2;
-//    ba2.resize( appliedDelta.ByteSize() );
-//    appliedDelta.SerializeToArray( ba2.data(), ba2.count() );
-//
-//    QByteArray base64 = ba2.toBase64();
-//    QString str64 = QString::fromAscii( base64.constData(), base64.length() );
-//    return str64;
-//}
-
 void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const AppliedWaveletDelta& waveletDelta)
 {
-//    QString str64 = appliedWaveletDeltaToBase64( waveletDelta );
     QString str64 = waveletDelta.toBase64();
 
     if ( m_state != Established )
