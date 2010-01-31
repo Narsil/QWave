@@ -6,7 +6,6 @@
 #include "network/converter.h"
 #include "participant.h"
 #include "protocol/common.pb.h"
-#include <openssl/sha.h>
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
     : m_wave(wave), m_domain(waveletDomain), m_id(waveletId), m_version(0)
@@ -96,10 +95,6 @@ int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString
         clientDelta.version().version = m_version;
     }
 
-    // The binary version is required for hashing
-//    QByteArray binary( protobufDelta.ByteSize(), 0 );
-//    protobufDelta.SerializeToArray( binary.data(), binary.length() );
-
     // Track which participants are added by the delta
     QSet<QString> newParticipants;
 
@@ -188,63 +183,11 @@ int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString
     // This is a hack // QDateTime::currentDateTime().toTime_t()
     qint64 applicationTime = m_version;
 
-//    // Increase the version number
-//    int oldVersion = m_version;
-//    m_version += clientDelta.operations().count();
-//    // Compute the new hash
-//    binary.prepend( m_hash );
-//    QByteArray hashBuffer( 32, 0 );
-//    SHA256( (const unsigned char*)binary.constData(), binary.length(), (unsigned char*)hashBuffer.data() );
-//    // Copy over the first 20 bytes
-//    m_hash.resize(20);
-//    for( int i = 0; i < 20; ++i )
-//        m_hash.data()[i] = hashBuffer.data()[i];
-
     // Construct a AppliedWaveletDelta and sign int
     AppliedWaveletDelta appliedDelta( clientDelta, applicationTime, operationsApplied );
-//    appliedDelta.setApplicationTime( applicationTime );
-//    appliedDelta.setOperationsApplied( operationsApplied );
 
-//    QByteArray ba;
-//    ba.resize( protobufDelta.ByteSize() );
-//    protobufDelta.SerializeToArray( ba.data(), ba.count() );
-//
-//    protocol::ProtocolAppliedWaveletDelta protobufAppliedDelta;
-//    protobufAppliedDelta.set_operations_applied( operationsApplied );
-//    protobufAppliedDelta.set_application_timestamp( applicationTime );
-//
-////    protocol::ProtocolHashedVersion* hashed = appliedDelta.mutable_hashed_version_applied_at();
-////    hashed->set_version( waveletDelta.delta().version().version );
-////    QByteArray hash = waveletDelta.delta().version().hash;
-////    hashed->set_history_hash( hash.constData(), hash.length() );
-//
-//    protocol::ProtocolSignedDelta* signedDelta = protobufAppliedDelta.mutable_signed_original_delta();
-//    signedDelta->set_delta( ba.constData(), ba.length() );
-//    protocol::ProtocolSignature* signature = signedDelta->add_signature();
-//    signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
-//    QByteArray signerInfo = XmppComponentConnection::connection()->certificate().signerInfo();
-//    signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
-//    QByteArray sig = XmppComponentConnection::connection()->certificate().sign(ba);
-//    signature->set_signature_bytes( sig.constData(), sig.length() );
-//
-//    QByteArray ba2;
-//    ba2.resize( protobufAppliedDelta.ByteSize() );
-//    protobufAppliedDelta.SerializeToArray( ba2.data(), ba2.count() );
-
-    // Update the hashed version
     int oldVersion = m_version;
-//    m_version += operationsApplied;
-//    ba2.prepend( m_hash );
-//    QByteArray hashBuffer( 32, 0 );
-//    SHA256( (const unsigned char*)ba2.constData(), ba2.length(), (unsigned char*)hashBuffer.data() );
-//    // Copy over the first 20 bytes
-//    m_hash.resize(20);
-//    for( int i = 0; i < 20; ++i )
-//        m_hash.data()[i] = hashBuffer.data()[i];
-//
-//    appliedDelta.resultingVersion().hash = m_hash;
-//    appliedDelta.resultingVersion().version = m_version;
-
+    // Update the hashed version
     m_version = appliedDelta.resultingVersion().version;
     m_hash = appliedDelta.resultingVersion().hash;
 
