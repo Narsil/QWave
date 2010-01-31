@@ -5,3 +5,5 @@ xmppComponentSecret=PutYourSecretHere
 xmppComponentName=wave.mycompany.com
 xmppComponentPort=5275
 xmppServerName=wave.mycompany.com
+certificateFile=waveserver.crt
+privateKeyFile=waveserver.key

@@ -153,7 +153,6 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         CommitLog::commitLog()->write(update);
 
         QString waveletId = QString::fromStdString( update.wavelet_name() );
-        WaveletDelta delta = Converter::convert( update.delta() );
 
         WaveUrl url( waveletId );
         if ( url.isNull() )
@@ -162,6 +161,7 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
             return;
         }
 
+        // Find the wave
         Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == domain()) );
         if ( !wave )
         {
@@ -177,10 +177,13 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
             return;
         }
 
+        // Apply the delta
         QString err = "";
-        int ops = wavelet->receive(delta, &err );
+        int ops = wavelet->apply(update.delta(), &err );
         if ( err.isEmpty() )
             err = QString::null;
+
+        // Send a response
         sendSubmitResponse( ops, err );
     }
 }
@@ -194,30 +197,35 @@ void ClientConnection::sendSubmitResponse( qint32 operationsApplied, const QStri
 
     qDebug("SubmitResponse>> %s", response.DebugString().data());
 
-    std::ostringstream str;
-    response.SerializeToOstream(&str);
+    QByteArray buffer( response.ByteSize(), 0 );
+    response.SerializeToArray( buffer.data(), buffer.length() );
 
-    m_rpc->send("waveserver.ProtocolSubmitResponse", str.str().data(), str.str().length());
+    m_rpc->send("waveserver.ProtocolSubmitResponse", buffer.constData(), buffer.length());
 }
 
-void ClientConnection::sendWaveletUpdate( Wavelet* wavelet, const QList<WaveletDelta>& deltas, qint64 resultingVersion, const QByteArray& resultHash )
+void ClientConnection::sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedWaveletDelta>& deltas )
 {
+    // Do nothing if there is nothing to send
+    if ( deltas.count() == 0 )
+        return;
+
     waveserver::ProtocolWaveletUpdate update;
     update.set_wavelet_name( wavelet->url().toString().toStdString() );
-    update.mutable_resulting_version()->set_version( resultingVersion );
-    update.mutable_resulting_version()->set_history_hash( resultHash.constData(), resultHash.length() );
+    update.mutable_resulting_version()->set_version( deltas.last().resultingVersion().version );
+    QByteArray resultingHash = deltas.last().resultingVersion().hash;
+    update.mutable_resulting_version()->set_history_hash( resultingHash.constData(), resultingHash.length() );
     for( int i = 0; i < deltas.count(); ++i )
     {
         protocol::ProtocolWaveletDelta* delta = update.add_applied_delta();
-        Converter::convert( delta, deltas[i] );
+        Converter::convert( delta, deltas[i].delta() );
     }
 
     qDebug("WaveletUpdate>> %s", update.DebugString().data());
 
-    std::ostringstream str;
-    update.SerializeToOstream(&str);
+    QByteArray buffer( update.ByteSize(), 0 );
+    update.SerializeToArray( buffer.data(), buffer.length() );
 
-    m_rpc->send("waveserver.ProtocolWaveletUpdate", str.str().data(), str.str().length());
+    m_rpc->send("waveserver.ProtocolWaveletUpdate", buffer.constData(), buffer.length());
 }
 
 void ClientConnection::sendIndexUpdate(Wavelet* wavelet, const WaveletDelta& indexDelta)
@@ -242,10 +250,10 @@ void ClientConnection::sendIndexUpdate(Wavelet* wavelet, const WaveletDelta& ind
 
     qDebug("Index WaveletUpdate>> %s", update.DebugString().data());
 
-    std::ostringstream str;
-    update.SerializeToOstream(&str);
+    QByteArray buffer( update.ByteSize(), 0 );
+    update.SerializeToArray( buffer.data(), buffer.length() );
 
-    m_rpc->send("waveserver.ProtocolWaveletUpdate", str.str().data(), str.str().length());
+    m_rpc->send("waveserver.ProtocolWaveletUpdate",buffer.constData(), buffer.length());
 }
 
 void ClientConnection::getOffline()

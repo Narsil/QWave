@@ -1,3 +1,16 @@
+Trouble Shooting
+----------------
+
+If something went wrong and restarting the server does not help, delete commit.log, which
+stores a copy of all wavelet deltas.
+
+Do not forget to edit the waveserver.conf file.
+
+Turn federation off by changing "federationEnabled" to false in waveserver.conf.
+
+Federation
+----------
+
 To enable XMPP federation (currently not really working),
 copy the waveserver.conf.example file to waveserver.conf
 and edit it to match your settings.
@@ -6,8 +19,8 @@ Without the config file the property "federationEnabled" is false
 and no XMPP connection is created. Thus, the server works as
 a stand-alone wave server.
 
-To test federation, make sure that FedOne instances do not insist
-on checking certificates. This server does not yet support this.
+Make sure to put your certificate and private key file in the files
+mentioned in waveserver.conf.
 
 PLEASE NOTE: Federation is work in progress and COMPLETELY BROKEN.
 Use this federation stuff only if you want to participate in development.

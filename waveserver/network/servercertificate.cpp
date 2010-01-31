@@ -11,6 +11,8 @@
 #include <openssl/err.h>
 #include <openssl/sha.h>
 
+ServerCertificate* ServerCertificate::s_certificate = 0;
+
 ServerCertificate::ServerCertificate()
         : m_publicKey(0), m_privateKey(0), m_signerInfo( 32, 0 ), m_hasSignerInfo(false)
 {
@@ -147,4 +149,11 @@ QByteArray ServerCertificate::sign( const QByteArray& message ) const
     }
 
     return ba;
+}
+
+ServerCertificate* ServerCertificate::certificate()
+{
+    if ( s_certificate == 0 )
+        s_certificate = new ServerCertificate();
+    return s_certificate;
 }

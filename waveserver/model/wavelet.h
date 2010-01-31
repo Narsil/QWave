@@ -7,12 +7,18 @@
 #include <QSet>
 #include <QByteArray>
 #include "model/waveletdelta.h"
+#include "model/appliedwaveletdelta.h"
 #include "waveurl.h"
 
 class Wave;
 class WaveletDocument;
 class ClientConnection;
 class JID;
+
+namespace protocol
+{
+    class ProtocolWaveletDelta;
+}
 
 class Wavelet
 {
@@ -36,10 +42,14 @@ public:
     bool hasParticipant(const QString& jid) const;
     QSet<QString> participantIds() const { return m_participants; }
 
+    qint64 version() const { return m_version; }
+
+    const AppliedWaveletDelta& delta( int version ) { return m_deltas[version]; }
+
     /**
       * @return operations_applied.
       */
-    int receive( const WaveletDelta& delta, QString* errorMessage );
+    int apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage );
 
     void subscribe( ClientConnection* connection );
     void unsubscribe( ClientConnection* connection );
@@ -54,8 +64,10 @@ private:
     QHash<QString,WaveletDocument*> m_documents;
     /**
       * History of all transformed and applied deltas.
+      * The position in this array reflects the version number. Since one delta can span multiple versions
+      * it is possible that some entries in this list are 0.
       */
-    QList<WaveletDelta> m_deltas;
+    QList<AppliedWaveletDelta> m_deltas;
     /**
       * The latest version.
       */
