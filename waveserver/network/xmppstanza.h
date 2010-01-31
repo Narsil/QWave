@@ -37,6 +37,7 @@ public:
 
     QHash<QString,QString>& attributes() { return m_attributes; }
     const QHash<QString,QString>& attributes() const { return m_attributes; }
+    QString attribute( const QString& qualifiedName ) const { return m_attributes[qualifiedName]; }
     void setAttribute( const QString& qualifiedName, const QString& value );
     QString operator[] ( const QString& qualifiedName ) const;
     bool hasAttribute(const QString& qualifiedName ) const { return m_attributes.contains( qualifiedName ); }

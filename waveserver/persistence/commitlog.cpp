@@ -39,7 +39,7 @@ bool CommitLog::applyAll()
         // Read a delta from the commit log
         const waveserver::ProtocolSubmitRequest& request = lst.requests(i);
         QString waveletId = QString::fromStdString( request.wavelet_name() );
-        WaveletDelta delta = Converter::convert( request.delta() );
+        // WaveletDelta delta = Converter::convert( request.delta() );
 
         WaveUrl url( waveletId );
         if ( url.isNull() )
@@ -48,7 +48,7 @@ bool CommitLog::applyAll()
             return false;
         }
 
-        // Apply the delta
+        // Find the wave
         Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == Settings::settings()->domain()) );
         if ( !wave )
             continue;
@@ -58,8 +58,9 @@ bool CommitLog::applyAll()
         if ( !wavelet )
             continue;
 
+        // Apply the delta
         QString err = "";
-        wavelet->receive(delta, &err );
+        wavelet->apply(request.delta(), &err );
     }
 
     return true;

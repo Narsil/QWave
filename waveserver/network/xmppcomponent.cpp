@@ -1,9 +1,12 @@
 #include "xmppcomponent.h"
 #include "app/settings.h"
-#include "model/waveletdelta.h"
+#include "model/appliedwaveletdelta.h"
+#include "model/wavelet.h"
+#include "model/wave.h"
 #include "network/converter.h"
 #include "protocol/common.pb.h"
 #include "protocol/waveclient-rpc.pb.h"
+#include "model/waveurl.h"
 
 #include <QByteArray>
 #include <QXmlStreamAttributes>
@@ -530,7 +533,7 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                     writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
                     writer.writeAttribute("domain", Settings::settings()->domain() );
                     writer.writeAttribute("algorithm", "SHA256" );
-                    QList<QByteArray> certificates = m_connection->certificate().toBase64();
+                    QList<QByteArray> certificates = ServerCertificate::certificate()->toBase64();
                     foreach(QByteArray ba, certificates )
                     {
                         writer.writeStartElement("certificate");
@@ -541,6 +544,95 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                         writer.writeCDATA( lst.join("") );
                         writer.writeEndElement();
                     }
+                    writer.writeEndElement();
+                    writer.writeEndElement();
+                    writer.writeEndElement();
+                    writer.writeEndElement();
+                }
+                m_connection->send( sendStr );
+            }
+            else if ( items && (*items)["node"] == "wavelet" && items->child("delta-history") )
+            {
+                XmppTag* history = items->child("delta-history");
+                // TODO: Inspect the hashes that are being sent
+                bool ok = true;
+                qint64 start = history->attribute("start-version").toLong(&ok);
+                if ( !ok || start < 0)
+                {
+                    qDebug("start-version missing");
+                    xmppError();
+                    return;
+                }
+                qint64 end = history->attribute("end-version").toLong(&ok);
+                if ( !ok || end < 0 )
+                {
+                    qDebug("end-version missing");
+                    xmppError();
+                    return;
+                }
+                QString waveletName = history->attribute("wavelet-name");
+                WaveUrl url( waveletName );
+                if ( url.isNull() )
+                {
+                    qDebug("Malformed wavelet-name");
+                    xmppError();
+                    return;
+                }
+                Wave* wave = Wave::wave( url.waveDomain(), url.waveId() );
+                if ( !wave )
+                {
+                    qDebug("Unknown wave");
+                    xmppError();
+                    return;
+                }
+                Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId() );
+                if ( !wavelet )
+                {
+                    qDebug("Unknown wavelet");
+                    xmppError();
+                    return;
+                }
+
+                QString sendStr;
+                {
+                    QXmlStreamWriter writer( &sendStr );
+                    writer.writeStartElement("iq");
+                    writer.writeAttribute("type", "result" );
+                    writer.writeAttribute("id", stanza["id"] );
+                    writer.writeAttribute("to", m_domain );
+                    writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
+                    writer.writeStartElement("pubsub");
+                    writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
+                    writer.writeStartElement("items");
+
+                    end = qMin( wavelet->version(), end );
+                    start = qMin( wavelet->version(), start );
+                    for( qint64 v = start; v <= end; ++v )
+                    {
+                        const AppliedWaveletDelta& delta = wavelet->delta(v);
+                        if ( !delta.isNull() )
+                        {
+                            // QString str64 = appliedWaveletDeltaToBase64( delta );
+                            QString str64 = delta.toBase64();
+                            writer.writeStartElement("item");
+                            writer.writeStartElement("applied-delta");
+                            writer.writeCDATA( str64 );
+                            writer.writeEndElement();
+                            writer.writeEndElement();
+                        }
+                    }
+
+                    writer.writeStartElement("item");
+                    writer.writeStartElement("commit-notice");
+                    writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
+                    writer.writeAttribute("version", QString::number(wavelet->version()) );
+                    writer.writeEndElement();
+                    writer.writeEndElement();
+                    writer.writeStartElement("item");
+                    writer.writeStartElement("history-truncated");
+                    writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
+                    writer.writeAttribute("version", QString::number(end) );
+                    writer.writeEndElement();
                     writer.writeEndElement();
                     writer.writeEndElement();
                     writer.writeEndElement();
@@ -576,36 +668,45 @@ void XmppVirtualConnection::xmppError()
     m_state = Error;
 }
 
-void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const WaveletDelta& waveletDelta)
+//QString XmppVirtualConnection::appliedWaveletDeltaToBase64( const AppliedWaveletDelta& waveletDelta )
+//{
+//    protocol::ProtocolWaveletDelta delta;
+//    Converter::convert( &delta, waveletDelta.delta());
+//    QByteArray ba;
+//    ba.resize( delta.ByteSize() );
+//    delta.SerializeToArray( ba.data(), ba.count() );
+//
+//    protocol::ProtocolAppliedWaveletDelta appliedDelta;
+//    appliedDelta.set_operations_applied( waveletDelta.operationsApplied());
+//    appliedDelta.set_application_timestamp( waveletDelta.applicationTime() );
+//
+////    protocol::ProtocolHashedVersion* hashed = appliedDelta.mutable_hashed_version_applied_at();
+////    hashed->set_version( waveletDelta.delta().version().version );
+////    QByteArray hash = waveletDelta.delta().version().hash;
+////    hashed->set_history_hash( hash.constData(), hash.length() );
+//
+//    protocol::ProtocolSignedDelta* signedDelta = appliedDelta.mutable_signed_original_delta();
+//    signedDelta->set_delta( ba.constData(), ba.length() );
+//    protocol::ProtocolSignature* signature = signedDelta->add_signature();
+//    signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
+//    QByteArray signerInfo = ServerCertificate::certificate()->signerInfo();
+//    signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
+//    QByteArray sig = ServerCertificate::certificate()->sign(ba);
+//    signature->set_signature_bytes( sig.constData(), sig.length() );
+//
+//    QByteArray ba2;
+//    ba2.resize( appliedDelta.ByteSize() );
+//    appliedDelta.SerializeToArray( ba2.data(), ba2.count() );
+//
+//    QByteArray base64 = ba2.toBase64();
+//    QString str64 = QString::fromAscii( base64.constData(), base64.length() );
+//    return str64;
+//}
+
+void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const AppliedWaveletDelta& waveletDelta)
 {
-    protocol::ProtocolWaveletDelta delta;
-    Converter::convert( &delta, waveletDelta);
-    QByteArray ba;
-    ba.resize( delta.ByteSize() );
-    delta.SerializeToArray( ba.data(), ba.count() );
-
-    protocol::ProtocolAppliedWaveletDelta appliedDelta;
-    appliedDelta.set_operations_applied( waveletDelta.operations().count() );
-    appliedDelta.set_application_timestamp( QDateTime::currentDateTime().toTime_t() );
-    protocol::ProtocolHashedVersion* hashed = appliedDelta.mutable_hashed_version_applied_at();
-    hashed->set_version( waveletDelta.version().version );
-    QByteArray hash = waveletDelta.version().hash;
-    hashed->set_history_hash( hash.constData(), hash.length() );
-    protocol::ProtocolSignedDelta* signedDelta = appliedDelta.mutable_signed_original_delta();
-    signedDelta->set_delta( ba.constData(), ba.length() );
-    protocol::ProtocolSignature* signature = signedDelta->add_signature();
-    signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
-    QByteArray signerInfo = m_connection->certificate().signerInfo();
-    signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
-    QByteArray sig = m_connection->certificate().sign(ba);
-    signature->set_signature_bytes( sig.constData(), sig.length() );
-
-    QByteArray ba2;
-    ba2.resize( appliedDelta.ByteSize() );
-    appliedDelta.SerializeToArray( ba2.data(), ba2.count() );
-
-    QByteArray base64 = ba2.toBase64();
-    QString str64 = QString::fromAscii( base64.constData(), base64.length() );
+//    QString str64 = appliedWaveletDeltaToBase64( waveletDelta );
+    QString str64 = waveletDelta.toBase64();
 
     if ( m_state != Established )
     {
@@ -613,7 +714,8 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
         stanza->setAttribute("type", "normal");
         stanza->setAttribute("id", m_connection->nextId());
         stanza->setAttribute("from", Settings::settings()->xmppComponentName());
-//        stanza->setAttribute("to", m_domain);
+        // Do not set this property yet
+        //        stanza->setAttribute("to", m_domain);
         XmppTag* request = new XmppTag( "request", XmppTag::Element );
         stanza->add(request);
         request->setAttribute("xmlns", "urn:xmpp:receipts");
@@ -637,7 +739,6 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
     }
     else
     {
-
         QString sendStr;
         {
             QXmlStreamWriter writer( &sendStr );

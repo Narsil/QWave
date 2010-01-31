@@ -3,7 +3,10 @@
 #include "waveletdocument.h"
 #include "network/clientconnection.h"
 #include "network/xmppcomponent.h"
+#include "network/converter.h"
 #include "participant.h"
+#include "protocol/common.pb.h"
+#include <openssl/sha.h>
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
     : m_wave(wave), m_domain(waveletDomain), m_id(waveletId), m_version(0)
@@ -23,23 +26,37 @@ WaveUrl Wavelet::url() const
     return WaveUrl( m_wave->domain(), m_wave->id(), m_domain, m_id );
 }
 
-int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
+int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage )
 {
-    WaveletDelta indexDelta;
-    indexDelta.setAuthor( "digest-author" );
-    indexDelta.version().version = 0;
-
-//    QSet<QString> participants( m_participants );
+    WaveletDelta clientDelta = Converter::convert( protobufDelta );
 
     // This is a delta from the future? -> error
-    if ( delta.version().version > m_version )
+    if ( clientDelta.version().version > m_version )
     {
         errorMessage->append("Version number did not match");
         return 0;
     }
 
-    // Make a shallow copy of the client delta
-    WaveletDelta clientDelta(delta);
+    // Compare the history hash. The hash of version 0 is a special case
+    qint64 clientVersion = clientDelta.version().version;
+    if ( clientVersion == 0 && url().toString().toAscii() != clientDelta.version().hash )
+    {
+        errorMessage->append("History hash does not match");
+        return 0;
+    }
+    else if ( clientVersion > 0 )
+    {
+        if ( m_deltas[clientVersion - 1].isNull() )
+        {
+            errorMessage->append("Applying at invalid version number");
+            return 0;
+        }
+        else if ( clientDelta.version().hash != m_deltas[clientVersion - 1].resultingVersion().hash )
+        {
+            errorMessage->append("History hash does not match");
+            return 0;
+        }
+    }
 
     // The delta needs to be transformed?
     if ( clientDelta.version().version < m_version )
@@ -48,24 +65,11 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
         // Perform OT on the delta
         //
 
-        // Compare the history hash. The hash of version 0 is a special case
-        qint64 clientVersion = clientDelta.version().version;
-        if ( clientVersion == 0 && url().toString().toAscii() != clientDelta.version().hash )
-        {
-            errorMessage->append("History hash does not match");
-            return 0;
-        }
-        else if ( clientVersion > 0 && clientDelta.version().hash != m_deltas[clientVersion].version().hash )
-        {
-            errorMessage->append("History hash does not match");
-            return 0;
-        }
-
         // Make a shallow copy of the server-deltas which need to participate in transformations.
         // These copies will be modified during OT
         QList<WaveletDelta> server;
-        for( int v = delta.version().version; v < m_deltas.count(); ++v )
-            server.append( m_deltas[v] );
+        for( int v = clientDelta.version().version; v < m_deltas.count(); ++v )
+            server.append( m_deltas[v].delta() );
 
         // Loop over all client operations and transform them
         for( int c = 0; c < clientDelta.operations().count(); ++c )
@@ -91,18 +95,18 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
         clientDelta.version().hash = m_hash;
         clientDelta.version().version = m_version;
     }
-    // This is an update to the latest version?
-    else
-    {
-        // Compare the history hash
-        if ( clientDelta.version().hash != m_hash )
-        {
-            errorMessage->append("History hash does not match");
-            return 0;
-        }
-    }
 
+    // The binary version is required for hashing
+//    QByteArray binary( protobufDelta.ByteSize(), 0 );
+//    protobufDelta.SerializeToArray( binary.data(), binary.length() );
+
+    // Track which participants are added by the delta
     QSet<QString> newParticipants;
+
+    // Prepare a delta for the digest
+    WaveletDelta indexDelta;
+    indexDelta.setAuthor( "digest-author" );
+    indexDelta.version().version = 0;
 
     // TODO: Rollback if something went wrong, or report that only a subset of ops succeeded
 
@@ -180,24 +184,86 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
         }
     }
 
-    // Increase the version number
-    m_version++;
-    // TODO: Compute the new hash
-    m_hash = clientDelta.version().hash;
-    // Add the new delta to the list
-    m_deltas.append(clientDelta);
+    int operationsApplied = clientDelta.operations().count();
+    // This is a hack // QDateTime::currentDateTime().toTime_t()
+    qint64 applicationTime = m_version;
 
-    QList<WaveletDelta> deltas;
-    deltas.append( clientDelta );
+//    // Increase the version number
+//    int oldVersion = m_version;
+//    m_version += clientDelta.operations().count();
+//    // Compute the new hash
+//    binary.prepend( m_hash );
+//    QByteArray hashBuffer( 32, 0 );
+//    SHA256( (const unsigned char*)binary.constData(), binary.length(), (unsigned char*)hashBuffer.data() );
+//    // Copy over the first 20 bytes
+//    m_hash.resize(20);
+//    for( int i = 0; i < 20; ++i )
+//        m_hash.data()[i] = hashBuffer.data()[i];
+
+    // Construct a AppliedWaveletDelta and sign int
+    AppliedWaveletDelta appliedDelta( clientDelta, applicationTime, operationsApplied );
+//    appliedDelta.setApplicationTime( applicationTime );
+//    appliedDelta.setOperationsApplied( operationsApplied );
+
+//    QByteArray ba;
+//    ba.resize( protobufDelta.ByteSize() );
+//    protobufDelta.SerializeToArray( ba.data(), ba.count() );
+//
+//    protocol::ProtocolAppliedWaveletDelta protobufAppliedDelta;
+//    protobufAppliedDelta.set_operations_applied( operationsApplied );
+//    protobufAppliedDelta.set_application_timestamp( applicationTime );
+//
+////    protocol::ProtocolHashedVersion* hashed = appliedDelta.mutable_hashed_version_applied_at();
+////    hashed->set_version( waveletDelta.delta().version().version );
+////    QByteArray hash = waveletDelta.delta().version().hash;
+////    hashed->set_history_hash( hash.constData(), hash.length() );
+//
+//    protocol::ProtocolSignedDelta* signedDelta = protobufAppliedDelta.mutable_signed_original_delta();
+//    signedDelta->set_delta( ba.constData(), ba.length() );
+//    protocol::ProtocolSignature* signature = signedDelta->add_signature();
+//    signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
+//    QByteArray signerInfo = XmppComponentConnection::connection()->certificate().signerInfo();
+//    signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
+//    QByteArray sig = XmppComponentConnection::connection()->certificate().sign(ba);
+//    signature->set_signature_bytes( sig.constData(), sig.length() );
+//
+//    QByteArray ba2;
+//    ba2.resize( protobufAppliedDelta.ByteSize() );
+//    protobufAppliedDelta.SerializeToArray( ba2.data(), ba2.count() );
+
+    // Update the hashed version
+    int oldVersion = m_version;
+//    m_version += operationsApplied;
+//    ba2.prepend( m_hash );
+//    QByteArray hashBuffer( 32, 0 );
+//    SHA256( (const unsigned char*)ba2.constData(), ba2.length(), (unsigned char*)hashBuffer.data() );
+//    // Copy over the first 20 bytes
+//    m_hash.resize(20);
+//    for( int i = 0; i < 20; ++i )
+//        m_hash.data()[i] = hashBuffer.data()[i];
+//
+//    appliedDelta.resultingVersion().hash = m_hash;
+//    appliedDelta.resultingVersion().version = m_version;
+
+    m_version = appliedDelta.resultingVersion().version;
+    m_hash = appliedDelta.resultingVersion().hash;
+
+    // For the intermediate versions (if any) there is no information.
+    for( int v = oldVersion + 1; v < m_version; ++v )
+        m_deltas.append( AppliedWaveletDelta() );
+    // Add the new delta to the list
+    m_deltas.append(appliedDelta);
 
     // Send the delta to all local subscribers
+    QList<AppliedWaveletDelta> deltas;
+    deltas.append( appliedDelta );
     foreach( QString cid, m_subscribers )
     {
         ClientConnection* c = ClientConnection::connectionById(cid);
         if ( !c )
             m_subscribers.remove(cid);
         else
-            c->sendWaveletUpdate( this, deltas, m_version, m_hash );
+            c->sendWaveletUpdate( this, deltas );
     }    
     // Send the delta to all remote subscribers
     XmppComponentConnection* comcon = XmppComponentConnection::connection();
@@ -208,7 +274,7 @@ int Wavelet::receive( const WaveletDelta& delta, QString* errorMessage )
             XmppVirtualConnection* con = comcon->virtualConnection( rid );
             if ( !con )
                 continue;
-            con->sendWaveletUpdate( url().toString(), delta );
+            con->sendWaveletUpdate( url().toString(), appliedDelta );
         }
     }
 
@@ -256,7 +322,7 @@ void Wavelet::subscribe( ClientConnection* connection )
     m_subscribers.insert( connection->id() );
 
     // Send the history
-    connection->sendWaveletUpdate( this, m_deltas, m_version, m_hash );
+    connection->sendWaveletUpdate( this, m_deltas );
 }
 
 void Wavelet::unsubscribe( ClientConnection* connection )

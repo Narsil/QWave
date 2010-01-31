@@ -11,6 +11,7 @@
 class RPC;
 class Wavelet;
 class WaveletDelta;
+class AppliedWaveletDelta;
 class QByteArray;
 class QTcpSocket;
 class ServerSocket;
@@ -33,7 +34,7 @@ public:
       */
     QString domain() const;
 
-    void sendWaveletUpdate( Wavelet* wavelet, const QList<WaveletDelta>& delta, qint64 resultingVersion, const QByteArray& resultHash );
+    void sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedWaveletDelta>& delta );
     void sendSubmitResponse( qint32 operations_applied, const QString& errorMessage = QString::null );
     void sendIndexUpdate(Wavelet* wavelet, const WaveletDelta& indexDelta);
 

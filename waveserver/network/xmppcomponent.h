@@ -19,7 +19,7 @@
 typedef QSharedPointer<XmppStanza> XmppStanzaPtr;
 
 class XmppVirtualConnection;
-class WaveletDelta;
+class AppliedWaveletDelta;
 
 class XmppComponentConnection : public QObject
 {
@@ -62,7 +62,7 @@ public:
       */
     QString nextId();
 
-    const ServerCertificate& certificate() const { return m_certificate; }
+//    const ServerCertificate& certificate() const { return m_certificate; }
 
     /**
       * @return null if no XMPP is configured.
@@ -96,7 +96,7 @@ private:
     int m_idCount;
     QQueue<QString> m_stanzaQueue;    
     XmppTag* m_currentTag;
-    ServerCertificate m_certificate;
+//    ServerCertificate m_certificate;
 
     static XmppComponentConnection* s_connection;
 };
@@ -114,7 +114,7 @@ public:
     /**
       * Sends a stanza to the remote wave server indicating a wavelet update.
       */
-    void sendWaveletUpdate(const QString& waveletName, const WaveletDelta& delta);
+    void sendWaveletUpdate(const QString& waveletName, const AppliedWaveletDelta& delta);
 
     /**
       * During wave server lookup, this property holds a domain such as "wave2.vs.uni-due.de", i.e. the JID of the XMPP server.
@@ -139,6 +139,8 @@ private:
 
     void processIqGet( const XmppStanza& stanza );
     void processMessage( const XmppStanza& stanza );
+
+//    QString appliedWaveletDeltaToBase64( const AppliedWaveletDelta& waveletDelta );
 
     enum State
     {
