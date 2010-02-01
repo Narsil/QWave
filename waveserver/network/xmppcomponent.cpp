@@ -1,6 +1,7 @@
 #include "xmppcomponent.h"
 #include "app/settings.h"
 #include "model/appliedwaveletdelta.h"
+#include "model/signedwaveletdelta.h"
 #include "model/wavelet.h"
 #include "model/wave.h"
 #include "network/converter.h"
@@ -645,6 +646,57 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
         }
         else
             qDebug(" ... message is unhandled");
+    }
+    else if ( stanza["type"] == "set" )
+    {
+        if ( pubsub && (*pubsub)["xmlns"] == "http://jabber.org/protocol/pubsub" )
+        {
+            XmppTag* items = pubsub->child( "items" );
+            if ( items && (*items)["node"] == "wavelet" && items->child("submit-request") )
+            {
+                XmppTag* request = items->child("submit-request");
+                XmppTag* delta = request->child("delta");                
+
+                QString waveletName = delta->attribute("wavelet-name");
+                WaveUrl url( waveletName );
+                if ( url.isNull() )
+                {
+                    qDebug("Malformed wavelet-name");
+                    xmppError();
+                    return;
+                }
+                Wave* wave = Wave::wave( url.waveDomain(), url.waveId() );
+                if ( !wave )
+                {
+                    qDebug("Unknown wave");
+                    xmppError();
+                    return;
+                }
+                Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId() );
+                if ( !wavelet )
+                {
+                    qDebug("Unknown wavelet");
+                    xmppError();
+                    return;
+                }
+
+                if ( delta && delta->children()->count() == 1 && delta->child(0)->isCData() )
+                {
+                    QString base64 = delta->child(0)->text();
+                    bool ok;
+                    SignedWaveletDelta wdelta = SignedWaveletDelta::fromBase64( base64, &ok );
+                    if ( !ok )
+                    {
+                        qDebug("Could not deserialize wavelet delta");
+                        xmppError();
+                        return;
+                    }
+                    qDebug("Got wavelet delta");
+
+                    // TODO
+                }
+            }
+        }
     }
     else
         qDebug(" ... message is unhandled");

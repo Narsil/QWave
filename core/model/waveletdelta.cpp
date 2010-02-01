@@ -55,20 +55,20 @@ WaveletDelta WaveletDelta::fromBinary(const QByteArray& data)
     return Converter::convert( delta );
 }
 
-WaveletDelta WaveletDelta::fromBase64(const QString& base64)
+WaveletDelta WaveletDelta::fromBase64(const QString& base64, bool* ok)
 {
     QByteArray ascii = base64.toAscii();
     QByteArray data = QByteArray::fromBase64( ascii );
 
-//    qDebug("Decode %i bytes", data.length() );
-//
-//    QFile file("out.data");
-//    file.open( QFile::ReadWrite );
-//    file.write( data );
-//    file.close();
-
     protocol::ProtocolWaveletDelta delta;
-    delta.ParseFromArray( data.constData(), data.length() );
-
+    bool result = delta.ParseFromArray( data.constData(), data.length() );
+    if ( !result )
+    {
+        if ( ok )
+            *ok = false;
+        return WaveletDelta();
+    }
+    if ( ok )
+        *ok = true;
     return Converter::convert( delta );
 }

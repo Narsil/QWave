@@ -48,7 +48,7 @@ public:
       * Deserializes a wavelet delta. The format follows Google's protobufs specifications.
       */
     static WaveletDelta fromBinary(const QByteArray& data);
-    static WaveletDelta fromBase64(const QString& data);
+    static WaveletDelta fromBase64(const QString& data, bool* ok = 0);
 
 private:
     HashedVersion m_version;

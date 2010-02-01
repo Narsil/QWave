@@ -30,7 +30,9 @@ SOURCES += main.cpp \
     protocol/commitlog.pb.cc \
     model/jid.cpp \
     network/servercertificate.cpp \
-    model/appliedwaveletdelta.cpp
+    model/appliedwaveletdelta.cpp \
+    model/signedwaveletdelta.cpp \
+    model/signature.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -54,7 +56,9 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     protocol/commitlog.pb.h \
     model/jid.h \
     network/servercertificate.h \
-    model/appliedwaveletdelta.h
+    model/appliedwaveletdelta.h \
+    model/signedwaveletdelta.h \
+    model/signature.h
 unix:LIBS += -lprotobuf \
     -lcrypto
 INCLUDEPATH += ./ \
