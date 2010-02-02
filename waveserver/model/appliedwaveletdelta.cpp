@@ -3,6 +3,7 @@
 #include "protocol/waveclient-rpc.pb.h"
 #include "network/servercertificate.h"
 #include "network/converter.h"
+#include "signature.h"
 #include <openssl/sha.h>
 
 AppliedWaveletDelta::AppliedWaveletDelta()
@@ -11,13 +12,18 @@ AppliedWaveletDelta::AppliedWaveletDelta()
 }
 
 AppliedWaveletDelta::AppliedWaveletDelta( const AppliedWaveletDelta& delta )
-        : m_null(delta.m_null), m_delta( delta.m_delta ), m_resultingVersion( delta.m_resultingVersion ), m_applicationTime( delta.m_applicationTime ), m_operationsApplied( delta.m_operationsApplied ), m_signature( delta.m_signature )
+        : m_null(delta.m_null), m_delta( delta.m_delta ), m_resultingVersion( delta.m_resultingVersion ), m_applicationTime( delta.m_applicationTime ), m_operationsApplied( delta.m_operationsApplied ), m_signature( delta.m_signature ), m_signerId( delta.m_signerId )
 {
 }
 
-AppliedWaveletDelta::AppliedWaveletDelta( const WaveletDelta& delta, qint64 applicationTime, int operationsApplied )
+AppliedWaveletDelta::AppliedWaveletDelta( const WaveletDelta& delta, qint64 applicationTime, int operationsApplied, const Signature* signature )
         : m_null(false), m_delta( delta ), m_applicationTime( applicationTime ), m_operationsApplied( operationsApplied )
 {
+    if ( signature )
+    {
+        m_signature = signature->signature();
+        m_signerId = signature->signerId();
+    }
 }
 
 void AppliedWaveletDelta::toProtobuf(protocol::ProtocolAppliedWaveletDelta* appliedDelta) const
@@ -40,8 +46,13 @@ void AppliedWaveletDelta::toProtobuf(protocol::ProtocolAppliedWaveletDelta* appl
     signedDelta->set_delta( ba.constData(), ba.length() );
     protocol::ProtocolSignature* signature = signedDelta->add_signature();
     signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
-    QByteArray signerInfo = ServerCertificate::certificate()->signerInfo();
-    signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
+    if ( m_signerId.isNull() )
+    {
+        QByteArray signerInfo = ServerCertificate::certificate()->signerInfo();
+        signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
+    }
+    else
+        signature->set_signer_id( m_signerId.constData(), m_signerId.length() );
     if ( m_signature.isNull() )
         ((AppliedWaveletDelta*)this)->m_signature = ServerCertificate::certificate()->sign(ba);
     signature->set_signature_bytes( m_signature.constData(), m_signature.length() );

@@ -714,10 +714,18 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                         }
                         qDebug("Got wavelet delta");
 
+                        if ( wdelta.signatures().count() == 0 )
+                        {
+                            qDebug("No signature found.");
+                            xmppError();
+                            return;
+                        }
+
                         // TODO check signature and ask for signer info
 
+                        Signature signature = wdelta.signatures()[0];
                         QString err;
-                        int version = wavelet->apply( wdelta.delta(), &err );
+                        int version = wavelet->apply( wdelta.delta(), &err, &signature );
                         if ( !err.isEmpty() || version < 0 )
                         {
                             qDebug("Failed to apply wavelet delta: %s", err.toAscii().constData());

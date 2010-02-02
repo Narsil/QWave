@@ -25,15 +25,14 @@ WaveUrl Wavelet::url() const
     return WaveUrl( m_wave->domain(), m_wave->id(), m_domain, m_id );
 }
 
-int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage )
+int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage, const Signature* signature )
 {
     WaveletDelta clientDelta = Converter::convert( protobufDelta );
-    return apply( clientDelta, errorMessage );
+    return apply( clientDelta, errorMessage, signature );
 }
 
-int Wavelet::apply( WaveletDelta& clientDelta, QString* errorMessage )
+int Wavelet::apply( WaveletDelta& clientDelta, QString* errorMessage, const Signature* signature )
 {
-
     // This is a delta from the future? -> error
     if ( clientDelta.version().version > m_version )
     {
@@ -189,7 +188,7 @@ int Wavelet::apply( WaveletDelta& clientDelta, QString* errorMessage )
     qint64 applicationTime = m_version;
 
     // Construct a AppliedWaveletDelta and sign int
-    AppliedWaveletDelta appliedDelta( clientDelta, applicationTime, operationsApplied );
+    AppliedWaveletDelta appliedDelta( clientDelta, applicationTime, operationsApplied, signature );
 
     int oldVersion = m_version;
     // Update the hashed version

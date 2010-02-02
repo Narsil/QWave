@@ -5,6 +5,8 @@
 #include <QString>
 #include <QByteArray>
 
+class Signature;
+
 namespace protocol
 {
     class ProtocolAppliedWaveletDelta;
@@ -15,15 +17,13 @@ class AppliedWaveletDelta
 public:
     AppliedWaveletDelta();
     AppliedWaveletDelta( const AppliedWaveletDelta& delta );
-    AppliedWaveletDelta( const WaveletDelta& delta, qint64 applicationTime, int m_operationsApplied );
+    AppliedWaveletDelta( const WaveletDelta& delta, qint64 applicationTime, int m_operationsApplied, const Signature* signature = 0 );
 
     const WaveletDelta& delta() const { return m_delta; }
     const WaveletDelta::HashedVersion& resultingVersion() const;
 
     qint64 applicationTime() const { return m_applicationTime; }
-//    void setApplicationTime( qint64 time ) { m_applicationTime = time; }
     int operationsApplied() const { return m_operationsApplied; }
-//    void setOperationsApplied(int operationsApplied) { m_operationsApplied = operationsApplied; }
 
     QByteArray signature() const { return m_signature; }
 
@@ -40,6 +40,7 @@ private:
     qint64 m_applicationTime;
     int m_operationsApplied;
     QByteArray m_signature;
+    QByteArray m_signerId;
 };
 
 #endif // APPLIEDWAVELETDELTA_H
