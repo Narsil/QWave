@@ -37,7 +37,7 @@ SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolSignedDelta* sig
         return;
     }
 
-    WaveletDelta delta = Converter::convert( pdelta );
+    m_delta = Converter::convert( pdelta );
     for( int i = 0; i < signedDelta->signature_size(); ++i )
     {
         const protocol::ProtocolSignature& sig = signedDelta->signature(i);

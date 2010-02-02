@@ -6,7 +6,7 @@
 #include <openssl/sha.h>
 
 AppliedWaveletDelta::AppliedWaveletDelta()
-        : m_null(true)
+        : m_null(true), m_operationsApplied(0)
 {
 }
 

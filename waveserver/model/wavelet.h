@@ -50,6 +50,7 @@ public:
       * @return operations_applied.
       */
     int apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage );
+    int apply( WaveletDelta& clientDelta, QString* errorMessage );
 
     void subscribe( ClientConnection* connection );
     void unsubscribe( ClientConnection* connection );

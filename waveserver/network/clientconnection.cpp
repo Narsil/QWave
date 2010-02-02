@@ -179,12 +179,18 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
 
         // Apply the delta
         QString err = "";
-        int ops = wavelet->apply(update.delta(), &err );
-        if ( err.isEmpty() )
-            err = QString::null;
+        int version = wavelet->apply(update.delta(), &err );
+        if ( !err.isEmpty() || version < 0 )
+        {
+            sendSubmitResponse( 0, err );
+        }
+        else
+        {
+            const AppliedWaveletDelta& applied = wavelet->delta(version - 1);
 
-        // Send a response
-        sendSubmitResponse( ops, err );
+            // Send a response
+            sendSubmitResponse( applied.operationsApplied(), QString::null );
+        }
     }
 }
 
@@ -216,8 +222,11 @@ void ClientConnection::sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedW
     update.mutable_resulting_version()->set_history_hash( resultingHash.constData(), resultingHash.length() );
     for( int i = 0; i < deltas.count(); ++i )
     {
+        const AppliedWaveletDelta& appliedDelta = deltas[i];
+        if ( appliedDelta.isNull() )
+            continue;
         protocol::ProtocolWaveletDelta* delta = update.add_applied_delta();
-        Converter::convert( delta, deltas[i].delta() );
+        Converter::convert( delta, appliedDelta.delta() );
     }
 
     qDebug("WaveletUpdate>> %s", update.DebugString().data());
