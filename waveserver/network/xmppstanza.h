@@ -45,10 +45,11 @@ public:
     QList<XmppTagPtr>* children() { return &m_children; }
     const QList<XmppTagPtr>* children() const { return &m_children; }
     XmppTag* child( const QString& qualifiedName ) const;
-    XmppTag* child( int index ) const { return m_children[index].data(); }
+    XmppTag* childAt( int index ) const { return m_children[index].data(); }
     QList<XmppTag*> children( const QString& qualifiedName ) const;
     void add( XmppTag* tag ) { m_children.append( XmppTagPtr( tag ) ); }
     void add( const QString& text );
+    void addCData( const QString& text );
 
     bool isText() const { return m_type == Text; }
     bool isElement() const { return m_type == Element; }

@@ -28,12 +28,17 @@ WaveUrl Wavelet::url() const
 int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage )
 {
     WaveletDelta clientDelta = Converter::convert( protobufDelta );
+    return apply( clientDelta, errorMessage );
+}
+
+int Wavelet::apply( WaveletDelta& clientDelta, QString* errorMessage )
+{
 
     // This is a delta from the future? -> error
     if ( clientDelta.version().version > m_version )
     {
         errorMessage->append("Version number did not match");
-        return 0;
+        return -1;
     }
 
     // Compare the history hash. The hash of version 0 is a special case
@@ -41,19 +46,19 @@ int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString
     if ( clientVersion == 0 && url().toString().toAscii() != clientDelta.version().hash )
     {
         errorMessage->append("History hash does not match");
-        return 0;
+        return -1;
     }
     else if ( clientVersion > 0 )
     {
         if ( m_deltas[clientVersion - 1].isNull() )
         {
             errorMessage->append("Applying at invalid version number");
-            return 0;
+            return -1;
         }
         else if ( clientDelta.version().hash != m_deltas[clientVersion - 1].resultingVersion().hash )
         {
             errorMessage->append("History hash does not match");
-            return 0;
+            return -1;
         }
     }
 
@@ -84,7 +89,7 @@ int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString
                     {
                         qDebug("Wavelet could not be applied");
                         errorMessage->append("Wavelet could not be applied");
-                        return 0;
+                        return -1;
                     }                
                     serverDelta.operations()[s] = pair.first;
                     clientDelta.operations()[c] = pair.second;
@@ -122,7 +127,7 @@ int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString
             {
                 // TODO: rollback
                 errorMessage->append("Failed to apply delta to " + docId);
-                return 0;
+                return -1;
             }
             // Remember that the digest will need an update
         }
@@ -257,7 +262,7 @@ int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString
         }
     }
 
-    return clientDelta.operations().count();
+    return m_version;
 }
 
 void Wavelet::subscribe( ClientConnection* connection )

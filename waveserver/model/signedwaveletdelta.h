@@ -22,6 +22,7 @@ public:
     SignedWaveletDelta( const WaveletDelta& delta, const QList<Signature>& signatures );
 
     const WaveletDelta& delta() const { return m_delta; }
+    WaveletDelta& delta() { return m_delta; }
     QList<Signature> signatures() const { return m_signatures; }
 
     void toProtobuf(protocol::ProtocolSignedDelta* signedDelta) const;

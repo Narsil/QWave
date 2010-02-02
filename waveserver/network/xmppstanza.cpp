@@ -18,6 +18,11 @@ void XmppTag::add( const QString& text )
         m_children.last()->appendText( text );
 }
 
+void XmppTag::addCData( const QString& text )
+{
+    add( new XmppTag( text, XmppTag::CData, this ) );
+}
+
 XmppTag* XmppTag::child( const QString& qualifiedName ) const
 {
     foreach( QSharedPointer<XmppTag> tag, m_children )
