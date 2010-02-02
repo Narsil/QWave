@@ -14,6 +14,7 @@ class Wave;
 class WaveletDocument;
 class ClientConnection;
 class JID;
+class Signature;
 
 namespace protocol
 {
@@ -49,8 +50,8 @@ public:
     /**
       * @return operations_applied.
       */
-    int apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage );
-    int apply( WaveletDelta& clientDelta, QString* errorMessage );
+    int apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage, const Signature* signature = 0 );
+    int apply( WaveletDelta& clientDelta, QString* errorMessage, const Signature* signature = 0 );
 
     void subscribe( ClientConnection* connection );
     void unsubscribe( ClientConnection* connection );
