@@ -11,71 +11,47 @@
 #include <openssl/err.h>
 #include <openssl/sha.h>
 
-ServerCertificate* ServerCertificate::s_certificate = 0;
-
 ServerCertificate::ServerCertificate()
-        : m_publicKey(0), m_privateKey(0), m_signerInfo( 32, 0 ), m_hasSignerInfo(false)
+        : m_signerId( 32, 0 ), m_publicKey(0)
 {
-    QFile file( Settings::settings()->certificateFile() );
-    bool ok = file.open( QFile::ReadOnly );
-    Q_ASSERT( ok );
+}
 
-    m_certificates = QSslCertificate::fromDevice( &file );
-    Q_ASSERT( m_certificates.length() > 0 );
-    file.close();
+ServerCertificate::~ServerCertificate()
+{
+    if ( m_publicKey )
+        RSA_free(m_publicKey);
+}
 
-    QFile file2( Settings::settings()->privateKeyFile() );
-    ok = file2.open( QFile::ReadOnly );
-    Q_ASSERT( ok );
-    QByteArray ba = file2.readAll();
-    file2.close();
+bool ServerCertificate::computePublicKey()
+{
+    if ( m_certificates.count() == 0 )
+        return false;
 
-    BIO *priv_bio = BIO_new_mem_buf(ba.data(), -1);
-    if( priv_bio == 0 )
-    {
-        ERR_print_errors_fp(stdout);
-        Q_ASSERT(false);
-        return;
-    }
-
-    m_privateKey = PEM_read_bio_RSAPrivateKey(priv_bio, NULL, NULL, NULL);
-    if( m_privateKey == 0)
-    {
-        ERR_print_errors_fp(stdout);
-        Q_ASSERT(false);
-        return;
-    }
-
-    ba = m_certificates[0].publicKey().toPem();
-    BIO *pub_bio = BIO_new_mem_buf(ba.data(), -1);
+    QByteArray ba = m_certificates[0].publicKey().toPem();
+    BIO *pub_bio = BIO_new_mem_buf(ba.data(), ba.length());
     if( pub_bio == 0 )
     {
         ERR_print_errors_fp(stdout);
-        Q_ASSERT(false);
-        return;
+        return false;
     }
 
     m_publicKey = PEM_read_bio_RSA_PUBKEY(pub_bio, NULL, NULL, NULL);
     if( m_publicKey == 0)
     {
+        BIO_free(pub_bio);
         ERR_print_errors_fp(stdout);
-        Q_ASSERT(false);
-        return;
+        return false;
     }
+
+    BIO_free(pub_bio);
+
+    return true;
 }
 
-ServerCertificate::~ServerCertificate()
+void ServerCertificate::computeSignerInfo()
 {
-    if ( m_privateKey )
-        RSA_free(m_privateKey);
-    if ( m_publicKey )
-        RSA_free(m_publicKey);
-}
-
-QByteArray ServerCertificate::signerInfo() const
-{
-    if ( m_hasSignerInfo )
-        return m_signerInfo;
+    if ( !isValid() )
+        return;
 
     int len = 0;
     // Get a sequence of DER encoded certificates
@@ -116,10 +92,7 @@ QByteArray ServerCertificate::signerInfo() const
         }
     }
 
-    SHA256( (const unsigned char*)seq.data(), seq.length(), (unsigned char*)m_signerInfo.constData() );
-
-    ((ServerCertificate*)this)->m_hasSignerInfo = true;
-    return m_signerInfo;
+    SHA256( (const unsigned char*)seq.data(), seq.length(), (unsigned char*)m_signerId.data() );
 }
 
 QList<QByteArray> ServerCertificate::toBase64() const
@@ -132,7 +105,104 @@ QList<QByteArray> ServerCertificate::toBase64() const
     return result;
 }
 
-QByteArray ServerCertificate::sign( const QByteArray& message ) const
+void ServerCertificate::setPEMCertificates( const QList<QByteArray>& certificates )
+{
+    m_certificates.clear();
+    foreach( const QByteArray& ba, certificates )
+    {
+        QSslCertificate c( ba, QSsl::Pem );
+        if ( !c.isValid() )
+        {
+            qDebug("Error reading PEM certificate %s", ba.constData());
+            m_certificates.clear();
+            return;
+        }
+        m_certificates.append( c );
+    }
+    computePublicKey();
+    computeSignerInfo();
+}
+
+void ServerCertificate::setPEMCertificates( const QByteArray& certificates )
+{
+    m_certificates = QSslCertificate::fromData( certificates, QSsl::Pem );
+    foreach( const QSslCertificate& c, m_certificates )
+    {
+        if ( !c.isValid() )
+        {
+            qDebug("Error reading PEM certificate");
+            m_certificates.clear();
+            return;
+        }
+    }
+
+    computePublicKey();
+    computeSignerInfo();
+}
+
+
+
+LocalServerCertificate* LocalServerCertificate::s_certificate = 0;
+
+LocalServerCertificate::LocalServerCertificate()
+        : ServerCertificate(), m_privateKey(0)
+{
+    // Load the certificate
+    QFile file( Settings::settings()->certificateFile() );
+    bool ok = file.open( QFile::ReadOnly );
+    if ( !ok )
+    {
+        qDebug("Could not load certificate file");
+        Q_ASSERT( false );
+        return;
+    }
+
+    QByteArray bacert = file.readAll();
+    file.close();
+
+    setPEMCertificates( bacert );
+
+    // Load the private Key
+    QFile file2( Settings::settings()->privateKeyFile() );
+    ok = file2.open( QFile::ReadOnly );
+    if ( !ok )
+    {
+        qDebug("Could not load private key file");
+        Q_ASSERT( false );
+        return;
+    }
+    QByteArray ba = file2.readAll();
+    file2.close();
+
+    // Create a private key
+    BIO *priv_bio = BIO_new_mem_buf(ba.data(), -1);
+    if( priv_bio == 0 )
+    {
+        ERR_print_errors_fp(stdout);
+        Q_ASSERT(false);
+        return;
+    }
+
+    m_privateKey = PEM_read_bio_RSAPrivateKey(priv_bio, NULL, NULL, NULL);
+    if( m_privateKey == 0)
+    {
+        BIO_free(priv_bio);
+
+        ERR_print_errors_fp(stdout);
+        Q_ASSERT(false);
+        return;
+    }
+
+    BIO_free(priv_bio);
+}
+
+LocalServerCertificate::~LocalServerCertificate()
+{
+    if ( m_privateKey )
+        RSA_free(m_privateKey);
+}
+
+QByteArray LocalServerCertificate::sign( const QByteArray& message ) const
 {
     Q_ASSERT( m_privateKey );
 
@@ -151,9 +221,20 @@ QByteArray ServerCertificate::sign( const QByteArray& message ) const
     return ba;
 }
 
-ServerCertificate* ServerCertificate::certificate()
+LocalServerCertificate* LocalServerCertificate::certificate()
 {
     if ( s_certificate == 0 )
-        s_certificate = new ServerCertificate();
+        s_certificate = new LocalServerCertificate();
     return s_certificate;
+}
+
+
+
+RemoteServerCertificate::RemoteServerCertificate(const QList<QByteArray> certificateChain )
+{
+    setPEMCertificates( certificateChain );
+}
+
+RemoteServerCertificate::~RemoteServerCertificate()
+{
 }

@@ -32,7 +32,8 @@ SOURCES += main.cpp \
     network/servercertificate.cpp \
     model/appliedwaveletdelta.cpp \
     model/signedwaveletdelta.cpp \
-    model/signature.cpp
+    model/signature.cpp \
+    model/certificatestore.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -58,7 +59,8 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     network/servercertificate.h \
     model/appliedwaveletdelta.h \
     model/signedwaveletdelta.h \
-    model/signature.h
+    model/signature.h \
+    model/certificatestore.h
 unix:LIBS += -lprotobuf \
     -lcrypto
 INCLUDEPATH += ./ \

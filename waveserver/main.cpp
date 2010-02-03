@@ -28,7 +28,8 @@ int main(int argc, char *argv[])
         qDebug("You must specify a server certificate private key file.");
         return 2;
     }
-    ServerCertificate::certificate();
+    // Enfore the loading of the certificate and private key
+    LocalServerCertificate::certificate();
 
     if ( Settings::settings()->federationEnabled() )
     {

@@ -4,6 +4,7 @@
 #include "model/signedwaveletdelta.h"
 #include "model/wavelet.h"
 #include "model/wave.h"
+#include "model/certificatestore.h"
 #include "network/converter.h"
 #include "protocol/common.pb.h"
 #include "protocol/waveclient-rpc.pb.h"
@@ -529,9 +530,23 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
             //
             // Message: REQUEST SIGNATURE
             //
-            if ( items && (*items)["node"] == "signer" )
-            {
-                // TODO: Check the remainder of this message for plausability
+            if ( items && (*items)["node"] == "signer" && items->child("signer-request") )
+            {                
+                XmppTag* signerRequest = items->child("signer-request");
+
+                // Find out for which signer a certificate is requested
+                QByteArray signerId = QByteArray::fromBase64( signerRequest->attribute("signer-id").toAscii() );
+                const ServerCertificate* cert =  0;
+                if ( signerId == LocalServerCertificate::certificate()->signerId() )
+                    cert = LocalServerCertificate::certificate();
+                else
+                    cert = CertificateStore::store()->certificate( signerId );
+                if ( !cert )
+                {
+                    qDebug("Unknown signerId");
+                    xmppError();
+                    return;
+                }
 
                 QString sendStr;
                 {
@@ -548,7 +563,7 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                     writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
                     writer.writeAttribute("domain", Settings::settings()->domain() );
                     writer.writeAttribute("algorithm", "SHA256" );
-                    QList<QByteArray> certificates = ServerCertificate::certificate()->toBase64();
+                    QList<QByteArray> certificates = cert->toBase64();
                     foreach(QByteArray ba, certificates )
                     {
                         writer.writeStartElement("certificate");
@@ -701,7 +716,7 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                         return;
                     }
 
-                    if ( delta->children()->count() == 1 && ( delta->childAt(0)->isCData() || delta->childAt(0)->isText() ) )
+                    if ( delta->children().count() == 1 && ( delta->childAt(0)->isCData() || delta->childAt(0)->isText() ) )
                     {
                         QString base64 = delta->childAt(0)->text();
                         bool ok;
@@ -785,12 +800,49 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                         return;
                     }
 
+                    // Extract the certificates
+                    QList<QByteArray> certificates;
                     foreach( XmppTag* certificate, signature->children("certificate") )
                     {
-                        // TODO: Extract the certificate
+                        QString str;
+                        // Extract the certificate
+                        foreach( XmppTagPtr t, certificate->children() )
+                        {
+                            if ( t->isText() || t->isCData() )
+                                str += t->text();
+                        }
+                        // Convert it to PEM format
+                        QString pem( "-----BEGIN CERTIFICATE-----\n");
+                        int i = 0;
+                        while( i < str.length() )
+                        {
+                            int l = qMin(64, str.length() - i);
+                            pem += str.mid( i, l ) + "\n";
+                            i += l;
+                        }
+                        pem += "-----END CERTIFICATE-----\n";
+                        QByteArray ba = pem.toAscii();
+                        certificates.append(ba);
+                    }
+                    if ( certificates.count() == 0 )
+                    {
+                        qDebug("No certificate supplied.");
+                        xmppError();
+                        return;
                     }
 
-                    // TODO: Remember the signer info
+                    // Decode the certificate
+                    RemoteServerCertificate* cs = new RemoteServerCertificate( certificates );
+                    if ( !cs->isValid() )
+                    {
+                        delete cs;
+                        qDebug("Supplied certificate is not valid or malformed.");
+                        xmppError();
+                        return;
+                    }
+
+                    // Store the certificates
+                    CertificateStore::store()->addCertificate( cs );
 
                     // Send a response
                     QString sendStr;
