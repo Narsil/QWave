@@ -42,8 +42,8 @@ public:
     QString operator[] ( const QString& qualifiedName ) const;
     bool hasAttribute(const QString& qualifiedName ) const { return m_attributes.contains( qualifiedName ); }
 
-    QList<XmppTagPtr>* children() { return &m_children; }
-    const QList<XmppTagPtr>* children() const { return &m_children; }
+    QList<XmppTagPtr>& children() { return m_children; }
+    const QList<XmppTagPtr>& children() const { return m_children; }
     XmppTag* child( const QString& qualifiedName ) const;
     XmppTag* childAt( int index ) const { return m_children[index].data(); }
     QList<XmppTag*> children( const QString& qualifiedName ) const;

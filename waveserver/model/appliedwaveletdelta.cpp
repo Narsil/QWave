@@ -48,13 +48,13 @@ void AppliedWaveletDelta::toProtobuf(protocol::ProtocolAppliedWaveletDelta* appl
     signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
     if ( m_signerId.isNull() )
     {
-        QByteArray signerInfo = ServerCertificate::certificate()->signerInfo();
-        signature->set_signer_id( signerInfo.constData(), signerInfo.length() );
+        QByteArray signerId = LocalServerCertificate::certificate()->signerId();
+        signature->set_signer_id( signerId.constData(), signerId.length() );
     }
     else
         signature->set_signer_id( m_signerId.constData(), m_signerId.length() );
     if ( m_signature.isNull() )
-        ((AppliedWaveletDelta*)this)->m_signature = ServerCertificate::certificate()->sign(ba);
+        ((AppliedWaveletDelta*)this)->m_signature = LocalServerCertificate::certificate()->sign(ba);
     signature->set_signature_bytes( m_signature.constData(), m_signature.length() );
 }
 
