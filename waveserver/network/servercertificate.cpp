@@ -22,6 +22,15 @@ ServerCertificate::~ServerCertificate()
         RSA_free(m_publicKey);
 }
 
+bool ServerCertificate::verify( const QByteArray& data, const QByteArray& signature ) const
+{
+    if ( !isValid() )
+        return false;
+    QByteArray hash = QCryptographicHash::hash( data, QCryptographicHash::Sha1 );
+    int verified = RSA_verify(NID_sha1, (const unsigned char*) hash.constData(), hash.length(), (unsigned char*)signature.constData(), signature.length(), m_publicKey);
+    return verified;
+}
+
 bool ServerCertificate::computePublicKey()
 {
     if ( m_certificates.count() == 0 )
@@ -217,6 +226,8 @@ QByteArray LocalServerCertificate::sign( const QByteArray& message ) const
         Q_ASSERT(false);
         return QByteArray();
     }
+
+//    Q_ASSERT( verify( hash, ba ) );
 
     return ba;
 }

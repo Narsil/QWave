@@ -51,7 +51,7 @@ public:
       * @return operations_applied.
       */
     int apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage, const Signature* signature = 0 );
-    int apply( WaveletDelta& clientDelta, QString* errorMessage, const Signature* signature = 0 );
+    int apply( const WaveletDelta& clientDelta, QString* errorMessage, const Signature* signature = 0 );
 
     void subscribe( ClientConnection* connection );
     void unsubscribe( ClientConnection* connection );

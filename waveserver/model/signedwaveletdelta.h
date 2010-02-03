@@ -18,12 +18,12 @@ public:
     SignedWaveletDelta();
     SignedWaveletDelta( const protocol::ProtocolSignedDelta* signedDelta, bool* ok = 0 );
     SignedWaveletDelta( const SignedWaveletDelta& delta );
-    SignedWaveletDelta( const WaveletDelta& delta );
+//    SignedWaveletDelta( const WaveletDelta& delta );
     SignedWaveletDelta( const WaveletDelta& delta, const QList<Signature>& signatures );
 
     const WaveletDelta& delta() const { return m_delta; }
-    WaveletDelta& delta() { return m_delta; }
-    QList<Signature> signatures() const { return m_signatures; }
+    const QList<Signature>& signatures() const { return m_signatures; }
+    const QByteArray& deltaBytes() const { return m_deltaBytes; }
 
     void toProtobuf(protocol::ProtocolSignedDelta* signedDelta) const;
     QByteArray toBinary() const;
@@ -33,6 +33,7 @@ public:
 
 private:
     WaveletDelta m_delta;
+    QByteArray m_deltaBytes;
     QList<Signature> m_signatures;
 };
 

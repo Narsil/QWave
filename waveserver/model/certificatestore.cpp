@@ -13,6 +13,8 @@ CertificateStore::~CertificateStore()
 
 const ServerCertificate* CertificateStore::certificate( const QByteArray& signerId )
 {
+    if ( signerId == LocalServerCertificate::certificate()->signerId() )
+        return LocalServerCertificate::certificate();
     return m_certificates[signerId];
 }
 

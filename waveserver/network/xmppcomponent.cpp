@@ -536,11 +536,7 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
 
                 // Find out for which signer a certificate is requested
                 QByteArray signerId = QByteArray::fromBase64( signerRequest->attribute("signer-id").toAscii() );
-                const ServerCertificate* cert =  0;
-                if ( signerId == LocalServerCertificate::certificate()->signerId() )
-                    cert = LocalServerCertificate::certificate();
-                else
-                    cert = CertificateStore::store()->certificate( signerId );
+                const ServerCertificate* cert = CertificateStore::store()->certificate( signerId );
                 if ( !cert )
                 {
                     qDebug("Unknown signerId");
@@ -736,8 +732,34 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                             return;
                         }
 
-                        // TODO check signature and ask for signer info
+                        // Are all signers known to the certificate store?
+                        bool allKnown = true;
+                        foreach( const Signature& sig, wdelta.signatures() )
+                        {
+                            const ServerCertificate* cert = CertificateStore::store()->certificate( sig.signerId() );
+                            if ( !cert )
+                            {
+                                qDebug("At least one signer is not known. Move submit-request to the EscrowDeposit.");
+                                allKnown = false;
+                            }
+                            else
+                            {
+                                // Check signature
+                                if ( !cert->verify( wdelta.deltaBytes(), sig.signature() ) )
+                                {
+                                    qDebug("Certificate and signature do not match");
+                                    xmppError();
+                                    return;
+                                }
+                                qDebug("CHECKED Signature successfully");
+                            }
+                        }
+                        if ( !allKnown )
+                        {
+                            // TODO Escrow
+                        }
 
+                        // TODO: AppliedWaveletDelta should be able to carry a list of signatures
                         Signature signature = wdelta.signatures()[0];
                         QString err;
                         int version = wavelet->apply( wdelta.delta(), &err, &signature );
@@ -842,6 +864,7 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                     }
 
                     // Store the certificates
+                    // TODO: Check the top-level authority of the certificates. Is this certificate acceptable at all?
                     CertificateStore::store()->addCertificate( cs );
 
                     // Send a response

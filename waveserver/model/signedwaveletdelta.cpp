@@ -11,23 +11,28 @@ SignedWaveletDelta::SignedWaveletDelta()
 }
 
 SignedWaveletDelta::SignedWaveletDelta( const SignedWaveletDelta& delta )
-        : m_delta( delta.m_delta ), m_signatures( delta.m_signatures )
+        : m_delta( delta.m_delta ), m_deltaBytes( delta.m_deltaBytes ), m_signatures( delta.m_signatures )
 {
 }
 
-SignedWaveletDelta::SignedWaveletDelta( const WaveletDelta& delta )
-        : m_delta( delta )
-{
-}
-
+//SignedWaveletDelta::SignedWaveletDelta( const WaveletDelta& delta )
+//        : m_delta( delta )
+//{
+//}
+//
 SignedWaveletDelta::SignedWaveletDelta( const WaveletDelta& delta, const QList<Signature>& signatures )
         : m_delta( delta ), m_signatures( signatures )
 {
+    protocol::ProtocolWaveletDelta d;
+    Converter::convert( &d, m_delta);
+    m_deltaBytes.resize( d.ByteSize() );
+    d.SerializeToArray( m_deltaBytes.data(), m_deltaBytes.count() );
 }
 
 SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolSignedDelta* signedDelta, bool* ok )
 {
     const ::std::string& str = signedDelta->delta();
+    m_deltaBytes = QByteArray( str.data(), str.length() );
     protocol::ProtocolWaveletDelta pdelta;
     bool result = pdelta.ParseFromArray( str.data(), str.length() );
     if ( !result )
@@ -50,13 +55,7 @@ SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolSignedDelta* sig
 
 void SignedWaveletDelta::toProtobuf(protocol::ProtocolSignedDelta* signedDelta) const
 {
-    protocol::ProtocolWaveletDelta delta;
-    Converter::convert( &delta, m_delta);
-    QByteArray ba;
-    ba.resize( delta.ByteSize() );
-    delta.SerializeToArray( ba.data(), ba.count() );
-
-    signedDelta->set_delta( ba.constData(), ba.length() );
+    signedDelta->set_delta( m_deltaBytes.constData(), m_deltaBytes.length() );
     foreach( const Signature& sig, m_signatures )
     {
         protocol::ProtocolSignature* signature = signedDelta->add_signature();
