@@ -16,8 +16,8 @@ public:
     Signature( const Signature& signature ) : m_signature( signature.m_signature ), m_signerId( signature.m_signerId ) { }
     Signature( const QByteArray& signature, const QByteArray& signerId ) : m_signature( signature ), m_signerId( signerId ) { }
 
-    QByteArray signature() const { return m_signature; }
-    QByteArray signerId() const { return m_signerId; }
+    const QByteArray& signature() const { return m_signature; }
+    const QByteArray& signerId() const { return m_signerId; }
 
     void toProtobuf(protocol::ProtocolSignature* signature) const;
 

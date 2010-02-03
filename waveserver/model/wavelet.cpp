@@ -31,8 +31,11 @@ int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString
     return apply( clientDelta, errorMessage, signature );
 }
 
-int Wavelet::apply( WaveletDelta& clientDelta, QString* errorMessage, const Signature* signature )
+int Wavelet::apply( const WaveletDelta& newDelta, QString* errorMessage, const Signature* signature )
 {
+    // Make a copy of the delta because we might have to transform it
+    WaveletDelta clientDelta( newDelta );
+
     // This is a delta from the future? -> error
     if ( clientDelta.version().version > m_version )
     {

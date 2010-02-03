@@ -20,6 +20,8 @@ public:
       */
     QList<QByteArray> toBase64() const;
 
+    bool verify( const QByteArray& data, const QByteArray& signature ) const;
+
     virtual bool isValid() const { return m_certificates.count() > 0 && m_publicKey != 0; }
 
 protected:
