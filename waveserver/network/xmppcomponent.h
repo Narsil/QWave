@@ -19,6 +19,12 @@ typedef QSharedPointer<XmppStanza> XmppStanzaPtr;
 
 class XmppVirtualConnection;
 class AppliedWaveletDelta;
+class WaveUrl;
+
+namespace protocol
+{
+    class ProtocolWaveletDelta;
+}
 
 class XmppComponentConnection : public QObject
 {
@@ -111,6 +117,7 @@ public:
       * Sends a stanza to the remote wave server indicating a wavelet update.
       */
     void sendWaveletUpdate(const QString& waveletName, const AppliedWaveletDelta& delta);
+    void sendSubmitRequest( const WaveUrl& url, const protocol::ProtocolWaveletDelta& delta );
 
     /**
       * During wave server lookup, this property holds a domain such as "wave2.vs.uni-due.de", i.e. the JID of the XMPP server.

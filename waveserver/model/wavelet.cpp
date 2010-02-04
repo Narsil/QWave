@@ -6,6 +6,7 @@
 #include "network/converter.h"
 #include "participant.h"
 #include "protocol/common.pb.h"
+#include "app/settings.h"
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
     : m_wave(wave), m_domain(waveletDomain), m_id(waveletId), m_version(0)
@@ -23,6 +24,43 @@ Wavelet::~Wavelet()
 WaveUrl Wavelet::url() const
 {
     return WaveUrl( m_wave->domain(), m_wave->id(), m_domain, m_id );
+}
+
+bool Wavelet::checkHashedVersion( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage )
+{
+    // TODO: This is not very efficient and it does not check the correctness of OT operations.
+
+    WaveletDelta clientDelta = Converter::convert( protobufDelta );
+
+    // This is a delta from the future? -> error
+    if ( clientDelta.version().version > m_version )
+    {
+        errorMessage->append("Version number did not match");
+        return false;
+    }
+
+    // Compare the history hash. The hash of version 0 is a special case
+    qint64 clientVersion = clientDelta.version().version;
+    if ( clientVersion == 0 && url().toString().toAscii() != clientDelta.version().hash )
+    {
+        errorMessage->append("History hash does not match");
+        return -1;
+    }
+    else if ( clientVersion > 0 )
+    {
+        if ( m_deltas[clientVersion - 1].isNull() )
+        {
+            errorMessage->append("Applying at invalid version number");
+            return false;
+        }
+        else if ( clientDelta.version().hash != m_deltas[clientVersion - 1].resultingVersion().hash )
+        {
+            errorMessage->append("History hash does not match");
+            return false;
+        }
+    }
+
+    return true;
 }
 
 int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage, const Signature* signature )
@@ -215,7 +253,7 @@ int Wavelet::apply( const WaveletDelta& newDelta, QString* errorMessage, const S
         else
             c->sendWaveletUpdate( this, deltas );
     }    
-    // Send the delta to all remote subscribers
+    // Send the delta to all remote subscribers (if XMPP is enabled)
     XmppComponentConnection* comcon = XmppComponentConnection::connection();
     if ( comcon )
     {
@@ -362,4 +400,9 @@ WaveletDelta Wavelet::initialDigest() const
 bool Wavelet::hasParticipant(const QString& jid) const
 {
     return m_participants.contains(jid);
+}
+
+bool Wavelet::isRemote() const
+{
+    return ( m_domain != Settings::settings()->domain() );
 }

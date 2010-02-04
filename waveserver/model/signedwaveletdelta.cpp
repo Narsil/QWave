@@ -20,13 +20,13 @@ SignedWaveletDelta::SignedWaveletDelta( const SignedWaveletDelta& delta )
 //{
 //}
 //
-SignedWaveletDelta::SignedWaveletDelta( const WaveletDelta& delta, const QList<Signature>& signatures )
-        : m_delta( delta ), m_signatures( signatures )
+SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolWaveletDelta& delta )
 {
-    protocol::ProtocolWaveletDelta d;
-    Converter::convert( &d, m_delta);
-    m_deltaBytes.resize( d.ByteSize() );
-    d.SerializeToArray( m_deltaBytes.data(), m_deltaBytes.count() );
+    m_delta = Converter::convert( delta );
+    m_deltaBytes.resize( delta.ByteSize() );
+    delta.SerializeToArray( m_deltaBytes.data(), m_deltaBytes.count() );
+
+    m_signatures.append( Signature( LocalServerCertificate::certificate()->sign(m_deltaBytes), LocalServerCertificate::certificate()->signerId() ) );
 }
 
 SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolSignedDelta* signedDelta, bool* ok )
