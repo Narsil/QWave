@@ -7,6 +7,7 @@
 #include <QString>
 #include <QList>
 #include <QByteArray>
+#include "model/waveletdelta.h"
 
 class RPC;
 class Wavelet;
@@ -35,7 +36,7 @@ public:
     QString domain() const;
 
     void sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedWaveletDelta>& delta );
-    void sendSubmitResponse( qint32 operations_applied, const QString& errorMessage = QString::null );
+    void sendSubmitResponse( qint32 operations_applied, const WaveletDelta::HashedVersion* hashedVersionAfterApplication, const QString& errorMessage = QString::null );
     void sendIndexUpdate(Wavelet* wavelet, const WaveletDelta& indexDelta);
 
     static ClientConnection* connectionById( const QString& id );
