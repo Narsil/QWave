@@ -10,6 +10,7 @@
 namespace protocol
 {
     class ProtocolSignedDelta;
+    class ProtocolWaveletDelta;
 }
 
 class SignedWaveletDelta
@@ -18,8 +19,10 @@ public:
     SignedWaveletDelta();
     SignedWaveletDelta( const protocol::ProtocolSignedDelta* signedDelta, bool* ok = 0 );
     SignedWaveletDelta( const SignedWaveletDelta& delta );
-//    SignedWaveletDelta( const WaveletDelta& delta );
-    SignedWaveletDelta( const WaveletDelta& delta, const QList<Signature>& signatures );
+    /**
+      * Creates a signed delta by signing the provided delta with the local server certificate.
+      */
+    SignedWaveletDelta( const protocol::ProtocolWaveletDelta& delta );
 
     const WaveletDelta& delta() const { return m_delta; }
     const QList<Signature>& signatures() const { return m_signatures; }

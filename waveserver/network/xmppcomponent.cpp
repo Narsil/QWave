@@ -1009,7 +1009,45 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
             writer.writeEndElement();
         }
         m_connection->send( sendStr );
+
+        // TODO: Wait for the response and resend if response does not arrive
     }
+}
+
+void XmppVirtualConnection::sendSubmitRequest( const WaveUrl& url, const protocol::ProtocolWaveletDelta& delta )
+{
+    // TODO: Post signer information before sending the first submit request
+    SignedWaveletDelta sdelta( delta );
+    QString str64 = sdelta.toBase64();
+
+    QString sendStr;
+    {
+        QXmlStreamWriter writer( &sendStr );
+        writer.writeStartElement("iq");
+        writer.writeAttribute("type", "set" );
+        writer.writeAttribute("id", m_connection->nextId() );
+        writer.writeAttribute("to", m_domain );
+        writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
+        writer.writeStartElement("pubsub");
+        writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
+        writer.writeStartElement("publish");
+        writer.writeAttribute("node", "wavelet" );
+        writer.writeStartElement("item");
+        writer.writeStartElement("submit-request");
+        writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
+        writer.writeAttribute("wavelet-name", url.toString() );
+        writer.writeStartElement("delta");
+        writer.writeCDATA( str64 );
+        writer.writeEndElement();
+        writer.writeEndElement();
+        writer.writeEndElement();
+        writer.writeEndElement();
+        writer.writeEndElement();
+        writer.writeEndElement();
+    }
+    m_connection->send( sendStr );
+
+    // TODO: Wait for the response
 }
 
 void XmppVirtualConnection::send( XmppStanza* stanza )

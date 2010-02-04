@@ -1,6 +1,7 @@
 #include "clientconnection.h"
 #include "serversocket.h"
 #include "network/rpc.h"
+#include "network/xmppcomponent.h"
 #include "protocol/common.pb.h"
 #include "protocol/waveclient-rpc.pb.h"
 #include "network/converter.h"
@@ -157,6 +158,7 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         WaveUrl url( waveletId );
         if ( url.isNull() )
         {
+            qDebug("Malformed wave url");
             sendSubmitResponse( 0, 0, "Malformed wave url");
             return;
         }
@@ -165,15 +167,51 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == domain()) );
         if ( !wave )
         {
+            qDebug("Could not create wave");
             sendSubmitResponse( 0, 0, "Could not create wave");
             return;
         }
 
-        // TODO: What about remote wavelets?
+        // If the wavelet does not exist -> create it (but only if it is a local wavelet)
         Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), (url.waveletDomain() == domain()) );
         if ( !wavelet )
         {
+            qDebug("Could not create wavelet");
             sendSubmitResponse( 0, 0, "Could not create wavelet");
+            return;
+        }
+
+        if ( wavelet->isRemote() )
+        {
+            // Is the delta applicable? If not we can reject it right now
+            QString err = "";
+            if ( !wavelet->checkHashedVersion( update.delta(), &err ) )
+            {
+                qDebug("Could not apply delta %s. Delta is not sent to remote server.", err.toAscii().constData() );
+                sendSubmitResponse( 0, 0, err );
+                return;
+            }
+
+            // Send the delta to all remote subscribers (if XMPP is enabled)
+            XmppComponentConnection* comcon = XmppComponentConnection::connection();
+            if ( !comcon )
+            {
+                qDebug("XMPP not configured. No access to remote wavelets");
+                sendSubmitResponse( 0, 0, "XMPP not configured. No access to remote wavelets");
+                return;
+            }
+            XmppVirtualConnection* con = comcon->virtualConnection( wavelet->domain() );
+            if ( !con )
+            {
+                qDebug("XMPP failure. No access to remote wavelets");
+                sendSubmitResponse( 0, 0, "XMPP failure. No access to remote wavelets");
+                return;
+            }
+
+            // Send a submit-request
+            con->sendSubmitRequest( url, update.delta() );
+
+            // TODO: Queue a job which waits for the response
             return;
         }
 
@@ -182,15 +220,14 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         int version = wavelet->apply(update.delta(), &err );
         if ( !err.isEmpty() || version < 0 )
         {
+            qDebug("Could not apply delta: %s", err.toAscii().constData() );
             sendSubmitResponse( 0, 0, err );
+            return;
         }
-        else
-        {
-            const AppliedWaveletDelta& applied = wavelet->delta(version - 1);
 
-            // Send a response
-            sendSubmitResponse( applied.operationsApplied(), &applied.resultingVersion(), QString::null );
-        }
+        const AppliedWaveletDelta& applied = wavelet->delta(version - 1);
+        // Send a response
+        sendSubmitResponse( applied.operationsApplied(), &applied.resultingVersion(), QString::null );
     }
 }
 

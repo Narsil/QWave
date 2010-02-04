@@ -31,6 +31,7 @@ public:
 
     QString id() const { return m_id; }
     QString domain() const { return m_domain; }
+    bool isRemote() const;
 
     Wave* wave() const { return m_wave; }
 
@@ -52,6 +53,14 @@ public:
       */
     int apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage, const Signature* signature = 0 );
     int apply( const WaveletDelta& clientDelta, QString* errorMessage, const Signature* signature = 0 );
+
+    /**
+      * Checks that the version and history hash are ok. It does not do OT, i.e. the delta may still fail
+      * when being transformed or applied because its operations are not applicable.
+      *
+      * The purpose of this function is to roughly check deltas before they are submitted to remote wave servers.
+      */
+    bool checkHashedVersion( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage );
 
     void subscribe( ClientConnection* connection );
     void unsubscribe( ClientConnection* connection );
