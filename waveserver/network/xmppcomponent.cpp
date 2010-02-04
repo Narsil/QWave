@@ -741,6 +741,32 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                             {
                                 qDebug("At least one signer is not known. Move submit-request to the EscrowDeposit.");
                                 allKnown = false;
+
+//                                // Send a signer-request
+//                                QString sendStr;
+//                                {
+//                                    QXmlStreamWriter writer( &sendStr );
+//                                    writer.writeStartElement("iq");
+//                                    writer.writeAttribute("type", "get" );
+//                                    writer.writeAttribute("id", m_connection->nextId() );
+//                                    writer.writeAttribute("to", m_domain );
+//                                    writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
+//                                    writer.writeStartElement("pubsub");
+//                                    writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
+//                                    writer.writeStartElement("items");
+//                                    writer.writeAttribute("node", "signer");
+//                                    writer.writeStartElement("signer-request");
+//                                    writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
+//                                    writer.writeAttribute("wavelet-name", waveletName );
+//                                    writer.writeAttribute("version", QString::number( wdelta.delta().version().version ) );
+//                                    writer.writeAttribute("history-hash", QString::fromAscii( wdelta.delta().version().hash.toBase64() ) );
+//                                    writer.writeAttribute("signer-id", QString::fromAscii( sig.signerId().toBase64() ) );
+//                                    writer.writeEndElement();
+//                                    writer.writeEndElement();
+//                                    writer.writeEndElement();
+//                                    writer.writeEndElement();
+//                                }
+//                                m_connection->send( sendStr );
                             }
                             else
                             {
@@ -756,7 +782,11 @@ void XmppVirtualConnection::processIqGet( const XmppStanza& stanza )
                         }
                         if ( !allKnown )
                         {
-                            // TODO Escrow
+                            // TODO Send an error to indicate the remote that the signer infor is missing.
+                            // TODO: This must wait until the protocol has been updated.
+                            qDebug("Submit-request rejected because of missing singer info.");
+                            xmppError();
+                            return;
                         }
 
                         // TODO: AppliedWaveletDelta should be able to carry a list of signatures
