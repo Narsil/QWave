@@ -157,7 +157,7 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         WaveUrl url( waveletId );
         if ( url.isNull() )
         {
-            sendSubmitResponse( 0, "Malformed wave url");
+            sendSubmitResponse( 0, 0, "Malformed wave url");
             return;
         }
 
@@ -165,7 +165,7 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == domain()) );
         if ( !wave )
         {
-            sendSubmitResponse( 0, "Could not create wave");
+            sendSubmitResponse( 0, 0, "Could not create wave");
             return;
         }
 
@@ -173,7 +173,7 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), (url.waveletDomain() == domain()) );
         if ( !wavelet )
         {
-            sendSubmitResponse( 0, "Could not create wavelet");
+            sendSubmitResponse( 0, 0, "Could not create wavelet");
             return;
         }
 
@@ -182,24 +182,30 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         int version = wavelet->apply(update.delta(), &err );
         if ( !err.isEmpty() || version < 0 )
         {
-            sendSubmitResponse( 0, err );
+            sendSubmitResponse( 0, 0, err );
         }
         else
         {
             const AppliedWaveletDelta& applied = wavelet->delta(version - 1);
 
             // Send a response
-            sendSubmitResponse( applied.operationsApplied(), QString::null );
+            sendSubmitResponse( applied.operationsApplied(), &applied.resultingVersion(), QString::null );
         }
     }
 }
 
-void ClientConnection::sendSubmitResponse( qint32 operationsApplied, const QString& errorMessage )
+void ClientConnection::sendSubmitResponse( qint32 operationsApplied, const WaveletDelta::HashedVersion* hashedVersionAfterApplication, const QString& errorMessage )
 {
     waveserver::ProtocolSubmitResponse response;
     response.set_operations_applied( operationsApplied );
     if ( !errorMessage.isNull() )
         response.set_error_message( errorMessage.toStdString() );
+    if ( hashedVersionAfterApplication )
+    {
+        protocol::ProtocolHashedVersion* version = response.mutable_hashed_version_after_application();
+        version->set_history_hash( hashedVersionAfterApplication->hash.data(), hashedVersionAfterApplication->hash.length() );
+        version->set_version( hashedVersionAfterApplication->version );
+    }
 
     qDebug("SubmitResponse>> %s", response.DebugString().data());
 
