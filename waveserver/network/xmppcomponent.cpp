@@ -321,7 +321,7 @@ QString XmppComponentConnection::host() const
   **********************************************/
 
 XmppVirtualConnection::XmppVirtualConnection( XmppComponentConnection* connection, const QString& domain, bool resolve )
-        : QObject( connection ), m_state( resolve ? Init : Established ), m_connection( connection ), m_domain( domain )
+        : QObject( connection ), m_state( resolve ? Init : Established ), m_connection( connection ), m_domain( domain ), m_signerInfoSent(false)
 {
     if ( m_state == Init )
     {
@@ -937,7 +937,101 @@ void XmppVirtualConnection::processMessage( const XmppStanza& stanza )
         return;
     }
 
-    // TODO
+    if ( stanza["type"] == "normale" )
+    {
+        XmppTag* event = stanza.child("event");
+        XmppTag* items = event ? event->child("items") : 0;
+        XmppTag* item = items ? items->child("item") : 0;
+        XmppTag* update = item ? item->child("wavelet-update") : 0;
+        XmppTag* applied = update ? update->child("applied-delta") : 0;
+        XmppTag* text = applied ? applied->childAt(0) : 0;
+        if ( text && ( text->isCData() || text->isText() ) )
+        {
+            WaveUrl url( update->attribute("wavelet-name") );
+            if ( url.isNull() )
+            {
+                qDebug("Malformed wavelet name %s", url.toString().toAscii().constData() );
+                xmppError();
+                return;
+            }
+
+            bool ok;
+            SignedWaveletDelta delta = SignedWaveletDelta::fromBase64( text->text(), &ok );
+            if ( !ok )
+            {
+                qDebug("Could not deserialize signed wavelet delta.");
+                xmppError();
+                return;
+            }
+
+            if ( delta.signatures().count() == 0 )
+            {
+                qDebug("No signature in SignedWaveltDelta");
+                xmppError();
+                return;
+            }
+
+            Wave* wave = Wave::wave( url.waveDomain(), url.waveId() );
+            if ( !wave )
+            {
+                qDebug("Unknown wave");
+                xmppError();
+                return;
+            }
+            Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), true );
+            if ( !wavelet )
+            {
+                qDebug("Unknown wavelet");
+                xmppError();
+                return;
+            }
+
+            // Send a response
+            QString sendStr;
+            {
+                QXmlStreamWriter writer( &sendStr );
+                writer.writeStartElement("message");
+                writer.writeAttribute("id", stanza["id"] );
+                writer.writeAttribute("to", m_domain );
+                writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
+                writer.writeStartElement("received");
+                writer.writeAttribute("xmlns", "urn:xmpp:receipts" );
+                writer.writeEndElement();
+                writer.writeEndElement();
+            }
+            m_connection->send( sendStr );
+
+            // Are all signers known ?
+            foreach( const Signature& sig, delta.signatures() )
+            {
+                const ServerCertificate* cert = CertificateStore::store()->certificate( sig.signerId() );
+                if ( !cert )
+                {
+                    // TODO Ask for signer info, i.e. get a certificate for this signer ID.
+                }
+            }
+
+            // We are missing some deltas? Then issue a history-request
+            if ( delta.delta().version().version > wavelet->version() )
+            {
+                // TODO: return
+            }
+
+            QString err;
+            // TODO: What if there are multuple signatures
+            int version = wavelet->apply( delta.delta(), &err, &delta.signatures()[0] );
+            if ( version == -1 || !err.isEmpty() )
+            {
+                qDebug("Error applying delta: %s", err.toAscii().constData() );
+                xmppError();
+                return;
+            }
+        }
+        else
+            qDebug("... message unhandled");
+    }
+    else
+        qDebug("... message unhandled");
 }
 
 void XmppVirtualConnection::xmppError()
@@ -1016,7 +1110,47 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
 
 void XmppVirtualConnection::sendSubmitRequest( const WaveUrl& url, const protocol::ProtocolWaveletDelta& delta )
 {
-    // TODO: Post signer information before sending the first submit request
+    // Post signer information before sending the first submit request
+    if ( !m_signerInfoSent )
+    {
+        m_signerInfoSent = true;
+        QString sendStr;
+        {
+            QXmlStreamWriter writer( &sendStr );
+            writer.writeStartElement("iq");
+            writer.writeAttribute("type", "set" );
+            writer.writeAttribute("id", m_connection->nextId() );
+            writer.writeAttribute("to", m_domain );
+            writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
+            writer.writeStartElement("pubsub");
+            writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
+            writer.writeStartElement("publish");
+            writer.writeAttribute("node", "signer" );
+            writer.writeStartElement("item");
+            writer.writeStartElement("signature");
+            writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
+            writer.writeAttribute("domain", m_domain );
+            writer.writeAttribute("algorithm", "SHA256" );
+            QList<QByteArray> certificates = LocalServerCertificate::certificate()->toBase64();
+            foreach(QByteArray ba, certificates )
+            {
+                writer.writeStartElement("certificate");
+                QString str = QString::fromAscii(ba);
+                QStringList lst = str.split('\n', QString::SkipEmptyParts );
+                lst.removeFirst();
+                lst.removeLast();
+                writer.writeCDATA( lst.join("") );
+                writer.writeEndElement();
+            }
+            writer.writeEndElement();
+            writer.writeEndElement();
+            writer.writeEndElement();
+            writer.writeEndElement();
+            writer.writeEndElement();
+        }
+        m_connection->send( sendStr );
+    }
+
     SignedWaveletDelta sdelta( delta );
     QString str64 = sdelta.toBase64();
 

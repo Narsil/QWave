@@ -155,6 +155,7 @@ private:
     XmppComponentConnection* m_connection;
     QString m_domain;
     QQueue<XmppStanza*> m_stanzaQueue;
+    bool m_signerInfoSent;
 };
 
 #endif // XmppComponentConnection_H
