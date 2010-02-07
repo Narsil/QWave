@@ -14,7 +14,7 @@ typedef QSharedPointer<IMessage> IMessagePtr;
 class ActorGroup : public QObject
 {
 public:
-    ActorGroup();
+    ActorGroup( QObject* parent = 0 );
     virtual ~ActorGroup();
 
     void enqueue( IMessage* msg );
