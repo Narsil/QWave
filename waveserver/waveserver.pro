@@ -33,7 +33,11 @@ SOURCES += main.cpp \
     model/appliedwaveletdelta.cpp \
     model/signedwaveletdelta.cpp \
     model/signature.cpp \
-    model/certificatestore.cpp
+    model/certificatestore.cpp \
+    actor/actor.cpp \
+    actor/timeout.cpp \
+    actor/recvsignal.cpp \
+    actor/actorgroup.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -60,7 +64,16 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     model/appliedwaveletdelta.h \
     model/signedwaveletdelta.h \
     model/signature.h \
-    model/certificatestore.h
+    model/certificatestore.h \
+    actor/timeout.h \
+    actor/recvxor.h \
+    actor/recvxmpp.h \
+    actor/recvsignal.h \
+    actor/recv.h \
+    actor/imessage.h \
+    actor/actor.h \
+    actor/actorgroup.h \
+    actor/waitingcondition.h
 unix:LIBS += -lprotobuf \
     -lcrypto
 INCLUDEPATH += ./ \
