@@ -1,7 +1,7 @@
 #include "actorgroup.h"
 
-ActorGroup::ActorGroup()
-        : m_destructed(false), m_active(false)
+ActorGroup::ActorGroup(QObject* parent)
+        : QObject( parent ), m_destructed(false), m_active(false)
 {
 }
 

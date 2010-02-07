@@ -40,5 +40,6 @@ private:
     RecvXorImpl* m_ptr;
 };
 
+template<class X> RecvXor operator|( const RecvXor& x, const X& y ) { return RecvXor(x.donate(), y.donate()); }
 
 #endif // RECVXOR_H
