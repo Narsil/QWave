@@ -75,6 +75,29 @@ public:
     QString from() const { return attributes()["from"]; }
     QString to() const { return attributes()["to"]; }
     QString id() const { return attributes()["id"]; }
+
+    enum Kind
+    {
+        Unknown = 0,
+        WaveletUpdate = 1,
+        MessageReceipt = 2,
+        HistoryRequest = 3,
+        HistoryResponse = 4,
+        SignerInfoRequest = 5,
+        SignerInfoResponse = 6,
+        PostSignerInfo = 7,
+        PostSignerInfoResponse = 8,
+        SubmitRequest = 9,
+        SubmitResponse = 10,
+        DiscoInfo = 11,
+        DiscoItems = 12
+    };
+
+    Kind kind() const { return m_kind; }
+    void setKind( Kind kind ) { m_kind = kind; }
+
+private:
+    Kind m_kind;
 };
 
 
