@@ -51,13 +51,6 @@ public:
     void setDomain( const QString& domain );
 
     XmppComponentConnection* component() const { return m_component; }
-    /**
-      * @return true if the virtual connection could not be established, i.e. the remote wave server did not answer or
-      * is incompatible.
-      */
-    bool hasError() const { return m_state == Error; }
-
-    void process( const XmppStanza& stanza );
 
     void xmppError();
 
@@ -81,7 +74,6 @@ private:
       */
     void send( XmppStanza* stanza );
 
-    void processIqGet( const XmppStanza& stanza );
     void processMessage( const XmppStanza& stanza );
 
     enum State
