@@ -8,6 +8,8 @@
 #include <QHash>
 #include <QSharedPointer>
 
+#include "actor/imessage.h"
+
 class XmppTag;
 typedef QSharedPointer<XmppTag> XmppTagPtr;
 
@@ -66,15 +68,16 @@ private:
     QList<XmppTagPtr> m_children;
 };
 
-class XmppStanza : public XmppTag
+class XmppStanza : public IMessage, public XmppTag
 {
 public:
-    XmppStanza( const QString& qualifiedName ) : XmppTag( qualifiedName, Element ) { }
-    XmppStanza( const QString& qualifiedName, const QXmlStreamAttributes& attribs ) : XmppTag( qualifiedName, attribs ) { }
+    XmppStanza( const QString& qualifiedName ) : XmppTag( qualifiedName, Element ), m_kind(Unknown) { }
+    XmppStanza( const QString& qualifiedName, const QXmlStreamAttributes& attribs ) : XmppTag( qualifiedName, attribs ), m_kind(Unknown) { }
 
     QString from() const { return attributes()["from"]; }
     QString to() const { return attributes()["to"]; }
     QString id() const { return attributes()["id"]; }
+    QString type() const { return attributes()["type"]; }
 
     enum Kind
     {
@@ -83,14 +86,17 @@ public:
         MessageReceipt = 2,
         HistoryRequest = 3,
         HistoryResponse = 4,
-        SignerInfoRequest = 5,
-        SignerInfoResponse = 6,
-        PostSignerInfo = 7,
-        PostSignerInfoResponse = 8,
+        SignerRequest = 5,
+        SignerResponse = 6,
+        PostSigner = 7,
+        PostSignerResponse = 8,
         SubmitRequest = 9,
         SubmitResponse = 10,
         DiscoInfo = 11,
-        DiscoItems = 12
+        DiscoInfoResponse = 12,
+        DiscoItems = 13,
+        DiscoItemsResponse = 14,
+        Error = 1000
     };
 
     Kind kind() const { return m_kind; }

@@ -21,7 +21,6 @@ SOURCES += main.cpp \
     ../core/protocol/common.pb.cc \
     network/serversocket.cpp \
     network/clientconnection.cpp \
-    network/xmppcomponent.cpp \
     network/xmppstanza.cpp \
     ../core/network/rpc.cpp \
     ../core/network/converter.cpp \
@@ -37,7 +36,17 @@ SOURCES += main.cpp \
     actor/actor.cpp \
     actor/timeout.cpp \
     actor/recvsignal.cpp \
-    actor/actorgroup.cpp
+    actor/actorgroup.cpp \
+    network/xmppcomponentconnection.cpp \
+    network/xmppvirtualconnection.cpp \
+    network/xmppdiscoactor.cpp \
+    network/xmppactor.cpp \
+    network/xmppwaveletupdateactor.cpp \
+    network/xmppdiscoresponseactor.cpp \
+    network/xmppsignerresponseactor.cpp \
+    network/xmpphistoryresponseactor.cpp \
+    network/xmppsubmitresponseactor.cpp \
+    network/xmpppostsignerresponseactor.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -52,7 +61,6 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/protocol/waveclient-rpc.pb.h \
     network/serversocket.h \
     network/clientconnection.h \
-    network/xmppcomponent.h \
     network/xmppstanza.h \
     ../core/network/rpc.h \
     ../core/network/converter.h \
@@ -73,7 +81,17 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     actor/imessage.h \
     actor/actor.h \
     actor/actorgroup.h \
-    actor/waitingcondition.h
+    actor/waitingcondition.h \
+    network/xmppcomponentconnection.h \
+    network/xmppvirtualconnection.h \
+    network/xmppdiscoactor.h \
+    network/xmppactor.h \
+    network/xmppwaveletupdateactor.h \
+    network/xmppdiscoresponseactor.h \
+    network/xmppsignerresponseactor.h \
+    network/xmpphistoryresponseactor.h \
+    network/xmppsubmitresponseactor.h \
+    network/xmpppostsignerresponseactor.h
 unix:LIBS += -lprotobuf \
     -lcrypto
 INCLUDEPATH += ./ \
