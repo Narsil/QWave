@@ -14,7 +14,7 @@ ActorGroup::~ActorGroup()
     }
 }
 
-void ActorGroup::process( const QSharedPointer<IMessage>& message )
+void ActorGroup::dispatch( const QSharedPointer<IMessage>& message )
 {
     Actor* actor = message->receiver();
     if ( actor )
@@ -73,7 +73,7 @@ void ActorGroup::enqueue( IMessage* msg )
     {
         m_active = true;
         QSharedPointer<IMessage> message(msg);
-        process( message );
+        dispatch( message );
         m_active = false;
         if ( !m_queue.isEmpty() )
             run();
@@ -89,7 +89,7 @@ void ActorGroup::run()
     while( !m_queue.isEmpty() )
     {
         QSharedPointer<IMessage> msg = m_queue.dequeue();
-        process( msg );
+        dispatch( msg );
     }
 
     m_active = false;

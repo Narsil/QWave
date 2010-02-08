@@ -9,16 +9,6 @@ Actor::Actor()
     m_wait = 0;
 }
 
-Actor::Actor(ActorGroup* group )
-        : m_group(0)
-{
-    m_state = 0;
-    m_reason = 0;
-    m_wait = 0;
-
-    group->addActor( this );
-}
-
 Actor::~Actor()
 {
     deleteWait();

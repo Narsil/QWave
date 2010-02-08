@@ -10,7 +10,7 @@
 #define TERMINATE() m_state = -1; return;
 #define BEGIN_EXECUTE switch(m_state) { case 0:
 #define END_EXECUTE ; } m_state = -1;
-#define yield(condition) m_state = __LINE__; m_wait = (condition).donate(); return; case __LINE__:
+#define yield(condition) { m_state = __LINE__; m_wait = (condition).donate(); return; case __LINE__: ; }
 // #define REASON(t) t* REASON = dynamic_cast<t*>( this->m_reason )
 #define REASON(t) t REASON = _REASON<t>( this->m_reason )
 
@@ -36,7 +36,6 @@ class ActorGroup;
 class Actor : public QObject
 {
 public:
-    Actor(ActorGroup* group);
     Actor();
     virtual ~Actor();
 

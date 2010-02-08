@@ -3,6 +3,9 @@
 
 class Actor;
 
+/**
+  * All messages which are passed between actors must implement this interface.
+  */
 class IMessage
 {
 public:
