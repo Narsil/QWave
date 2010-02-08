@@ -22,7 +22,7 @@ public:
         {
             if ( m_id.isNull() || m_id == ptr->id() )
             {
-                m_message = m_message.dynamicCast<XmppStanza>();
+                m_message = msg.dynamicCast<XmppStanza>();
                 return this;
             }
         }

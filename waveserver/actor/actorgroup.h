@@ -22,12 +22,14 @@ public:
     void addActor( Actor* actor );
     void removeActor( Actor* actor );
 
+protected:
+    virtual void dispatch( const QSharedPointer<IMessage>& message );
+
 private:
     void run();
     /**
       * The object takes over ownership of the message.
       */
-    void process( const QSharedPointer<IMessage>& message );
     void process( const QSharedPointer<IMessage>& message, Actor* actor );
 
     bool m_destructed;
