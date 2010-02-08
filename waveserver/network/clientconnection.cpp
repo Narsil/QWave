@@ -225,9 +225,10 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
             return;
         }
 
-        const AppliedWaveletDelta& applied = wavelet->delta(version - 1);
+        const AppliedWaveletDelta* applied = wavelet->delta(version - 1);
+        Q_ASSERT(applied);
         // Send a response
-        sendSubmitResponse( applied.operationsApplied(), &applied.resultingVersion(), QString::null );
+        sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
     }
 }
 

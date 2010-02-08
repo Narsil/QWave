@@ -46,7 +46,7 @@ public:
 
     qint64 version() const { return m_version; }
 
-    const AppliedWaveletDelta& delta( int version ) { return m_deltas[version]; }
+    const AppliedWaveletDelta* delta( int version ) { return &(m_deltas[version]); }
 
     /**
       * @return operations_applied.

@@ -6,6 +6,7 @@ Settings* Settings::s_settings = 0;
 Settings::Settings(const QString& filename, QObject* parent)
         : QSettings(filename, QSettings::NativeFormat, parent)
 {
+    s_settings = this;
 }
 
 Settings* Settings::settings()
