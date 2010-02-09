@@ -1,11 +1,13 @@
-#include "xmppvirtualconnection.h"
-#include "xmppdiscoactor.h"
-#include "xmppwaveletupdateactor.h"
-#include "xmppdiscoresponseactor.h"
-#include "xmppsignerresponseactor.h"
-#include "xmpphistoryresponseactor.h"
-#include "xmppsubmitresponseactor.h"
-#include "xmpppostsignerresponseactor.h"
+#include "network/xmppvirtualconnection.h"
+#include "network/xmppdiscoactor.h"
+#include "network/xmppwaveletupdateactor.h"
+#include "network/xmppdiscoresponseactor.h"
+#include "network/xmppsignerresponseactor.h"
+#include "network/xmpphistoryresponseactor.h"
+#include "network/xmppsubmitresponseactor.h"
+#include "network/xmpppostsignerresponseactor.h"
+#include "network/xmppwaveletupdateresponseactor.h"
+#include "network/xmppsubmitrequestactor.h"
 #include "network/xmppcomponentconnection.h"
 #include "app/settings.h"
 #include "model/appliedwaveletdelta.h"
@@ -27,7 +29,7 @@
 #include <QDateTime>
 
 XmppVirtualConnection::XmppVirtualConnection( XmppComponentConnection* connection, const QString& domain, bool resolve )
-        : ActorGroup( connection ), m_state( resolve ? Init : Established ), m_component( connection ), m_domain( domain ), m_signerInfoSent(false), m_ready(false)
+        : ActorGroup( connection ), m_component( connection ), m_domain( domain ), m_postedSigner(false), m_ready(false)
 {
     if ( !resolve )
         setReady();
@@ -37,215 +39,7 @@ XmppVirtualConnection::XmppVirtualConnection( XmppComponentConnection* connectio
 
 XmppVirtualConnection::~XmppVirtualConnection()
 {
-    foreach( XmppStanza* stanza, m_stanzaQueue )
-    {
-        delete stanza;
-    }
 }
-
-void XmppVirtualConnection::processMessage( const XmppStanza& stanza )
-{
-    if ( stanza["type"] == "error" )
-    {
-        xmppError();
-        return;
-    }
-
-    if ( stanza["type"] == "normal" )
-    {
-        XmppTag* event = stanza.child("event");
-        XmppTag* items = event ? event->child("items") : 0;
-        XmppTag* item = items ? items->child("item") : 0;
-        XmppTag* update = item ? item->child("wavelet-update") : 0;
-        XmppTag* applied = update ? update->child("applied-delta") : 0;
-        XmppTag* text = applied ? applied->childAt(0) : 0;
-        if ( text && ( text->isCData() || text->isText() ) )
-        {
-            WaveUrl url( update->attribute("wavelet-name") );
-            if ( url.isNull() )
-            {
-                qDebug("Malformed wavelet name %s", url.toString().toAscii().constData() );
-                xmppError();
-                return;
-            }
-
-            bool ok;
-            SignedWaveletDelta delta = SignedWaveletDelta::fromBase64( text->text(), &ok );
-            if ( !ok )
-            {
-                qDebug("Could not deserialize signed wavelet delta.");
-                xmppError();
-                return;
-            }
-
-            if ( delta.signatures().count() == 0 )
-            {
-                qDebug("No signature in SignedWaveltDelta");
-                xmppError();
-                return;
-            }
-
-            Wave* wave = Wave::wave( url.waveDomain(), url.waveId() );
-            if ( !wave )
-            {
-                qDebug("Unknown wave");
-                xmppError();
-                return;
-            }
-            Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), true );
-            if ( !wavelet )
-            {
-                qDebug("Unknown wavelet");
-                xmppError();
-                return;
-            }
-
-            // Send a response
-            QString sendStr;
-            {
-                QXmlStreamWriter writer( &sendStr );
-                writer.writeStartElement("message");
-                writer.writeAttribute("id", stanza["id"] );
-                writer.writeAttribute("to", m_domain );
-                writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
-                writer.writeStartElement("received");
-                writer.writeAttribute("xmlns", "urn:xmpp:receipts" );
-                writer.writeEndElement();
-                writer.writeEndElement();
-            }
-            m_component->send( sendStr );
-
-            // Are all signers known ?
-            foreach( const Signature& sig, delta.signatures() )
-            {
-                const ServerCertificate* cert = CertificateStore::store()->certificate( sig.signerId() );
-                if ( !cert )
-                {
-                    // TODO Ask for signer info, i.e. get a certificate for this signer ID.
-                }
-            }
-
-            // We are missing some deltas? Then issue a history-request
-            if ( delta.delta().version().version > wavelet->version() )
-            {
-                // TODO: return
-            }
-
-            QString err;
-            // TODO: What if there are multuple signatures
-            int version = wavelet->apply( delta.delta(), &err, &delta.signatures()[0] );
-            if ( version == -1 || !err.isEmpty() )
-            {
-                qDebug("Error applying delta: %s", err.toAscii().constData() );
-                xmppError();
-                return;
-            }
-        }
-        else
-            qDebug("... message unhandled");
-    }
-    else
-        qDebug("... message unhandled");
-}
-
-void XmppVirtualConnection::sendSubmitRequest( const WaveUrl& url, const protocol::ProtocolWaveletDelta& delta )
-{
-    // Post signer information before sending the first submit request
-    if ( !m_signerInfoSent )
-    {
-        m_signerInfoSent = true;
-        QString sendStr;
-        {
-            QXmlStreamWriter writer( &sendStr );
-            writer.writeStartElement("iq");
-            writer.writeAttribute("type", "set" );
-            writer.writeAttribute("id", m_component->nextId() );
-            writer.writeAttribute("to", m_domain );
-            writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
-            writer.writeStartElement("pubsub");
-            writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
-            writer.writeStartElement("publish");
-            writer.writeAttribute("node", "signer" );
-            writer.writeStartElement("item");
-            writer.writeStartElement("signature");
-            writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
-            writer.writeAttribute("domain", m_domain );
-            writer.writeAttribute("algorithm", "SHA256" );
-            QList<QByteArray> certificates = LocalServerCertificate::certificate()->toBase64();
-            foreach(QByteArray ba, certificates )
-            {
-                writer.writeStartElement("certificate");
-                QString str = QString::fromAscii(ba);
-                QStringList lst = str.split('\n', QString::SkipEmptyParts );
-                lst.removeFirst();
-                lst.removeLast();
-                writer.writeCDATA( lst.join("") );
-                writer.writeEndElement();
-            }
-            writer.writeEndElement();
-            writer.writeEndElement();
-            writer.writeEndElement();
-            writer.writeEndElement();
-            writer.writeEndElement();
-        }
-        m_component->send( sendStr );
-    }
-
-    SignedWaveletDelta sdelta( delta );
-    QString str64 = sdelta.toBase64();
-
-    QString sendStr;
-    {
-        QXmlStreamWriter writer( &sendStr );
-        writer.writeStartElement("iq");
-        writer.writeAttribute("type", "set" );
-        writer.writeAttribute("id", m_component->nextId() );
-        writer.writeAttribute("to", m_domain );
-        writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
-        writer.writeStartElement("pubsub");
-        writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
-        writer.writeStartElement("publish");
-        writer.writeAttribute("node", "wavelet" );
-        writer.writeStartElement("item");
-        writer.writeStartElement("submit-request");
-        writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
-        writer.writeAttribute("wavelet-name", url.toString() );
-        writer.writeStartElement("delta");
-        writer.writeCDATA( str64 );
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeEndElement();
-    }
-    m_component->send( sendStr );
-
-    // TODO: Wait for the response
-}
-
-void XmppVirtualConnection::send( XmppStanza* stanza )
-{
-    switch( m_state )
-    {
-        case Init:
-        case DiscoItems:
-            m_stanzaQueue.enqueue(stanza);
-            break;
-        case Established:
-            m_component->send( *stanza );
-            delete stanza;
-            break;
-        case Delete:
-        case Error:
-            // Do nothing by intention
-            break;
-    }
-}
-
-////////
-/// NEW
-////////
 
 void XmppVirtualConnection::setDomain( const QString& domain )
 {
@@ -275,7 +69,7 @@ void XmppVirtualConnection::dispatch( const QSharedPointer<IMessage>& message )
             switch( stanza->kind() )
             {
                 case XmppStanza::WaveletUpdate:
-                    // TODO
+                    new XmppWaveletUpdateResponseActor( this, message.dynamicCast<XmppStanza>() );
                     break;
                 case XmppStanza::HistoryRequest:
                     new XmppHistoryResponseActor( this, message.dynamicCast<XmppStanza>() );
@@ -309,9 +103,13 @@ void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const 
     new XmppWaveletUpdateActor( this, waveletName, waveletDelta );
 }
 
+void XmppVirtualConnection::sendSubmitRequest( const WaveUrl& url, const protocol::ProtocolWaveletDelta& delta )
+{
+    new XmppSubmitRequestActor( this, url, delta );
+}
+
 void XmppVirtualConnection::xmppError()
 {
     qDebug("ERROR talking to servers %s", m_domain.toAscii().constData() );
     m_ready = false;
 }
-

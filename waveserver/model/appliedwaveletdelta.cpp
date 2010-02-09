@@ -12,50 +12,44 @@ AppliedWaveletDelta::AppliedWaveletDelta()
 }
 
 AppliedWaveletDelta::AppliedWaveletDelta( const AppliedWaveletDelta& delta )
-        : m_null(delta.m_null), m_delta( delta.m_delta ), m_resultingVersion( delta.m_resultingVersion ), m_applicationTime( delta.m_applicationTime ), m_operationsApplied( delta.m_operationsApplied ), m_signature( delta.m_signature ), m_signerId( delta.m_signerId )
+        : m_null(delta.m_null), m_signedDelta( delta.m_signedDelta ), m_resultingVersion( delta.m_resultingVersion ), m_applicationTime( delta.m_applicationTime ), m_operationsApplied( delta.m_operationsApplied ), m_appliedAt( delta.m_appliedAt ), m_transformedDelta( delta.m_transformedDelta )
 {
 }
 
-AppliedWaveletDelta::AppliedWaveletDelta( const WaveletDelta& delta, qint64 applicationTime, int operationsApplied, const Signature* signature )
-        : m_null(false), m_delta( delta ), m_applicationTime( applicationTime ), m_operationsApplied( operationsApplied )
+AppliedWaveletDelta::AppliedWaveletDelta( const SignedWaveletDelta& delta, qint64 applicationTime, int operationsApplied )
+        : m_null(false), m_signedDelta( delta ), m_applicationTime( applicationTime ), m_operationsApplied( operationsApplied )
 {
-    if ( signature )
-    {
-        m_signature = signature->signature();
-        m_signerId = signature->signerId();
-    }
+}
+
+AppliedWaveletDelta::AppliedWaveletDelta( const protocol::ProtocolAppliedWaveletDelta* protobufDelta, bool *ok )
+        : m_null(false)
+{
+     m_operationsApplied = protobufDelta->operations_applied();
+     m_applicationTime = protobufDelta->application_timestamp();
+
+     if ( protobufDelta->has_hashed_version_applied_at() )
+     {
+         m_appliedAt.version = protobufDelta->hashed_version_applied_at().version();
+         m_appliedAt.hash = QByteArray( protobufDelta->hashed_version_applied_at().history_hash().data(), protobufDelta->hashed_version_applied_at().history_hash().length() );
+     }
+
+     m_signedDelta = SignedWaveletDelta( &protobufDelta->signed_original_delta(), ok );
 }
 
 void AppliedWaveletDelta::toProtobuf(protocol::ProtocolAppliedWaveletDelta* appliedDelta) const
 {
-    protocol::ProtocolWaveletDelta delta;
-    Converter::convert( &delta, m_delta);
-    QByteArray ba;
-    ba.resize( delta.ByteSize() );
-    delta.SerializeToArray( ba.data(), ba.count() );
-
     appliedDelta->set_operations_applied( m_operationsApplied );
     appliedDelta->set_application_timestamp( m_applicationTime );
 
-//    protocol::ProtocolHashedVersion* hashed = appliedDelta.mutable_hashed_version_applied_at();
-//    hashed->set_version( waveletDelta.delta().version().version );
-//    QByteArray hash = waveletDelta.delta().version().hash;
-//    hashed->set_history_hash( hash.constData(), hash.length() );
+    if ( !m_appliedAt.isNull() )
+    {
+        protocol::ProtocolHashedVersion* hashed = appliedDelta->mutable_hashed_version_applied_at();
+        hashed->set_version( m_appliedAt.version );
+        hashed->set_history_hash( m_appliedAt.hash.constData(), m_appliedAt.hash.length() );
+    }
 
     protocol::ProtocolSignedDelta* signedDelta = appliedDelta->mutable_signed_original_delta();
-    signedDelta->set_delta( ba.constData(), ba.length() );
-    protocol::ProtocolSignature* signature = signedDelta->add_signature();
-    signature->set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
-    if ( m_signerId.isNull() )
-    {
-        QByteArray signerId = LocalServerCertificate::certificate()->signerId();
-        signature->set_signer_id( signerId.constData(), signerId.length() );
-    }
-    else
-        signature->set_signer_id( m_signerId.constData(), m_signerId.length() );
-    if ( m_signature.isNull() )
-        ((AppliedWaveletDelta*)this)->m_signature = LocalServerCertificate::certificate()->sign(ba);
-    signature->set_signature_bytes( m_signature.constData(), m_signature.length() );
+    m_signedDelta.toProtobuf( signedDelta );
 }
 
 QByteArray AppliedWaveletDelta::toBinary() const
@@ -76,13 +70,30 @@ QString AppliedWaveletDelta::toBase64() const
     return str64;
 }
 
+AppliedWaveletDelta AppliedWaveletDelta::fromBase64( const QString& base64, bool* ok)
+{
+    QByteArray data = QByteArray::fromBase64( base64.toAscii() );
+
+    protocol::ProtocolAppliedWaveletDelta appliedDelta;
+    if ( !appliedDelta.ParseFromArray( data.data(), data.length() ) )
+    {
+        if ( ok )
+            *ok = false;
+        return AppliedWaveletDelta();
+    }
+
+    appliedDelta.PrintDebugString();
+
+    return AppliedWaveletDelta( &appliedDelta, ok );
+}
+
 const WaveletDelta::HashedVersion& AppliedWaveletDelta::resultingVersion() const
 {
     if ( !m_resultingVersion.hash.isNull() )
         return m_resultingVersion;
 
     QByteArray ba2 = toBinary();
-    ba2.prepend( m_delta.version().hash );
+    ba2.prepend( m_signedDelta.delta().version().hash );
 
     QByteArray hashBuffer( 32, 0 );
     SHA256( (const unsigned char*)ba2.constData(), ba2.length(), (unsigned char*)hashBuffer.data() );
@@ -90,6 +101,6 @@ const WaveletDelta::HashedVersion& AppliedWaveletDelta::resultingVersion() const
     ((AppliedWaveletDelta*)this)->m_resultingVersion.hash.resize(20);
     for( int i = 0; i < 20; ++i )
         ((AppliedWaveletDelta*)this)->m_resultingVersion.hash.data()[i] = hashBuffer.data()[i];
-    ((AppliedWaveletDelta*)this)->m_resultingVersion.version = m_delta.version().version + m_operationsApplied;
+    ((AppliedWaveletDelta*)this)->m_resultingVersion.version = m_signedDelta.delta().version().version + m_operationsApplied;
     return m_resultingVersion;
 }

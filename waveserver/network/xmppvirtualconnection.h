@@ -27,6 +27,9 @@ namespace protocol
     class ProtocolWaveletDelta;
 }
 
+/**
+  * Handles all XMPP stanzas exchanged between this wave server and another remote wave server.
+  */
 class XmppVirtualConnection : public ActorGroup
 {
     Q_OBJECT
@@ -52,8 +55,14 @@ public:
 
     XmppComponentConnection* component() const { return m_component; }
 
+    /**
+      * Used by the actors to signal an error.
+      */
     void xmppError();
 
+    /**
+      * Used by the actors to send a message.
+      */
     bool send( const QString& stanza );
 
     /**
@@ -62,33 +71,31 @@ public:
     void setReady();
     bool isReady() const { return m_ready; }
 
+    /**
+      * Tells whether the post-signer message has already been sent.
+      */
+    bool hasPostedSigner() const { return m_postedSigner; }
+    /**
+      * Used by the actor after the post-signer message has been sent and acknowledged.
+      */
+    void setPostedSigner( bool posted ) { m_postedSigner = posted; }
+
 signals:
+    /**
+      * Emitted after we verified that the remote xmpp server supports wave.
+      */
     void ready();
 
 protected:
+    /**
+      * Creates new actors based on incoming messages.
+      */
     virtual void dispatch( const QSharedPointer<IMessage>& message );
 
 private:
-    /**
-      * The function takes ownership of the generated stanza.
-      */
-    void send( XmppStanza* stanza );
-
-    void processMessage( const XmppStanza& stanza );
-
-    enum State
-    {
-        Init,
-        DiscoItems,
-        Established,
-        Delete,
-        Error
-    } m_state;
-
     XmppComponentConnection* m_component;
     QString m_domain;
-    QQueue<XmppStanza*> m_stanzaQueue;
-    bool m_signerInfoSent;
+    bool m_postedSigner;
     bool m_ready;
 };
 

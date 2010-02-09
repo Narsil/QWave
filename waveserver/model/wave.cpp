@@ -1,4 +1,7 @@
 #include "wave.h"
+#include "localwavelet.h"
+#include "remotewavelet.h"
+#include "app/settings.h"
 
 QHash<QString,Wave*>* Wave::s_waves = 0;
 
@@ -22,7 +25,11 @@ Wavelet* Wave::wavelet( const QString& domain, const QString& id, bool create )
         return m_wavelets[name];
     if ( !create )
         return 0;
-    Wavelet* wavelet = new Wavelet(this, domain, id);
+    Wavelet* wavelet;
+    if ( domain == Settings::settings()->domain() )
+        wavelet = new LocalWavelet(this, domain, id);
+    else
+        wavelet = new RemoteWavelet(this, domain, id);
     m_wavelets[name] = wavelet;
     return wavelet;
 }

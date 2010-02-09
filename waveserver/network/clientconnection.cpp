@@ -1,7 +1,8 @@
 #include "clientconnection.h"
 #include "serversocket.h"
 #include "network/rpc.h"
-#include "network/xmppcomponent.h"
+#include "network/xmppcomponentconnection.h"
+#include "network/xmppvirtualconnection.h"
 #include "protocol/common.pb.h"
 #include "protocol/waveclient-rpc.pb.h"
 #include "network/converter.h"
@@ -9,6 +10,8 @@
 #include "model/wavelet.h"
 #include "model/wave.h"
 #include "model/waveurl.h"
+#include "model/localwavelet.h"
+#include "model/remotewavelet.h"
 #include "model/participant.h"
 #include "app/settings.h"
 #include "persistence/commitlog.h"
@@ -215,9 +218,12 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
             return;
         }
 
+        Q_ASSERT( wavelet->isLocal() );
+
+        LocalWavelet* localWavelet = dynamic_cast<LocalWavelet*>(wavelet);
         // Apply the delta
         QString err = "";
-        int version = wavelet->apply(update.delta(), &err );
+        int version = localWavelet->apply( SignedWaveletDelta( update.delta() ), &err );
         if ( !err.isEmpty() || version < 0 )
         {
             qDebug("Could not apply delta: %s", err.toAscii().constData() );
@@ -270,7 +276,7 @@ void ClientConnection::sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedW
         if ( appliedDelta.isNull() )
             continue;
         protocol::ProtocolWaveletDelta* delta = update.add_applied_delta();
-        Converter::convert( delta, appliedDelta.delta() );
+        Converter::convert( delta, appliedDelta.transformedDelta() );
     }
 
     qDebug("WaveletUpdate>> %s", update.DebugString().data());

@@ -46,7 +46,11 @@ SOURCES += main.cpp \
     network/xmppsignerresponseactor.cpp \
     network/xmpphistoryresponseactor.cpp \
     network/xmppsubmitresponseactor.cpp \
-    network/xmpppostsignerresponseactor.cpp
+    network/xmpppostsignerresponseactor.cpp \
+    network/xmppwaveletupdateresponseactor.cpp \
+    network/xmppsubmitrequestactor.cpp \
+    model/remotewavelet.cpp \
+    model/localwavelet.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -91,7 +95,11 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     network/xmppsignerresponseactor.h \
     network/xmpphistoryresponseactor.h \
     network/xmppsubmitresponseactor.h \
-    network/xmpppostsignerresponseactor.h
+    network/xmpppostsignerresponseactor.h \
+    network/xmppwaveletupdateresponseactor.h \
+    network/xmppsubmitrequestactor.h \
+    model/remotewavelet.h \
+    model/localwavelet.h
 unix:LIBS += -lprotobuf \
     -lcrypto
 INCLUDEPATH += ./ \

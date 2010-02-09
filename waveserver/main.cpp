@@ -1,6 +1,6 @@
 #include <QCoreApplication>
 #include "network/serversocket.h"
-#include "network/xmppcomponent.h"
+#include "network/xmppcomponentconnection.h"
 #include "network/servercertificate.h"
 #include "app/settings.h"
 #include "persistence/commitlog.h"
