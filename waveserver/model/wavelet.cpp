@@ -1,6 +1,7 @@
 #include "wavelet.h"
 #include "wave.h"
 #include "waveletdocument.h"
+#include "signedwaveletdelta.h"
 #include "network/clientconnection.h"
 #include "network/xmppcomponentconnection.h"
 #include "network/xmppvirtualconnection.h"
@@ -10,7 +11,7 @@
 #include "app/settings.h"
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
-    : m_wave(wave), m_domain(waveletDomain), m_id(waveletId), m_version(0)
+    : m_version(0), m_wave(wave), m_domain(waveletDomain), m_id(waveletId)
 {
     // The initial hash is the wave URL
     m_hash = url().toString().toAscii();
@@ -29,26 +30,26 @@ WaveUrl Wavelet::url() const
 
 bool Wavelet::checkHashedVersion( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage )
 {
-    // TODO: This is not very efficient and it does not check the correctness of OT operations.
-
     WaveletDelta clientDelta = Converter::convert( protobufDelta );
+    return checkHashedVersion( clientDelta, errorMessage );
+}
 
-    // This is a delta from the future? -> error
-    if ( clientDelta.version().version > m_version )
-    {
-        errorMessage->append("Version number did not match");
-        return false;
-    }
-
+bool Wavelet::checkHashedVersion( const WaveletDelta& clientDelta, QString* errorMessage )
+{
     // Compare the history hash. The hash of version 0 is a special case
     qint64 clientVersion = clientDelta.version().version;
     if ( clientVersion == 0 && url().toString().toAscii() != clientDelta.version().hash )
     {
         errorMessage->append("History hash does not match");
-        return -1;
+        return false;
     }
     else if ( clientVersion > 0 )
     {
+        if ( clientVersion > m_version )
+        {
+            errorMessage->append("Applying at invalid version number, i.e. version number is from the futur");
+            return false;
+        }
         if ( m_deltas[clientVersion - 1].isNull() )
         {
             errorMessage->append("Applying at invalid version number");
@@ -64,248 +65,6 @@ bool Wavelet::checkHashedVersion( const protocol::ProtocolWaveletDelta& protobuf
     return true;
 }
 
-int Wavelet::apply( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage, const Signature* signature )
-{
-    WaveletDelta clientDelta = Converter::convert( protobufDelta );
-    return apply( clientDelta, errorMessage, signature );
-}
-
-int Wavelet::apply( const WaveletDelta& newDelta, QString* errorMessage, const Signature* signature )
-{
-    // Make a copy of the delta because we might have to transform it
-    WaveletDelta clientDelta( newDelta );
-
-    // This is a delta from the future? -> error
-    if ( clientDelta.version().version > m_version )
-    {
-        errorMessage->append("Version number did not match");
-        return -1;
-    }
-
-    // Compare the history hash. The hash of version 0 is a special case
-    qint64 clientVersion = clientDelta.version().version;
-    if ( clientVersion == 0 && url().toString().toAscii() != clientDelta.version().hash )
-    {
-        errorMessage->append("History hash does not match");
-        return -1;
-    }
-    else if ( clientVersion > 0 )
-    {
-        if ( m_deltas[clientVersion - 1].isNull() )
-        {
-            errorMessage->append("Applying at invalid version number");
-            return -1;
-        }
-        else if ( clientDelta.version().hash != m_deltas[clientVersion - 1].resultingVersion().hash )
-        {
-            errorMessage->append("History hash does not match");
-            return -1;
-        }
-    }
-
-    // The delta needs to be transformed?
-    if ( clientDelta.version().version < m_version )
-    {
-        //
-        // Perform OT on the delta
-        //
-
-        // Make a shallow copy of the server-deltas which need to participate in transformations.
-        // These copies will be modified during OT
-        QList<WaveletDelta> server;
-        for( int v = clientDelta.version().version; v < m_deltas.count(); ++v )
-            server.append( m_deltas[v].delta() );
-
-        // Loop over all client operations and transform them
-        for( int c = 0; c < clientDelta.operations().count(); ++c )
-        {
-            for( int i = 0; i < server.count(); ++i )
-            {
-                WaveletDelta& serverDelta = server[i];
-                for( int s = 0; s < serverDelta.operations().count(); ++s )
-                {
-                    bool ok;
-                    QPair<WaveletDeltaOperation,WaveletDeltaOperation> pair = WaveletDeltaOperation::xform(serverDelta.operations()[s], clientDelta.operations()[c], &ok);
-                    if ( !ok )
-                    {
-                        qDebug("Wavelet could not be applied");
-                        errorMessage->append("Wavelet could not be applied");
-                        return -1;
-                    }                
-                    serverDelta.operations()[s] = pair.first;
-                    clientDelta.operations()[c] = pair.second;
-                }
-            }
-        }    
-        clientDelta.version().hash = m_hash;
-        clientDelta.version().version = m_version;
-    }
-
-    // Track which participants are added by the delta
-    QSet<QString> newParticipants;
-
-    // Prepare a delta for the digest
-    WaveletDelta indexDelta;
-    indexDelta.setAuthor( "digest-author" );
-    indexDelta.version().version = 0;
-
-    // TODO: Rollback if something went wrong, or report that only a subset of ops succeeded
-
-    for( QList<WaveletDeltaOperation>::const_iterator it = clientDelta.operations().begin(); it != clientDelta.operations().end(); it++ )
-    {
-        QString docId = (*it).documentId();
-        WaveletDocument* doc = m_documents[docId];
-        if ( !doc )
-        {
-            doc = new WaveletDocument();
-            m_documents[docId] = doc;
-        }
-
-        if ( (*it).hasMutation() )
-        {
-            bool check = doc->apply( (*it).mutation(), clientDelta.author() );
-            if ( !check )
-            {
-                // TODO: rollback
-                errorMessage->append("Failed to apply delta to " + docId);
-                return -1;
-            }
-            // Remember that the digest will need an update
-        }
-        if ( (*it).hasAddParticipant() )
-        {
-            QString p = (*it).addParticipant();
-            JID jid(p);
-            // Is this a valid participant name?
-            if ( jid.isValid() )
-            {
-                if ( !m_participants.contains( p ) )
-                {
-                    m_participants.insert( p );
-                    // Add the wavelet to the participant (and  make sure that such a participant exists.
-                    // TODO: Error if we know that this participant is not known?
-                    Participant::participant( p, true )->addWavelet(this);
-                    // Send the new participant an index wave entry
-                    newParticipants.insert( p );
-
-                    // Is this a remote user?
-                    if ( !jid.isLocal() )
-                        subscribeRemote( jid );
-                }
-                // The digest needs an update
-                WaveletDeltaOperation op;
-                op.setAddParticipant( (*it).addParticipant() );
-                indexDelta.addOperation(op);
-            }
-        }
-        if ( (*it).hasRemoveParticipant() )
-        {
-            QString p = (*it).removeParticipant();
-            JID jid(p);
-            // Is this a valid participant name?
-            if ( jid.isValid() )
-            {
-                if ( m_participants.contains( p ) )
-                {
-                    m_participants.remove( p );
-                    // Remove the wavelet from the participant
-                    Participant* pptr = Participant::participant( p, false );
-                    if ( pptr )
-                        pptr->removeWavelet(this);
-
-                    // Is it a remote user?
-                    if ( !jid.isLocal() )
-                        unsubscribeRemote( jid );
-                }
-            }
-            // The digest needs an update
-            WaveletDeltaOperation op;
-            op.setRemoveParticipant( (*it).removeParticipant() );
-            indexDelta.addOperation(op);
-        }
-    }
-
-    int operationsApplied = clientDelta.operations().count();
-    // This is a hack // QDateTime::currentDateTime().toTime_t()
-    qint64 applicationTime = m_version;
-
-    // Construct a AppliedWaveletDelta and sign int
-    AppliedWaveletDelta appliedDelta( clientDelta, applicationTime, operationsApplied, signature );
-
-    int oldVersion = m_version;
-    // Update the hashed version
-    m_version = appliedDelta.resultingVersion().version;
-    m_hash = appliedDelta.resultingVersion().hash;
-
-    // For the intermediate versions (if any) there is no information.
-    for( int v = oldVersion + 1; v < m_version; ++v )
-        m_deltas.append( AppliedWaveletDelta() );
-    // Add the new delta to the list
-    m_deltas.append(appliedDelta);
-
-    // Send the delta to all local subscribers
-    QList<AppliedWaveletDelta> deltas;
-    deltas.append( appliedDelta );
-    foreach( QString cid, m_subscribers )
-    {
-        ClientConnection* c = ClientConnection::connectionById(cid);
-        if ( !c )
-            m_subscribers.remove(cid);
-        else
-            c->sendWaveletUpdate( this, deltas );
-    }    
-    // Send the delta to all remote subscribers (if XMPP is enabled)
-    XmppComponentConnection* comcon = XmppComponentConnection::connection();
-    if ( comcon )
-    {
-        foreach( QString rid, m_remoteSubscribers.keys() )
-        {
-            XmppVirtualConnection* con = comcon->virtualConnection( rid );
-            if ( !con )
-                continue;
-            con->sendWaveletUpdate( url().toString(), appliedDelta );
-        }
-    }
-
-    // Prepare a digest update
-    DocumentMutation m;
-    if ( !m_lastDigest.isEmpty() )
-        m.deleteChars( m_lastDigest );
-    m_lastDigest = digest();
-    m.insertChars( m_lastDigest );
-    WaveletDeltaOperation op;
-    op.setMutation(m);
-    indexDelta.addOperation(op);
-
-    // Send the digest delta to all connected participants
-    foreach( QString p, m_participants )
-    {
-        // Digest deltas go only to local users
-        JID jid(p);
-        if ( !jid.isLocal() )
-            continue;
-        // A new participant? Send him an initial digest
-        if ( newParticipants.contains(p) )
-        {
-            WaveletDelta digest = initialDigest();
-            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
-            {
-                c->sendIndexUpdate(this, digest);
-            }
-        }
-        // An old participant -> send him a digest update
-        else
-        {
-            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
-            {
-                c->sendIndexUpdate(this, indexDelta);
-            }
-        }
-    }
-
-    return m_version;
-}
-
 void Wavelet::subscribe( ClientConnection* connection )
 {
     m_subscribers.insert( connection->id() );
@@ -319,24 +78,84 @@ void Wavelet::unsubscribe( ClientConnection* connection )
     m_subscribers.remove( connection->id() );
 }
 
-void Wavelet::subscribeRemote( const JID& remoteJid )
+bool Wavelet::transform( WaveletDelta& clientDelta, QString* errorMessage, bool* ok )
 {
-    if ( !m_remoteSubscribers.contains( remoteJid.domain() ) )
-        m_remoteSubscribers[ remoteJid.domain() ] = 1;
-    else
-        m_remoteSubscribers[ remoteJid.domain() ] = m_remoteSubscribers[ remoteJid.domain() ] + 1;
+    // The delta needs to be transformed?
+    Q_ASSERT( clientDelta.version().version <= m_version );
+
+    if ( ok )
+        *ok = true;
+    if ( clientDelta.version().version == m_version )
+        return false;
+
+    //
+    // Perform OT on the delta
+    //
+
+    // Make a shallow copy of the server-deltas which need to participate in transformations.
+    // These copies will be modified during OT
+    QList<WaveletDelta> server;
+    for( int v = clientDelta.version().version; v < m_deltas.count(); ++v )
+        server.append( m_deltas[v].signedDelta().delta() );
+
+    // Loop over all client operations and transform them
+    for( int c = 0; c < clientDelta.operations().count(); ++c )
+    {
+        for( int i = 0; i < server.count(); ++i )
+        {
+            WaveletDelta& serverDelta = server[i];
+            for( int s = 0; s < serverDelta.operations().count(); ++s )
+            {
+                bool ok2;
+                QPair<WaveletDeltaOperation,WaveletDeltaOperation> pair = WaveletDeltaOperation::xform(serverDelta.operations()[s], clientDelta.operations()[c], &ok2);
+                if ( !ok2 )
+                {
+                    qDebug("Wavelet could not be applied");
+                    errorMessage->append("Wavelet could not be applied");
+                    if ( ok )
+                        *ok = false;
+                    return true;
+                }
+                serverDelta.operations()[s] = pair.first;
+                clientDelta.operations()[c] = pair.second;
+            }
+        }
+    }
+    clientDelta.version().hash = m_hash;
+    clientDelta.version().version = m_version;
+
+    return true;
 }
 
-void Wavelet::unsubscribeRemote( const JID& remoteJid )
+void Wavelet::broadcast( const AppliedWaveletDelta& delta )
 {
-    if ( m_remoteSubscribers.contains( remoteJid.domain() ) )
+    QList<AppliedWaveletDelta> deltas;
+    deltas.append( delta );
+    foreach( QString cid, m_subscribers )
     {
-        int count = m_remoteSubscribers[ remoteJid.domain() ];
-        if ( count == 1 )
-            m_remoteSubscribers.remove( remoteJid.domain() );
+        ClientConnection* c = ClientConnection::connectionById(cid);
+        if ( !c )
+            m_subscribers.remove(cid);
         else
-            m_remoteSubscribers[ remoteJid.domain() ] = m_remoteSubscribers[ remoteJid.domain() ] - 1;
+            c->sendWaveletUpdate( this, deltas );
     }
+}
+
+void Wavelet::commit( const AppliedWaveletDelta& appliedDelta )
+{
+    int oldVersion = m_version;
+    // Update the hashed version
+    m_version = appliedDelta.resultingVersion().version;
+    m_hash = appliedDelta.resultingVersion().hash;
+
+    // For the intermediate versions (if any) there is no information.
+    for( int v = oldVersion + 1; v < m_version; ++v )
+        m_deltas.append( AppliedWaveletDelta() );
+    // Add the new delta to the list
+    m_deltas.append(appliedDelta);
+
+    broadcast( appliedDelta );
+    broadcastDigest( appliedDelta.signedDelta().delta() );
 }
 
 QString Wavelet::firstRootBlipId() const
@@ -367,7 +186,7 @@ WaveletDocument* Wavelet::firstRootBlip() const
     return m_documents[id];
 }
 
-QString Wavelet::digest() const
+QString Wavelet::digestText() const
 {
     // TODO: This is not a very nice digest ...
     WaveletDocument* doc = firstRootBlip();
@@ -396,6 +215,79 @@ WaveletDelta Wavelet::initialDigest() const
     }
 
     return indexDelta;
+}
+
+void Wavelet::broadcastDigest(const WaveletDelta& delta )
+{
+    // Track which participants are added by the delta
+    QSet<QString> newParticipants;
+
+    // Prepare a delta for the digest
+    WaveletDelta digest;
+    digest.setAuthor( "digest-author" );
+    // TODO
+    digest.version().version = 0;
+
+    // Find out which participants have been added or removed
+    for( QList<WaveletDeltaOperation>::const_iterator it = delta.operations().begin(); it != delta.operations().end(); it++ )
+    {
+        QString docId = (*it).documentId();
+        WaveletDocument* doc = m_documents[docId];
+        if ( !doc || docId == "conversation" || docId.left(2) == "a+" )
+            continue;
+
+        // The digest needs an update ?
+        if ( (*it).hasAddParticipant() )
+        {
+            QString p = (*it).addParticipant();
+            WaveletDeltaOperation op;
+            op.setAddParticipant( p );
+            digest.addOperation(op);
+        }
+        if ( (*it).hasRemoveParticipant() )
+        {
+            QString p = (*it).removeParticipant();        
+            WaveletDeltaOperation op;
+            op.setRemoveParticipant( p );
+            digest.addOperation(op);
+        }
+    }
+
+    // Prepare a digest update
+    DocumentMutation m;
+    if ( !m_lastDigest.isEmpty() )
+        m.deleteChars( m_lastDigest );
+    m_lastDigest = digestText();
+    m.insertChars( m_lastDigest );
+    WaveletDeltaOperation op;
+    op.setMutation(m);
+    digest.addOperation(op);
+
+    // Send the digest delta to all connected participants
+    foreach( QString p, m_participants )
+    {
+        // Digest deltas go only to local users
+        JID jid(p);
+        if ( !jid.isLocal() )
+            continue;
+        // A new participant? Send him an initial digest
+        if ( newParticipants.contains(p) )
+        {
+            WaveletDelta initdigest = initialDigest();
+            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
+            {
+                c->sendIndexUpdate(this, initdigest);
+            }
+        }
+        // An old participant -> send him a digest update
+        else
+        {
+            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
+            {
+                c->sendIndexUpdate(this, digest);
+            }
+        }
+    }
 }
 
 bool Wavelet::hasParticipant(const QString& jid) const

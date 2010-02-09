@@ -23,6 +23,10 @@ public:
       * Creates a signed delta by signing the provided delta with the local server certificate.
       */
     SignedWaveletDelta( const protocol::ProtocolWaveletDelta& delta );
+    /**
+      * Creates a signed delta by signing the provided delta with the local server certificate.
+      */
+    SignedWaveletDelta( const WaveletDelta& delta );
 
     const WaveletDelta& delta() const { return m_delta; }
     const QList<Signature>& signatures() const { return m_signatures; }
@@ -31,10 +35,13 @@ public:
     void toProtobuf(protocol::ProtocolSignedDelta* signedDelta) const;
     QByteArray toBinary() const;
     QString toBase64() const;
-    
+
+    bool isNull() const { return m_null; }
+
     static SignedWaveletDelta fromBase64( const QString& base64, bool* ok = 0 );
 
 private:
+    bool m_null;
     WaveletDelta m_delta;
     QByteArray m_deltaBytes;
     QList<Signature> m_signatures;

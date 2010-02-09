@@ -8,20 +8,17 @@
 
 SignedWaveletDelta::SignedWaveletDelta()
 {
+    m_null = true;
 }
 
 SignedWaveletDelta::SignedWaveletDelta( const SignedWaveletDelta& delta )
-        : m_delta( delta.m_delta ), m_deltaBytes( delta.m_deltaBytes ), m_signatures( delta.m_signatures )
+        : m_null( delta.m_null ), m_delta( delta.m_delta ), m_deltaBytes( delta.m_deltaBytes ), m_signatures( delta.m_signatures )
 {
 }
 
-//SignedWaveletDelta::SignedWaveletDelta( const WaveletDelta& delta )
-//        : m_delta( delta )
-//{
-//}
-//
 SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolWaveletDelta& delta )
 {
+    m_null = false;
     m_delta = Converter::convert( delta );
     m_deltaBytes.resize( delta.ByteSize() );
     delta.SerializeToArray( m_deltaBytes.data(), m_deltaBytes.count() );
@@ -29,8 +26,21 @@ SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolWaveletDelta& de
     m_signatures.append( Signature( LocalServerCertificate::certificate()->sign(m_deltaBytes), LocalServerCertificate::certificate()->signerId() ) );
 }
 
+SignedWaveletDelta::SignedWaveletDelta( const WaveletDelta& delta )
+        : m_delta( delta )
+{
+    m_null = false;
+    protocol::ProtocolWaveletDelta proto;
+    Converter::convert( &proto, delta );
+    m_deltaBytes.resize( proto.ByteSize() );
+    proto.SerializeToArray( m_deltaBytes.data(), m_deltaBytes.count() );
+
+    m_signatures.append( Signature( LocalServerCertificate::certificate()->sign(m_deltaBytes), LocalServerCertificate::certificate()->signerId() ) );
+}
+
 SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolSignedDelta* signedDelta, bool* ok )
 {
+    m_null = true;
     const ::std::string& str = signedDelta->delta();
     m_deltaBytes = QByteArray( str.data(), str.length() );
     protocol::ProtocolWaveletDelta pdelta;
@@ -51,6 +61,7 @@ SignedWaveletDelta::SignedWaveletDelta( const protocol::ProtocolSignedDelta* sig
 
     if ( ok )
         *ok = true;
+    m_null = false;
 }
 
 void SignedWaveletDelta::toProtobuf(protocol::ProtocolSignedDelta* signedDelta) const

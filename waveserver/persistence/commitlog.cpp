@@ -1,6 +1,7 @@
 #include "commitlog.h"
 #include "model/wave.h"
 #include "model/wavelet.h"
+#include "model/localwavelet.h"
 #include "model/waveletdelta.h"
 #include "network/converter.h"
 #include "app/settings.h"
@@ -53,14 +54,20 @@ bool CommitLog::applyAll()
         if ( !wave )
             continue;
 
-        // TODO: What about remote wavelets?
         Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), (url.waveletDomain() == Settings::settings()->domain()) );
         if ( !wavelet )
             continue;
 
-        // Apply the delta
-        QString err = "";
-        wavelet->apply(request.delta(), &err );
+        // TODO: What about remote wavelets?
+        if ( wavelet->isLocal() )
+        {
+            LocalWavelet* localWavelet = dynamic_cast<LocalWavelet*>( wavelet );
+            // Apply the delta
+            QString err = "";
+            int version = localWavelet->apply(request.delta(), &err );
+            if ( version == -1 || !err.isEmpty() )
+                qDebug("FAILED to apply commit log: %s", err.toAscii().constData() );
+        }
     }
 
     return true;

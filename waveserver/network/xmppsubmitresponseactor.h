@@ -7,7 +7,7 @@
 #include "xmppactor.h"
 #include "model/signedwaveletdelta.h"
 
-class Wavelet;
+class LocalWavelet;
 class AppliedWaveletDelta;
 
 class XmppSubmitResponseActor : public XmppActor
@@ -20,7 +20,7 @@ protected:
 
 private:
     QSharedPointer<XmppStanza> m_stanza;
-    Wavelet* m_wavelet;
+    LocalWavelet* m_wavelet;
     SignedWaveletDelta m_delta;
     const AppliedWaveletDelta* m_applied;
 };

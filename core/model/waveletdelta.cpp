@@ -5,10 +5,12 @@
 
 WaveletDelta::WaveletDelta()
 {
+    m_null = true;
 }
 
 WaveletDelta::WaveletDelta(const WaveletDelta& delta)
-        : m_version( delta.m_version ),
+        : m_null( delta.m_null ),
+          m_version( delta.m_version ),
           m_author( delta.m_author ),
           m_operations( delta.m_operations )
 {
@@ -20,6 +22,7 @@ WaveletDelta::~WaveletDelta()
 
 void WaveletDelta::addOperation(const WaveletDeltaOperation& op)
 {
+    m_null = false;
     m_operations.append(op);
 }
 

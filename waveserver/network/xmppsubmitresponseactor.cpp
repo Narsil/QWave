@@ -8,7 +8,7 @@
 #include "network/servercertificate.h"
 #include "model/waveurl.h"
 #include "model/wave.h"
-#include "model/wavelet.h"
+#include "model/localwavelet.h"
 #include "model/certificatestore.h"
 #include <QXmlStreamWriter>
 
@@ -43,8 +43,10 @@ void XmppSubmitResponseActor::EXECUTE()
         if ( url.isNull() ) { XMPPERROR("Malformed wavelet-name"); }
         Wave* wave = Wave::wave( url.waveDomain(), url.waveId() );
         if ( !wave ) { XMPPERROR("Unknown wave"); }
-        m_wavelet = wave->wavelet( url.waveletDomain(), url.waveletId() );
-        if ( !m_wavelet ) { XMPPERROR("Unknown wavelet"); }
+        Wavelet* w = wave->wavelet( url.waveletDomain(), url.waveletId() );
+        if ( !w ) { XMPPERROR("Unknown wavelet"); }
+        if ( !w->isLocal() ) { XMPPERROR("Submit requests for remote wavelets cannot be accepted"); }
+        m_wavelet = dynamic_cast<LocalWavelet*>(w);
 
         // Extract the delta
         if ( delta->children().count() == 0 || ( !delta->childAt(0)->isCData() && !delta->childAt(0)->isText() ) ) { XMPPERROR("Empty delta in submit-request"); }
@@ -65,13 +67,10 @@ void XmppSubmitResponseActor::EXECUTE()
             qDebug("CHECKED Signature successfully");
         }
 
-        // TODO: AppliedWaveletDelta should be able to carry a list of signatures
-
         // Apply the delta
-        Signature signature = m_delta.signatures()[0];
         QString err;
-        int version = m_wavelet->apply( m_delta.delta(), &err, &signature );
-        if ( !err.isEmpty() || version < 0 ) { XMPPERROR("Failed to apply subkitted wavelet delta"); }
+        int version = m_wavelet->apply( m_delta, &err );
+        if ( !err.isEmpty() || version < 0 ) { XMPPERROR("Failed to apply submitted wavelet delta"); }
         qDebug("Applied wavelet");
         m_applied = m_wavelet->delta(version - 1);
     }
