@@ -19,7 +19,7 @@ XmppDiscoActor::XmppDiscoActor(XmppVirtualConnection* con)
 
 void XmppDiscoActor::EXECUTE()
 {
-    qDebug("EXECUTE");
+    qDebug("EXECUTE Disco");
 
     BEGIN_EXECUTE;
 
@@ -86,8 +86,10 @@ void XmppDiscoActor::EXECUTE()
         connection()->send( send );
     }
 
+    qDebug("YIELD1");
     // Find out whether the remote server supports a version of wave that is acceptable
     yield( RecvXmpp<XmppStanza::DiscoInfoResponse>( m_id ) | Timeout(10000) | RecvXmpp<XmppStanza::Error>( m_id ) );
+    qDebug("YIELD2");
     if ( REASON( RecvXmpp<XmppStanza::DiscoInfoResponse> ) )
     {
         XmppTag* query = REASON->child("query");

@@ -1,5 +1,5 @@
 #include "clientconnection.h"
-#include "serversocket.h"
+#include "clientsubmitrequestactor.h"
 #include "network/rpc.h"
 #include "network/xmppcomponentconnection.h"
 #include "network/xmppvirtualconnection.h"
@@ -28,8 +28,8 @@
 QMultiHash<QString,ClientConnection*>* ClientConnection::s_connectionsByParticipant = 0;
 QHash<QString,ClientConnection*>* ClientConnection::s_connectionsById = 0;
 
-ClientConnection::ClientConnection(QTcpSocket* socket, ServerSocket* parent)
-        : QObject(parent), m_participant(0), m_digestVersion(0)
+ClientConnection::ClientConnection(QTcpSocket* socket, QObject* parent)
+        : ActorGroup(parent), m_participant(0), m_digestVersion(0)
 {
     m_id = QUuid::createUuid().toString();
 
@@ -149,92 +149,93 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
     }
     else if ( methodName == "waveserver.ProtocolSubmitRequest" )
     {
-        waveserver::ProtocolSubmitRequest update;
-        update.ParseFromArray(data.constData(), data.length());
-        qDebug("msg<< %s", update.DebugString().data());
-
-        // Write it to the commit log
-        CommitLog::commitLog()->write(update);
-
-        QString waveletId = QString::fromStdString( update.wavelet_name() );
-
-        WaveUrl url( waveletId );
-        if ( url.isNull() )
-        {
-            qDebug("Malformed wave url");
-            sendSubmitResponse( 0, 0, "Malformed wave url");
-            return;
-        }
-
-        // Find the wave
-        Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == domain()) );
-        if ( !wave )
-        {
-            qDebug("Could not create wave");
-            sendSubmitResponse( 0, 0, "Could not create wave");
-            return;
-        }
-
-        // If the wavelet does not exist -> create it (but only if it is a local wavelet)
-        Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), (url.waveletDomain() == domain()) );
-        if ( !wavelet )
-        {
-            qDebug("Could not create wavelet");
-            sendSubmitResponse( 0, 0, "Could not create wavelet");
-            return;
-        }
-
-        if ( wavelet->isRemote() )
-        {
-            // Is the delta applicable? If not we can reject it right now
-            QString err = "";
-            if ( !wavelet->checkHashedVersion( update.delta(), &err ) )
-            {
-                qDebug("Could not apply delta %s. Delta is not sent to remote server.", err.toAscii().constData() );
-                sendSubmitResponse( 0, 0, err );
-                return;
-            }
-
-            // Send the delta to all remote subscribers (if XMPP is enabled)
-            XmppComponentConnection* comcon = XmppComponentConnection::connection();
-            if ( !comcon )
-            {
-                qDebug("XMPP not configured. No access to remote wavelets");
-                sendSubmitResponse( 0, 0, "XMPP not configured. No access to remote wavelets");
-                return;
-            }
-            XmppVirtualConnection* con = comcon->virtualConnection( wavelet->domain() );
-            if ( !con )
-            {
-                qDebug("XMPP failure. No access to remote wavelets");
-                sendSubmitResponse( 0, 0, "XMPP failure. No access to remote wavelets");
-                return;
-            }
-
-            // Send a submit-request
-            con->sendSubmitRequest( url, update.delta() );
-
-            // TODO: Queue a job which waits for the response
-            return;
-        }
-
-        Q_ASSERT( wavelet->isLocal() );
-
-        LocalWavelet* localWavelet = dynamic_cast<LocalWavelet*>(wavelet);
-        // Apply the delta
-        QString err = "";
-        int version = localWavelet->apply( SignedWaveletDelta( update.delta() ), &err );
-        if ( !err.isEmpty() || version < 0 )
-        {
-            qDebug("Could not apply delta: %s", err.toAscii().constData() );
-            sendSubmitResponse( 0, 0, err );
-            return;
-        }
-
-        const AppliedWaveletDelta* applied = wavelet->delta(version - 1);
-        Q_ASSERT(applied);
-        // Send a response
-        sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
+        new ClientSubmitRequestActor( this, data );
+//        waveserver::ProtocolSubmitRequest update;
+//        update.ParseFromArray(data.constData(), data.length());
+//        qDebug("msg<< %s", update.DebugString().data());
+//
+//        // Write it to the commit log
+//        CommitLog::commitLog()->write(update);
+//
+//        QString waveletId = QString::fromStdString( update.wavelet_name() );
+//
+//        WaveUrl url( waveletId );
+//        if ( url.isNull() )
+//        {
+//            qDebug("Malformed wave url");
+//            sendSubmitResponse( 0, 0, "Malformed wave url");
+//            return;
+//        }
+//
+//        // Find the wave
+//        Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == domain()) );
+//        if ( !wave )
+//        {
+//            qDebug("Could not create wave");
+//            sendSubmitResponse( 0, 0, "Could not create wave");
+//            return;
+//        }
+//
+//        // If the wavelet does not exist -> create it (but only if it is a local wavelet)
+//        Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), (url.waveletDomain() == domain()) );
+//        if ( !wavelet )
+//        {
+//            qDebug("Could not create wavelet");
+//            sendSubmitResponse( 0, 0, "Could not create wavelet");
+//            return;
+//        }
+//
+//        if ( wavelet->isRemote() )
+//        {
+//            // Is the delta applicable? If not we can reject it right now
+//            QString err = "";
+//            if ( !wavelet->checkHashedVersion( update.delta(), &err ) )
+//            {
+//                qDebug("Could not apply delta %s. Delta is not sent to remote server.", err.toAscii().constData() );
+//                sendSubmitResponse( 0, 0, err );
+//                return;
+//            }
+//
+//            // Send the delta to all remote subscribers (if XMPP is enabled)
+//            XmppComponentConnection* comcon = XmppComponentConnection::connection();
+//            if ( !comcon )
+//            {
+//                qDebug("XMPP not configured. No access to remote wavelets");
+//                sendSubmitResponse( 0, 0, "XMPP not configured. No access to remote wavelets");
+//                return;
+//            }
+//            XmppVirtualConnection* con = comcon->virtualConnection( wavelet->domain() );
+//            if ( !con )
+//            {
+//                qDebug("XMPP failure. No access to remote wavelets");
+//                sendSubmitResponse( 0, 0, "XMPP failure. No access to remote wavelets");
+//                return;
+//            }
+//
+//            // Send a submit-request
+//            con->sendSubmitRequest( url, update.delta() );
+//
+//            // TODO: Queue a job which waits for the response
+//            return;
+//        }
+//
+//        Q_ASSERT( wavelet->isLocal() );
+//
+//        LocalWavelet* localWavelet = dynamic_cast<LocalWavelet*>(wavelet);
+//        // Apply the delta
+//        QString err = "";
+//        int version = localWavelet->apply( SignedWaveletDelta( update.delta() ), &err );
+//        if ( !err.isEmpty() || version < 0 )
+//        {
+//            qDebug("Could not apply delta: %s", err.toAscii().constData() );
+//            sendSubmitResponse( 0, 0, err );
+//            return;
+//        }
+//
+//        const AppliedWaveletDelta* applied = wavelet->delta(version - 1);
+//        Q_ASSERT(applied);
+//        // Send a response
+//        sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
     }
 }
 
@@ -251,6 +252,16 @@ void ClientConnection::sendSubmitResponse( qint32 operationsApplied, const Wavel
         version->set_version( hashedVersionAfterApplication->version );
     }
 
+    qDebug("SubmitResponse>> %s", response.DebugString().data());
+
+    QByteArray buffer( response.ByteSize(), 0 );
+    response.SerializeToArray( buffer.data(), buffer.length() );
+
+    m_rpc->send("waveserver.ProtocolSubmitResponse", buffer.constData(), buffer.length());
+}
+
+void ClientConnection::sendSubmitResponse( const waveserver::ProtocolSubmitResponse& response )
+{
     qDebug("SubmitResponse>> %s", response.DebugString().data());
 
     QByteArray buffer( response.ByteSize(), 0 );

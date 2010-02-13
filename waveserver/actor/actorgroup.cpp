@@ -1,4 +1,6 @@
 #include "actorgroup.h"
+#include "actorid.h"
+#include "actordispatcher.h"
 
 ActorGroup::ActorGroup(QObject* parent)
         : QObject( parent ), m_destructed(false), m_active(false)
@@ -69,17 +71,35 @@ void ActorGroup::removeActor( Actor* actor )
 
 void ActorGroup::enqueue( IMessage* msg )
 {
+    QSharedPointer<IMessage> message(msg);
+    enqueue( message );
+}
+
+void ActorGroup::enqueue( const QSharedPointer<IMessage>& message )
+{
     if ( !m_active && m_queue.isEmpty() )
     {
         m_active = true;
-        QSharedPointer<IMessage> message(msg);
         dispatch( message );
         m_active = false;
         if ( !m_queue.isEmpty() )
             run();
         return;
     }
-    m_queue.enqueue( QSharedPointer<IMessage>(msg) );
+    m_queue.enqueue( message );
+}
+
+bool ActorGroup::enqueue( const ActorId& actorId, const QSharedPointer<IMessage>& message )
+{
+    if ( actorId.hasActor() )
+    {
+        Actor* a = actor( actorId );
+        if ( !a )
+            return false;
+        message->setReceiver( a );
+    }
+    enqueue(message);
+    return true;
 }
 
 void ActorGroup::run()
@@ -93,4 +113,20 @@ void ActorGroup::run()
     }
 
     m_active = false;
+}
+
+Actor* ActorGroup::actor( const ActorId& id )
+{
+    for( int i = 0; i < m_actors.count(); ++i )
+    {
+        Actor* a = m_actors[i];
+        if ( a->objectName() == id.actor() )
+            return a;
+    }
+    return 0;
+}
+
+bool ActorGroup::send( const ActorId& id, IMessage* msg )
+{
+    return ActorDispatcher::dispatcher()->send( id, msg );
 }

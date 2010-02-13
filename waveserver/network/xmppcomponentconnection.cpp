@@ -19,7 +19,7 @@
 XmppComponentConnection* XmppComponentConnection::s_connection = 0;
 
 XmppComponentConnection::XmppComponentConnection(QObject* parent)
-        : ActorGroup(parent), m_state( Init ), m_connected(false), m_writer(0), m_idCount(0), m_currentStanza(0), m_currentTag(0)
+        : ActorFolk(ActorId::Federation, parent), m_state( Init ), m_connected(false), m_writer(0), m_idCount(0), m_currentStanza(0), m_currentTag(0)
 {
     // Setup the XML reader
     m_reader.setNamespaceProcessing(false);
@@ -39,6 +39,9 @@ XmppComponentConnection::XmppComponentConnection(QObject* parent)
     Q_ASSERT(ok);
 
     m_socket->connectToHost( Settings::settings()->xmppServerName(), Settings::settings()->xmppComponentPort());
+
+    // Start dispatching messages
+    activate();
 }
 
 XmppComponentConnection::~XmppComponentConnection()
@@ -213,7 +216,7 @@ void XmppComponentConnection::readBytes()
                                 m_currentStanza->setKind( XmppStanza::SignerResponse );
                             else if ( name == "signature" && m_currentStanza->type() == "set" )
                                 m_currentStanza->setKind( XmppStanza::PostSigner );
-                            else if ( name == "signature-response" && m_currentStanza->type() == "set" )
+                            else if ( name == "signature-response" )
                                 m_currentStanza->setKind( XmppStanza::PostSignerResponse );
                             else if ( name == "submit-request" )
                                 m_currentStanza->setKind( XmppStanza::SubmitRequest );
@@ -233,6 +236,7 @@ void XmppComponentConnection::readBytes()
                                 else if ( m_currentStanza->type() == "result" )
                                     m_currentStanza->setKind( XmppStanza::DiscoInfoResponse );
                             }
+                            // qDebug("KIND %i", m_currentStanza->kind() );
                         }
                         if ( m_currentTag == 0 )
                         {
@@ -297,6 +301,9 @@ XmppVirtualConnection* XmppComponentConnection::virtualConnection( const QString
 {
     if ( !m_virtualConnections.contains(domain) )
     {
+        QString wavedomain = "wave." + domain;
+        if ( m_virtualConnections.contains(wavedomain) )
+            return m_virtualConnections[wavedomain];
         XmppVirtualConnection* con = new XmppVirtualConnection( this, domain, resolve );
         m_virtualConnections[domain] = con;
     }
@@ -358,4 +365,9 @@ QString XmppComponentConnection::domain() const
 QString XmppComponentConnection::host() const
 {
     return Settings::settings()->xmppComponentName();
+}
+
+ActorGroup* XmppComponentConnection::group( const ActorId& id )
+{
+    return virtualConnection( id.group() );
 }

@@ -17,6 +17,7 @@
 template<class R> R _REASON(WaitingConditionImpl* ptr) { return R( ptr ); }
 
 class ActorGroup;
+class ActorId;
 
 /**
   * An actor can be used much like a C# or Python iterator.
@@ -53,7 +54,16 @@ public:
     void setActorGroup( ActorGroup* group ) { Q_ASSERT( m_group == 0 || m_group == group ); m_group = group; }
     ActorGroup* actorGroup() const { return m_group; }
 
+    /**
+      * This function takes ownership of the message being passed. Do not modify the message after it has been passed to send.
+      */
+    virtual bool send( const ActorId& destination, IMessage* msg );
+
+    virtual const ActorId& actorId() const = 0;
+
 protected:
+    qint64 nextId() const;
+
     virtual void EXECUTE() = 0;
 
     /**
@@ -76,6 +86,8 @@ private:
     void deleteReason();
 
     ActorGroup* m_group;
+
+    static qint64 s_id;
 };
 
 #endif // ACTOR_H

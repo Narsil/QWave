@@ -10,14 +10,14 @@
 #include <QSharedPointer>
 #include <QHash>
 
-#include "actor/actorgroup.h"
+#include "actor/actorfolk.h"
 
 class XmppVirtualConnection;
 class XmppStanza;
 class WaveUrl;
 class XmppTag;
 
-class XmppComponentConnection : public ActorGroup
+class XmppComponentConnection : public ActorFolk
 {
     Q_OBJECT
 public:
@@ -65,6 +65,9 @@ public:
 
 signals:
     void ready();
+
+protected:
+    virtual ActorGroup* group( const ActorId& id );
 
 private slots:
     void start();

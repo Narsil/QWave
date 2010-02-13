@@ -11,25 +11,30 @@
 #include "model/wave.h"
 #include "model/wavelet.h"
 #include "model/certificatestore.h"
+#include "protocol/common.pb.h"
+#include "protocol/waveclient-rpc.pb.h"
 #include <QXmlStreamWriter>
 #include <QList>
 #include <QByteArray>
 
-#define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
+#define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); sendErrorResponse(); connection()->xmppError(); TERMINATE(); }
 #define XMPPLOG(msg) { log(msg, __FILE__, __LINE__); }
 
 
-XmppSubmitRequestActor::XmppSubmitRequestActor(XmppVirtualConnection* con, const WaveUrl& url, const protocol::ProtocolWaveletDelta& delta)
-        : XmppActor(con), m_url( url ), m_delta(delta)
+XmppSubmitRequestActor::XmppSubmitRequestActor(XmppVirtualConnection* con, const QSharedPointer<PBMessage<waveserver::ProtocolSubmitRequest> >& message )
+        : XmppActor(con), m_message( message )
 {
     con->addActor( this );
 }
 
 void XmppSubmitRequestActor::EXECUTE()
 {
-    qDebug("EXECUTE WaveletUpdateResponse");
+    qDebug("EXECUTE SubmitRequest Actor");
 
     BEGIN_EXECUTE;
+
+    m_delta = SignedWaveletDelta( m_message->protoBuf().delta() );
+    m_url = WaveUrl( QString::fromStdString( m_message->protoBuf().wavelet_name() ) );
 
     // Wait until the connection is ready
     if ( !connection()->isReady() )
@@ -81,6 +86,7 @@ void XmppSubmitRequestActor::EXECUTE()
         if ( REASON( RecvXmpp<XmppStanza::PostSignerResponse> ) )
         {
             XMPPLOG("Got receipt for post signature");
+            connection()->setPostedSigner( true );
             // Do nothing by intention. We got the receipt. Fine.
         }
         else if ( REASON( Timeout ) ) { XMPPERROR("Timeout"); }
@@ -104,8 +110,8 @@ void XmppSubmitRequestActor::EXECUTE()
         writer.writeStartElement("item");
         writer.writeStartElement("submit-request");
         writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
-        writer.writeAttribute("wavelet-name", m_url.toString() );
         writer.writeStartElement("delta");
+        writer.writeAttribute("wavelet-name", m_url.toString() );
         writer.writeCDATA( m_delta.toBase64() );
         writer.writeEndElement();
         writer.writeEndElement();
@@ -121,10 +127,48 @@ void XmppSubmitRequestActor::EXECUTE()
     if ( REASON( RecvXmpp<XmppStanza::SubmitResponse> ) )
     {
         XMPPLOG("Got receipt for submit request");
-        // Do nothing by intention. We got the receipt. Fine.
+        XmppTag* pubsub = REASON->child("pubsub");
+        XmppTag* publish = pubsub ? pubsub->child("publish") : 0;
+        XmppTag* item = publish ? publish->child("item") : 0;
+        XmppTag* resp = item ? item->child("submit-response") : 0;
+        XmppTag* hash = resp ? resp->child("hashed-version") : 0;
+        if ( !hash ) { XMPPERROR("Malformed submit-response (missing tags)"); }
+
+        bool ok;
+        m_applicationTime = resp->attribute("application-timestamp").toLongLong(&ok);
+        if ( !ok ) { XMPPERROR("Malformed submit-response (timestamp)"); }
+
+        m_operationsApplied = resp->attribute("operations-applied").toInt(&ok);
+        if ( !ok ) { XMPPERROR("Malformed submit-response (operations applied)"); }
+
+        m_version = hash->attribute("version").toInt(&ok);
+        if ( !ok ) { XMPPERROR("Malformed submit-response (version)"); }
+
+        m_hash = QByteArray::fromBase64( hash->attribute("history-hash").toAscii() );
     }
     else if ( REASON( Timeout ) ) { XMPPERROR("Timeout"); }
     else if ( REASON( RecvXmpp<XmppStanza::Error> ) ) { XMPPERROR("Peer reported an error"); }
 
+    // Send information back
+    if ( !m_message->sender().isNull() )
+    {
+        XMPPLOG("Sending response to " + m_message->sender().toString() );
+        waveserver::ProtocolSubmitResponse response;
+        response.set_operations_applied( m_operationsApplied );
+        response.mutable_hashed_version_after_application()->set_history_hash( m_hash.data(), m_hash.length() );
+        response.mutable_hashed_version_after_application()->set_version( m_version );
+        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->id() ) );
+    }
+
     END_EXECUTE;
+}
+
+void XmppSubmitRequestActor::sendErrorResponse()
+{
+    if ( !m_message->sender().isNull() )
+    {
+        waveserver::ProtocolSubmitResponse response;
+        response.set_operations_applied( 0 );
+        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->id() ) );
+    }
 }
