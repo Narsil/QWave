@@ -20,6 +20,7 @@
 #include "protocol/waveclient-rpc.pb.h"
 #include "model/waveurl.h"
 #include "network/servercertificate.h"
+#include "actor/pbmessage.h"
 
 #include <QByteArray>
 #include <QXmlStreamAttributes>
@@ -70,28 +71,34 @@ void XmppVirtualConnection::dispatch( const QSharedPointer<IMessage>& message )
             {
                 case XmppStanza::WaveletUpdate:
                     new XmppWaveletUpdateResponseActor( this, message.dynamicCast<XmppStanza>() );
-                    break;
+                    return;
                 case XmppStanza::HistoryRequest:
                     new XmppHistoryResponseActor( this, message.dynamicCast<XmppStanza>() );
-                    break;
+                    return;
                 case XmppStanza::SignerRequest:
                     new XmppSignerResponseActor( this, message.dynamicCast<XmppStanza>() );
-                    break;
+                    return;
                 case XmppStanza::PostSigner:
                     new XmppPostSignerResponseActor( this, message.dynamicCast<XmppStanza>() );
-                    break;
+                    return;
                 case XmppStanza::SubmitRequest:
                     new XmppSubmitResponseActor( this, message.dynamicCast<XmppStanza>() );
-                    break;
+                    return;
                 case XmppStanza::DiscoInfo:
                     new XmppDiscoResponseActor( this, stanza->id(), XmppStanza::DiscoInfo );
-                    break;
+                    return;
                 case XmppStanza::DiscoItems:
                     new XmppDiscoResponseActor( this, stanza->id(), XmppStanza::DiscoItems );
-                    break;
+                    return;
                 default:
+                    qDebug("Dispatch %i", stanza->kind() );
                     break;
             }
+        }
+        PBMessage<waveserver::ProtocolSubmitRequest>* submitMsg = dynamic_cast< PBMessage<waveserver::ProtocolSubmitRequest>* >( message.data() );
+        if ( submitMsg )
+        {
+            new XmppSubmitRequestActor( this, message.dynamicCast<PBMessage<waveserver::ProtocolSubmitRequest> >() );
         }
     }
 
@@ -101,11 +108,6 @@ void XmppVirtualConnection::dispatch( const QSharedPointer<IMessage>& message )
 void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const AppliedWaveletDelta& waveletDelta)
 {
     new XmppWaveletUpdateActor( this, waveletName, waveletDelta );
-}
-
-void XmppVirtualConnection::sendSubmitRequest( const WaveUrl& url, const protocol::ProtocolWaveletDelta& delta )
-{
-    new XmppSubmitRequestActor( this, url, delta );
 }
 
 void XmppVirtualConnection::xmppError()

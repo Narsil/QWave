@@ -1,11 +1,14 @@
 #include "xmppactor.h"
 #include "xmppvirtualconnection.h"
+#include "actor/actorid.h"
 
 #include <QtGlobal>
 #include <QDateTime>
 
+qint64 XmppActor::s_id = 0;
+
 XmppActor::XmppActor(XmppVirtualConnection* con)
-        : Actor(), m_connection(con)
+        : Actor(), m_connection(con), m_actorId( ActorId::Federation, con->domain(), QString::number( s_id++ ) )
 {
 }
 

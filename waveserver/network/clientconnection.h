@@ -8,6 +8,7 @@
 #include <QList>
 #include <QByteArray>
 #include "model/waveletdelta.h"
+#include "actor/actorgroup.h"
 
 class RPC;
 class Wavelet;
@@ -15,14 +16,21 @@ class WaveletDelta;
 class AppliedWaveletDelta;
 class QByteArray;
 class QTcpSocket;
-class ServerSocket;
 class Participant;
 
-class ClientConnection : public QObject
+namespace waveserver
+{
+    class ProtocolSubmitResponse;
+}
+
+class ClientConnection : public ActorGroup
 {
     Q_OBJECT
 public:
-    ClientConnection(QTcpSocket* socket, ServerSocket* parent = 0);
+    /**
+      * Do not create a connection directly. Use ClientActorFolk instead.
+      */
+    ClientConnection(QTcpSocket* socket, QObject* parent = 0);
     ~ClientConnection();
 
     Participant* participant() const { return m_participant; }
@@ -36,6 +44,7 @@ public:
     QString domain() const;
 
     void sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedWaveletDelta>& delta );
+    void sendSubmitResponse( const waveserver::ProtocolSubmitResponse& response );
     void sendSubmitResponse( qint32 operations_applied, const WaveletDelta::HashedVersion* hashedVersionAfterApplication, const QString& errorMessage = QString::null );
     void sendIndexUpdate(Wavelet* wavelet, const WaveletDelta& indexDelta);
 

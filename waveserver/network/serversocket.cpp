@@ -1,5 +1,6 @@
 #include "serversocket.h"
-#include "clientconnection.h"
+#include "network/clientconnection.h"
+#include "network/clientactorfolk.h"
 #include "app/settings.h"
 #include <QTcpServer>
 #include <QHostAddress>
@@ -24,5 +25,7 @@ ServerSocket::ServerSocket()
 void ServerSocket::newConnection()
 {
     QTcpSocket* sock = m_socket->nextPendingConnection();
-    new ClientConnection(sock, this);
+    // new ClientConnection(sock, this);
+
+    ClientActorFolk::instance()->newClientConnection( sock );
 }

@@ -50,7 +50,13 @@ SOURCES += main.cpp \
     network/xmppwaveletupdateresponseactor.cpp \
     network/xmppsubmitrequestactor.cpp \
     model/remotewavelet.cpp \
-    model/localwavelet.cpp
+    model/localwavelet.cpp \
+    network/clientsubmitrequestactor.cpp \
+    network/clientactor.cpp \
+    actor/actorid.cpp \
+    actor/actorfolk.cpp \
+    actor/actordispatcher.cpp \
+    network/clientactorfolk.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -99,7 +105,15 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     network/xmppwaveletupdateresponseactor.h \
     network/xmppsubmitrequestactor.h \
     model/remotewavelet.h \
-    model/localwavelet.h
+    model/localwavelet.h \
+    network/clientactor.h \
+    network/clientsubmitrequestactor.h \
+    actor/actorid.h \
+    actor/actorfolk.h \
+    actor/actordispatcher.h \
+    network/clientactorfolk.h \
+    actor/pbmessage.h \
+    actor/recvpb.h
 unix:LIBS += -lprotobuf \
     -lcrypto
 INCLUDEPATH += ./ \

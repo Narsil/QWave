@@ -1,6 +1,8 @@
 #include "actor.h"
 #include "actorgroup.h"
 
+qint64 Actor::s_id = 0;
+
 Actor::Actor()
         : m_group(0)
 {
@@ -70,4 +72,17 @@ bool Actor::process( const QSharedPointer<IMessage>& message )
     }
 
     return false;
+}
+
+bool Actor::send( const ActorId& destination, IMessage* msg )
+{
+    msg->setSender( actorId() );
+    if ( !m_group )
+        return false;
+    return m_group->send( destination, msg );
+}
+
+qint64 Actor::nextId() const
+{
+    return ++s_id;
 }
