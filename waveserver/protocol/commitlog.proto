@@ -1,10 +1,17 @@
 
 syntax = "proto2";
 
-import "waveclient-rpc.proto";
+import "common.proto";
 
 package commitlog;
 
-message ProtocolSubmitRequestList {
-  repeated waveserver.ProtocolSubmitRequest requests = 1;
+message Entry
+{
+  required protocol.ProtocolAppliedWaveletDelta delta = 1;
+  required string wavelet_name = 2;
+}
+
+message CommitLog
+{
+  repeated Entry entry = 1;
 }

@@ -4,9 +4,9 @@
 #include <QObject>
 #include <QFile>
 #include "protocol/common.pb.h"
-#include "protocol/waveclient-rpc.pb.h"
 
-class WaveletDelta;
+class AppliedWaveletDelta;
+class Wavelet;
 
 /**
   * Writes deltas in a log file and re-applies them after a crash.
@@ -16,7 +16,7 @@ class CommitLog : public QObject
 public:    
     ~CommitLog();
 
-    bool write( const waveserver::ProtocolSubmitRequest& request );
+    bool write( Wavelet* wavelet, const AppliedWaveletDelta& delta );
     bool applyAll();
     void close();
 

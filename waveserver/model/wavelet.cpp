@@ -9,6 +9,7 @@
 #include "participant.h"
 #include "protocol/common.pb.h"
 #include "app/settings.h"
+#include "persistence/commitlog.h"
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
     : m_version(0), m_wave(wave), m_domain(waveletDomain), m_id(waveletId)
@@ -153,6 +154,9 @@ void Wavelet::commit( const AppliedWaveletDelta& appliedDelta )
         m_deltas.append( AppliedWaveletDelta() );
     // Add the new delta to the list
     m_deltas.append(appliedDelta);
+
+    // Write it to the commit log
+    CommitLog::commitLog()->write(this, appliedDelta);
 
     broadcast( appliedDelta );
     broadcastDigest( appliedDelta.signedDelta().delta() );
