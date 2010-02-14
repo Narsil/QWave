@@ -4,6 +4,7 @@
 #include "model/participant.h"
 #include "network/xmppcomponentconnection.h"
 #include "network/xmppvirtualconnection.h"
+#include <QDateTime>
 
 LocalWavelet::LocalWavelet(Wave* wave, const QString& waveletDomain, const QString& waveletId)
         : Wavelet( wave, waveletDomain, waveletId )
@@ -158,37 +159,16 @@ int LocalWavelet::apply( const SignedWaveletDelta& signedDelta, QString* errorMe
     }
 
     int operationsApplied = clientDelta.operations().count();
-    // TODO This is a hack // QDateTime::currentDateTime().toTime_t()
-    qint64 applicationTime = version();
+    // Time since 1.1.1970 in milliseconds
+    qint64 applicationTime = (qint64)(QDateTime::currentDateTime().toTime_t()) * 1000;
 
     // Construct a AppliedWaveletDelta and sign it (if required)
     AppliedWaveletDelta appliedDelta( signedDelta, applicationTime, operationsApplied );
     if ( transformed )
         appliedDelta.setTransformedDelta( clientDelta );
 
-//    int oldVersion = m_version;
-//    // Update the hashed version
-//    m_version = appliedDelta.resultingVersion().version;
-//    m_hash = appliedDelta.resultingVersion().hash;
-//
-//    // For the intermediate versions (if any) there is no information.
-//    for( int v = oldVersion + 1; v < m_version; ++v )
-//        m_deltas.append( AppliedWaveletDelta() );
-//    // Add the new delta to the list
-//    m_deltas.append(appliedDelta);
-
     // Send the delta to all local subscribers
     commit( appliedDelta );
-//    QList<AppliedWaveletDelta> deltas;
-//    deltas.append( appliedDelta );
-//    foreach( QString cid, m_subscribers )
-//    {
-//        ClientConnection* c = ClientConnection::connectionById(cid);
-//        if ( !c )
-//            m_subscribers.remove(cid);
-//        else
-//            c->sendWaveletUpdate( this, deltas );
-//    }
 
     // Send the delta to all remote subscribers (if XMPP is enabled)
     XmppComponentConnection* comcon = XmppComponentConnection::connection();

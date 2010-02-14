@@ -23,6 +23,8 @@ ActorId::ActorId( const QString& actorid )
         m_folk = Federation;
     else if ( url.host() == "client" )
         m_folk = Client;
+    else if ( url.host() == "store" )
+        m_folk = Store;
     else
         return;
 
@@ -33,14 +35,28 @@ ActorId::ActorId( const QString& actorid )
         return;
     }
 
-    int index = path.indexOf( '/', 1 );
+    int index = path.lastIndexOf( '/', 1 );
     if ( index == -1 )
+    {
+        m_folk = Null;
+        return;
+    }
+
+    if ( index == path.length() - 1 )
         m_group = path.mid(1);
     else
     {
         m_group = path.mid(1, index - 1);
         m_actor = path.mid( index + 1 );
     }
+}
+
+ActorId& ActorId::operator=( const ActorId& id )
+{
+    m_folk = id.folk();
+    m_group = id.group();
+    m_actor = id.actor();
+    return *this;
 }
 
 QString ActorId::toString() const
@@ -57,6 +73,9 @@ QString ActorId::toString() const
             break;
         case Client:
             url.setHost("client");
+            break;
+        case Store:
+            url.setHost("store");
             break;
         case Null:
         case MAX_FOLK:
