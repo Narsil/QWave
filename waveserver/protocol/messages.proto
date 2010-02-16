@@ -1,0 +1,29 @@
+
+syntax = "proto2";
+
+import "common.proto";
+
+package messages;
+
+/**
+ * Send to a RemoteWavelet
+ */
+message RemoteSubmitRequest {
+  required string wavelet_name = 1;
+  required protocol.ProtocolAppliedWaveletDelta applied_delta = 2;
+}
+
+/**
+ * Send to a LocalWavelet
+ */
+message LocalSubmitRequest {
+  required string wavelet_name = 1;
+  required protocol.ProtocolSignedDelta signed_delta = 2;
+}
+
+message SubmitResponse {
+  required int32 operations_applied = 1;
+  required int64 application_timestamp =  2;
+  optional string error_message = 3;
+  optional protocol.ProtocolHashedVersion hashed_version_after_application = 4;
+}
