@@ -25,6 +25,7 @@ WaveletGraphicsItem::WaveletGraphicsItem(WaveView* view)
 {    
     m_addUserButton = new ButtonGraphicsItem( QPixmap("images/adduser.png"), this );
     connect( m_addUserButton, SIGNAL(clicked()), SLOT(showAddParticipantDialog()));
+    m_addUserButton->hide();
 
     int dy = 42 + 2 * 5;
     m_rect = QRectF( 0, 0, 100, dy);
@@ -43,7 +44,8 @@ void WaveletGraphicsItem::setWavelet( Wavelet* wavelet )
     m_wavelet = wavelet;
     connect(wavelet, SIGNAL(participantAdded(Participant*)), SLOT(addParticipant(Participant*)));
     connect(wavelet, SIGNAL(participantRemoved(Participant*)), SLOT(removeParticipant(Participant*)));
-
+    if(!m_addUserButton->isVisible())
+        m_addUserButton->show();
     updateParticipants();
 }
 
@@ -75,7 +77,6 @@ void WaveletGraphicsItem::updateParticipants()
         connect(item,SIGNAL(clicked(Participant*)),SLOT(showParticipantInfo(Participant*)));
         m_participantItems.append( item );
     }
-
     m_addUserButton->setPos( (42 + 5) * m_participantItems.count() + 5, dy + 16);
 }
 
