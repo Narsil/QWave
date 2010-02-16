@@ -29,6 +29,7 @@ private:
     CommitLog();
 
     QFile m_file;
+    bool m_applying;
 
     static CommitLog* s_commitLog;
 };

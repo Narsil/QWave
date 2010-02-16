@@ -3,6 +3,7 @@
 
 #include <QObject>
 #include <QSharedPointer>
+#include <QHash>
 #include "actor/imessage.h"
 #include "actor/actorid.h"
 
@@ -19,7 +20,7 @@ public:
       * @internal Use ActorFolk::deactivate instead.
       */
     void removeFolk( ActorFolk* folk );
-    ActorFolk* folk( ActorId::Folk folk );
+    ActorFolk* folk( const QString& folk );
 
     bool send( const ActorId& actor, const QSharedPointer<IMessage>& message );
     bool send( const ActorId& actor, IMessage* msg );
@@ -29,7 +30,7 @@ public:
 private:
     ActorDispatcher();
 
-    ActorFolk* m_folks[ActorId::MAX_FOLK];
+    QHash<QString,ActorFolk*> m_folks;
     static ActorDispatcher* s_dispatcher;
 };
 

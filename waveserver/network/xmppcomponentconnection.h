@@ -34,7 +34,7 @@ public:
     QString host() const;
     bool isReady() const { return m_connected; }
 
-    XmppVirtualConnection* virtualConnection( const QString& domain, bool resolve = true );
+    XmppVirtualConnection* virtualConnection( const QString& domain, bool resolve = true, bool createOnDemand = true );
     /**
       * @internal
       */
@@ -67,7 +67,7 @@ signals:
     void ready();
 
 protected:
-    virtual ActorGroup* group( const ActorId& id );
+    virtual ActorGroup* group( const QString& id, bool createOnDemand );
 
 private slots:
     void start();

@@ -11,7 +11,7 @@ public:
     /**
       * @return true on success
       */
-    bool apply( AppliedWaveletDelta& appliedDelta, QString* errorMessage );
+    bool apply( AppliedWaveletDelta& appliedDelta, QString* errorMessage, bool restore = false );
 
     virtual bool isRemote() const;
     virtual bool isLocal() const;

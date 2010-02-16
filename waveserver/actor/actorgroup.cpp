@@ -2,9 +2,10 @@
 #include "actorid.h"
 #include "actordispatcher.h"
 
-ActorGroup::ActorGroup(QObject* parent)
-        : QObject( parent ), m_destructed(false), m_active(false)
+ActorGroup::ActorGroup(const QString& name, QObject* parent)
+        : QObject( parent ), m_destructed(false), m_active(false), m_parentGroup(0)
 {
+    setObjectName( name );
 }
 
 ActorGroup::~ActorGroup()
@@ -69,6 +70,21 @@ void ActorGroup::removeActor( Actor* actor )
     m_actors.removeOne( actor );
 }
 
+void ActorGroup::addGroup( ActorGroup* group )
+{
+    Q_ASSERT( !m_destructed );
+
+    group->setParentGroup( this );
+    m_groups.append( group );
+}
+
+void ActorGroup::removeGroup( ActorGroup* group )
+{
+    if ( m_destructed )
+        return;
+    m_groups.removeOne( group );
+}
+
 void ActorGroup::enqueue( IMessage* msg )
 {
     QSharedPointer<IMessage> message(msg);
@@ -93,7 +109,7 @@ bool ActorGroup::enqueue( const ActorId& actorId, const QSharedPointer<IMessage>
 {
     if ( actorId.hasActor() )
     {
-        Actor* a = actor( actorId );
+        Actor* a = actor( actorId, false );
         if ( !a )
             return false;
         message->setReceiver( a );
@@ -115,12 +131,27 @@ void ActorGroup::run()
     m_active = false;
 }
 
-Actor* ActorGroup::actor( const ActorId& id )
+Actor* ActorGroup::actor( const ActorId& id, bool createOnDemand )
 {
+    Q_UNUSED( createOnDemand )
+
     for( int i = 0; i < m_actors.count(); ++i )
     {
         Actor* a = m_actors[i];
-        if ( a->objectName() == id.actor() )
+        if ( a->actorId().actor() == id.actor() )
+            return a;
+    }
+    return 0;
+}
+
+ActorGroup* ActorGroup::group( const QString& id, bool createOnDemand )
+{
+    Q_UNUSED( createOnDemand )
+
+    for( int i = 0; i < m_groups.count(); ++i )
+    {
+        ActorGroup* a = m_groups[i];
+        if ( a->groupId() == id )
             return a;
     }
     return 0;
@@ -129,4 +160,16 @@ Actor* ActorGroup::actor( const ActorId& id )
 bool ActorGroup::send( const ActorId& id, IMessage* msg )
 {
     return ActorDispatcher::dispatcher()->send( id, msg );
+}
+
+QString ActorGroup::absGroupId() const
+{
+    if ( m_parentGroup )
+    {
+        QString id = m_parentGroup->groupId();
+        id += "$";
+        id += objectName();
+        return id;
+    }
+    return objectName();
 }

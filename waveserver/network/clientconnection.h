@@ -37,7 +37,7 @@ public:
     /**
       * A locally unique ID for this connection.
       */
-    QString id() const { return m_id; }
+//    QString id() const { return m_id; }
     /**
       * The domain of this wave server.
       */
@@ -59,7 +59,7 @@ private slots:
 private:
     RPC* m_rpc;
     Participant* m_participant;
-    QString m_id;
+//    QString m_id;
     qint64 m_digestVersion;
     QByteArray m_digestHash;
 

@@ -11,20 +11,24 @@ class ActorGroup;
 class ActorFolk : public QObject
 {
 public:
-    ActorFolk(ActorId::Folk folk, QObject* parent = 0);
+    ActorFolk(const QString& folk, QObject* parent = 0);
 
     void activate();
     void deactivate();
 
-    inline ActorId::Folk folk() const { return m_folk; }
+    inline QString folk() const { return m_folk; }
 
     bool enqueue( const ActorId& actor, const QSharedPointer<IMessage>& message );
 
+    bool isHierarchical() const { return m_isHierarchical; }
+    void setHierarchical(bool enable) { m_isHierarchical = enable; }
+
 protected:
-    virtual ActorGroup* group( const ActorId& id ) = 0;
+    virtual ActorGroup* group( const QString& id, bool createOnDemand ) = 0;
 
 private:
-    ActorId::Folk m_folk;
+    QString m_folk;
+    bool m_isHierarchical;
 };
 
 #endif // ACTORFOLK_H

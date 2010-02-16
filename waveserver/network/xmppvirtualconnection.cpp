@@ -30,7 +30,7 @@
 #include <QDateTime>
 
 XmppVirtualConnection::XmppVirtualConnection( XmppComponentConnection* connection, const QString& domain, bool resolve )
-        : ActorGroup( connection ), m_component( connection ), m_domain( domain ), m_postedSigner(false), m_ready(false)
+        : ActorGroup( domain, connection ), m_component( connection ), m_domain( domain ), m_postedSigner(false), m_ready(false)
 {
     if ( !resolve )
         setReady();

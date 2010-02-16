@@ -11,11 +11,11 @@ public:
     /**
       * @return operations_applied or -1 on error.
       */
-    int apply( const protocol::ProtocolSignedDelta& protobufDelta, QString* errorMessage );
+    int apply( const protocol::ProtocolSignedDelta& protobufDelta, QString* errorMessage, int operationsApplied = -1, qint64 applicationTime = -1 );
     /**
       * @return operations_applied or -1 on error.
       */
-    int apply( const SignedWaveletDelta& clientDelta, QString* errorMessage );
+    int apply( const SignedWaveletDelta& clientDelta, QString* errorMessage, int operationsApplied = -1, qint64 applicationTime = -1 );
 
     virtual bool isRemote() const;
     virtual bool isLocal() const;

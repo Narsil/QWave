@@ -21,22 +21,12 @@
 class ActorId
 {
 public:
-    enum Folk
-    {
-        Null = 0,
-        Wavelet = 1,
-        Federation = 2,
-        Client = 3,
-        Store = 4,
-        MAX_FOLK = 5
-    };
-
-    ActorId() : m_folk(Null) { }
-    ActorId(Folk folk, const QString& group, const QString& actor = QString::null);
+    ActorId() { }
+    ActorId( const QString& folk, const QString& group, const QString& actor = QString::null);
     ActorId( const ActorId& id );
     ActorId( const QString& actorid );
 
-    inline Folk folk() const { return m_folk; }    
+    inline QString folk() const { return m_folk; }
     /**
       * @return the group name which can contain slashes if it is a hierarchical group.
       */
@@ -53,10 +43,10 @@ public:
 
     QString toString() const;
 
-    inline bool isNull() const { return m_folk == Null; }
+    inline bool isNull() const { return m_folk.isNull() || m_group.isNull(); }
 
 private:
-    Folk m_folk;
+    QString m_folk;
     QString m_group;
     QString m_actor;
 };

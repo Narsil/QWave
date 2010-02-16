@@ -3,7 +3,7 @@
 ClientActorFolk* ClientActorFolk::s_folk = 0;
 
 ClientActorFolk::ClientActorFolk(QObject* parent)
-        : ActorFolk( ActorId::Client, parent )
+        : ActorFolk( "client", parent )
 {
     // Start dispatching messages
     activate();
@@ -12,13 +12,15 @@ ClientActorFolk::ClientActorFolk(QObject* parent)
 ClientConnection* ClientActorFolk::newClientConnection( QTcpSocket* socket )
 {
     ClientConnection* con = new ClientConnection( socket, this );
-    m_connections[con->id()] = con;
+    m_connections[con->groupId()] = con;
     return con;
 }
 
-ActorGroup* ClientActorFolk::group( const ActorId& id )
+ActorGroup* ClientActorFolk::group( const QString& groupId, bool createOnDemand )
 {
-    return m_connections[ id.group() ];
+    Q_UNUSED( createOnDemand )
+
+    return m_connections[ groupId ];
 }
 
 ClientActorFolk* ClientActorFolk::instance()

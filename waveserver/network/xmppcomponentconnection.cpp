@@ -19,7 +19,7 @@
 XmppComponentConnection* XmppComponentConnection::s_connection = 0;
 
 XmppComponentConnection::XmppComponentConnection(QObject* parent)
-        : ActorFolk(ActorId::Federation, parent), m_state( Init ), m_connected(false), m_writer(0), m_idCount(0), m_currentStanza(0), m_currentTag(0)
+        : ActorFolk("federation", parent), m_state( Init ), m_connected(false), m_writer(0), m_idCount(0), m_currentStanza(0), m_currentTag(0)
 {
     // Setup the XML reader
     m_reader.setNamespaceProcessing(false);
@@ -297,10 +297,14 @@ void XmppComponentConnection::readBytes()
     stop();
 }
 
-XmppVirtualConnection* XmppComponentConnection::virtualConnection( const QString& domain, bool resolve )
+XmppVirtualConnection* XmppComponentConnection::virtualConnection( const QString& domain, bool resolve, bool createOnDemand )
 {
+    // Does the required connection exist already?
     if ( !m_virtualConnections.contains(domain) )
     {
+        if ( !createOnDemand )
+            return 0;
+        // Create a new connection
         QString wavedomain = "wave." + domain;
         if ( m_virtualConnections.contains(wavedomain) )
             return m_virtualConnections[wavedomain];
@@ -367,7 +371,7 @@ QString XmppComponentConnection::host() const
     return Settings::settings()->xmppComponentName();
 }
 
-ActorGroup* XmppComponentConnection::group( const ActorId& id )
+ActorGroup* XmppComponentConnection::group( const QString& id, bool createOnDemand )
 {
-    return virtualConnection( id.group() );
+    return virtualConnection( id, true, createOnDemand );
 }

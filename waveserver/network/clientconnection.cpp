@@ -29,15 +29,15 @@ QMultiHash<QString,ClientConnection*>* ClientConnection::s_connectionsByParticip
 QHash<QString,ClientConnection*>* ClientConnection::s_connectionsById = 0;
 
 ClientConnection::ClientConnection(QTcpSocket* socket, QObject* parent)
-        : ActorGroup(parent), m_participant(0), m_digestVersion(0)
+        : ActorGroup( QUuid::createUuid().toString(), parent), m_participant(0), m_digestVersion(0)
 {
-    m_id = QUuid::createUuid().toString();
+//    m_id = QUuid::createUuid().toString();
 
     if ( s_connectionsByParticipant == 0 )
         s_connectionsByParticipant = new QMultiHash<QString,ClientConnection*>();
     if ( s_connectionsById == 0 )
         s_connectionsById = new QMultiHash<QString,ClientConnection*>();
-    (*s_connectionsById)[ m_id ] = this;
+    (*s_connectionsById)[ groupId() ] = this;
 
     m_rpc = new RPC(socket, this);
     bool check = connect( m_rpc, SIGNAL(offline()), SLOT(getOffline()));
@@ -52,7 +52,7 @@ ClientConnection::~ClientConnection()
 {
     if ( m_participant )
         s_connectionsByParticipant->remove( m_participant->toString(), this );
-    s_connectionsById->remove( m_id );
+    s_connectionsById->remove( groupId() );
 }
 
 void ClientConnection::messageReceived(const QString& methodName, const QByteArray& data)

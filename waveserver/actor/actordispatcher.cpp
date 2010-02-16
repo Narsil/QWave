@@ -7,13 +7,9 @@ ActorDispatcher* ActorDispatcher::s_dispatcher = 0;
 
 ActorDispatcher::ActorDispatcher()
 {
-    for( int i = 0; i < ActorId::MAX_FOLK; ++i )
-    {
-        m_folks[i] = 0;
-    }
 }
 
-ActorFolk* ActorDispatcher::folk( ActorId::Folk folk )
+ActorFolk* ActorDispatcher::folk( const QString& folk )
 {
     return m_folks[folk];
 }
@@ -25,8 +21,7 @@ void ActorDispatcher::addFolk( ActorFolk* folk )
 
 void ActorDispatcher::removeFolk( ActorFolk* folk )
 {
-    if ( m_folks[folk->folk()] == folk )
-        m_folks[folk->folk()] = 0;
+    m_folks.remove( folk->folk() );
 }
 
 bool ActorDispatcher::send( const ActorId& actor, const QSharedPointer<IMessage>& message )

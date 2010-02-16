@@ -17,8 +17,7 @@ public:
 
     static ClientActorFolk* instance();
 
-protected:
-    virtual ActorGroup* group( const ActorId& id );
+    virtual ActorGroup* group( const QString& id, bool createOnDemand );
 
 private:
     QHash<QString,ClientConnection*> m_connections;
