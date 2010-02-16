@@ -1,15 +1,25 @@
 #include "actorgroup.h"
 #include "actorid.h"
 #include "actordispatcher.h"
+#include "actorfolk.h"
 
-ActorGroup::ActorGroup(const QString& name, QObject* parent)
-        : QObject( parent ), m_destructed(false), m_active(false), m_parentGroup(0)
+ActorGroup::ActorGroup(const QString& groupId, ActorFolk* folk)
+        : QObject( folk ), m_destructed(false), m_active(false), m_parentGroup(0), m_folk(folk)
 {
-    setObjectName( name );
+    setObjectName( groupId );
+}
+
+ActorGroup::ActorGroup(const QString& groupId, ActorGroup* parentGroup)
+        : QObject( parentGroup ), m_destructed(false), m_active(false), m_parentGroup(parentGroup), m_folk(0)
+{
+    setObjectName( groupId );
+    m_parentGroup->addGroup(this);
 }
 
 ActorGroup::~ActorGroup()
 {
+    if ( m_parentGroup )
+        m_parentGroup->removeGroup(this);
     m_destructed = true;
     foreach( Actor* actor, m_actors )
     {
@@ -51,6 +61,7 @@ void ActorGroup::process( const QSharedPointer<IMessage>& message, Actor* actor 
 void ActorGroup::addActor( Actor* actor )
 {
     Q_ASSERT( !m_destructed );
+    Q_ASSERT( folk() != 0 );
 
     actor->setActorGroup( this );
 
@@ -73,8 +84,8 @@ void ActorGroup::removeActor( Actor* actor )
 void ActorGroup::addGroup( ActorGroup* group )
 {
     Q_ASSERT( !m_destructed );
+    Q_ASSERT( folk() != 0 );
 
-    group->setParentGroup( this );
     m_groups.append( group );
 }
 
@@ -172,4 +183,20 @@ QString ActorGroup::absGroupId() const
         return id;
     }
     return objectName();
+}
+
+ActorId ActorGroup::actorId() const
+{
+    if ( !m_folk )
+        return ActorId();
+    return ActorId( m_folk->folkId(), absGroupId() );
+}
+
+ActorFolk* ActorGroup::folk() const
+{
+    if ( m_folk )
+        return m_folk;
+    if ( m_parentGroup )
+        return m_parentGroup->folk();
+    return 0;
 }

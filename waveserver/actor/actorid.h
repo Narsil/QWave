@@ -4,6 +4,8 @@
 #include <QString>
 #include <QStringList>
 
+class ActorGroup;
+
 /**
   * Uniquely identifies an actor or an actor group.
   * Such an ID can be used to send a message using a symbolic name, i.e. the ActorId.
@@ -22,6 +24,7 @@ class ActorId
 {
 public:
     ActorId() { }
+    ActorId( ActorGroup* group, const QString& actor );
     ActorId( const QString& folk, const QString& group, const QString& actor = QString::null);
     ActorId( const ActorId& id );
     ActorId( const QString& actorid );

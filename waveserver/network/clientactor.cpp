@@ -8,7 +8,7 @@
 quint64 ClientActor::s_id = 0;
 
 ClientActor::ClientActor( ClientConnection* con )
-    : m_connection( con ), m_actorId( "client", con->absGroupId(), QString::number( s_id++ ) )
+    : m_connection( con ), m_actorId( con, QString::number( s_id++ ) )
 {
     setObjectName( m_actorId.actor() );
 }

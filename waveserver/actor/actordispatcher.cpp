@@ -16,12 +16,12 @@ ActorFolk* ActorDispatcher::folk( const QString& folk )
 
 void ActorDispatcher::addFolk( ActorFolk* folk )
 {
-    m_folks[folk->folk()] = folk;
+    m_folks[folk->folkId()] = folk;
 }
 
 void ActorDispatcher::removeFolk( ActorFolk* folk )
 {
-    m_folks.remove( folk->folk() );
+    m_folks.remove( folk->folkId() );
 }
 
 bool ActorDispatcher::send( const ActorId& actor, const QSharedPointer<IMessage>& message )

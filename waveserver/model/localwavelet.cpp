@@ -10,7 +10,6 @@
 LocalWavelet::LocalWavelet(Wave* wave, const QString& waveletDomain, const QString& waveletId)
         : Wavelet( wave, waveletDomain, waveletId )
 {
-    wave->addGroup( this );
 }
 
 int LocalWavelet::apply( const protocol::ProtocolSignedDelta& protobufDelta, QString* errorMessage, int operationsApplied, qint64 applicationTime )

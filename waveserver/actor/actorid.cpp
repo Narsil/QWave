@@ -1,5 +1,12 @@
 #include "actorid.h"
+#include "actorgroup.h"
+#include "actorfolk.h"
 #include <QUrl>
+
+ActorId::ActorId( ActorGroup* group, const QString& actor )
+        : m_folk( group->folk()->folkId() ), m_group( group->absGroupId() ), m_actor( actor )
+{
+}
 
 ActorId::ActorId(const QString& folk, const QString& group, const QString& actor)
         : m_folk(folk), m_group(group), m_actor(actor)

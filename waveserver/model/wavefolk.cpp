@@ -26,7 +26,7 @@ ActorGroup* WaveFolk::group( const QString& groupId, bool createOnDemand )
     QString domain = groupId.left(index);
     QString id = groupId.mid(index+1);
 
-    wave = new Wave( domain, id );
+    wave = new Wave( this, domain, id );
     m_waves[ groupId ] = wave;
     return wave;
 }
@@ -38,7 +38,7 @@ Wave* WaveFolk::wave( const QString& domain, const QString& id, bool createOnDem
     if ( wave || !createOnDemand )
         return wave;
 
-    wave = new Wave( domain, id );
+    wave = new Wave( this, domain, id );
     m_waves[ groupId ] = wave;
     return wave;
 }

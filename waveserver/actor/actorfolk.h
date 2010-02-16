@@ -16,7 +16,7 @@ public:
     void activate();
     void deactivate();
 
-    inline QString folk() const { return m_folk; }
+    inline QString folkId() const { return m_folkId; }
 
     bool enqueue( const ActorId& actor, const QSharedPointer<IMessage>& message );
 
@@ -27,7 +27,7 @@ protected:
     virtual ActorGroup* group( const QString& id, bool createOnDemand ) = 0;
 
 private:
-    QString m_folk;
+    QString m_folkId;
     bool m_isHierarchical;
 };
 
