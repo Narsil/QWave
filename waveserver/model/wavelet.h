@@ -9,6 +9,7 @@
 #include "model/waveletdelta.h"
 #include "model/appliedwaveletdelta.h"
 #include "waveurl.h"
+#include "actor/actorgroup.h"
 
 class Wave;
 class WaveletDocument;
@@ -23,7 +24,7 @@ namespace protocol
     class ProtocolSignedDelta;
 }
 
-class Wavelet
+class Wavelet : public ActorGroup
 {
 public:
     Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId );
@@ -81,7 +82,7 @@ protected:
       */
     QString m_lastDigest;
 
-    void commit( const AppliedWaveletDelta& appliedDelta );
+    void commit( const AppliedWaveletDelta& appliedDelta, bool restore );
     bool transform( WaveletDelta& clientDelta, QString* errorMessage, bool* ok );
 
 private:

@@ -57,7 +57,7 @@ void ClientSubmitRequestActor::EXECUTE()
             if ( !m_wavelet->checkHashedVersion( m_update.delta(), &err ) ) { CLIENTERROR(QString("Could not apply delta %1. Delta is not sent to remote server.").arg(err)); }
 
             m_id = nextId();
-            bool ok = send( ActorId( ActorId::Federation, m_wavelet->domain() ), new PBMessage<waveserver::ProtocolSubmitRequest>( m_update, m_id ) );
+            bool ok = send( ActorId( "federation", m_wavelet->domain() ), new PBMessage<waveserver::ProtocolSubmitRequest>( m_update, m_id ) );
             if ( !ok ) { CLIENTERROR("Internal server error"); }
         }
 

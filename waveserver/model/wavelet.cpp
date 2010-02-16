@@ -12,7 +12,7 @@
 #include "persistence/commitlog.h"
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
-    : m_version(0), m_wave(wave), m_domain(waveletDomain), m_id(waveletId)
+    : ActorGroup( waveletDomain + "$" + waveletId, wave ), m_version(0), m_wave(wave), m_domain(waveletDomain), m_id(waveletId)
 {
     // The initial hash is the wave URL
     m_hash = url().toString().toAscii();
@@ -68,7 +68,7 @@ bool Wavelet::checkHashedVersion( const WaveletDelta& clientDelta, QString* erro
 
 void Wavelet::subscribe( ClientConnection* connection )
 {
-    m_subscribers.insert( connection->id() );
+    m_subscribers.insert( connection->groupId() );
 
     // Send the history
     connection->sendWaveletUpdate( this, m_deltas );
@@ -76,7 +76,7 @@ void Wavelet::subscribe( ClientConnection* connection )
 
 void Wavelet::unsubscribe( ClientConnection* connection )
 {
-    m_subscribers.remove( connection->id() );
+    m_subscribers.remove( connection->groupId() );
 }
 
 bool Wavelet::transform( WaveletDelta& clientDelta, QString* errorMessage, bool* ok )
@@ -142,7 +142,7 @@ void Wavelet::broadcast( const AppliedWaveletDelta& delta )
     }
 }
 
-void Wavelet::commit( const AppliedWaveletDelta& appliedDelta )
+void Wavelet::commit( const AppliedWaveletDelta& appliedDelta, bool restore )
 {
     int oldVersion = m_version;
     // Update the hashed version
@@ -155,11 +155,16 @@ void Wavelet::commit( const AppliedWaveletDelta& appliedDelta )
     // Add the new delta to the list
     m_deltas.append(appliedDelta);
 
-    // Write it to the commit log
-    CommitLog::commitLog()->write(this, appliedDelta);
+    if ( !restore )
+    {
+        // Write it to the commit log
+        CommitLog::commitLog()->write(this, appliedDelta);
 
-    broadcast( appliedDelta );
-    broadcastDigest( appliedDelta.signedDelta().delta() );
+        broadcast( appliedDelta );
+        broadcastDigest( appliedDelta.signedDelta().delta() );
+    }
+    else
+        m_lastDigest = digestText();
 }
 
 QString Wavelet::firstRootBlipId() const

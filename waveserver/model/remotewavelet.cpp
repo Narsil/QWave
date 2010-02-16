@@ -1,4 +1,5 @@
 #include "remotewavelet.h"
+#include "model/wave.h"
 #include "model/waveletdocument.h"
 #include "model/jid.h"
 #include "model/participant.h"
@@ -6,9 +7,10 @@
 RemoteWavelet::RemoteWavelet(Wave* wave, const QString& waveletDomain, const QString& waveletId)
         : Wavelet( wave, waveletDomain, waveletId )
 {
+    wave->addGroup( this );
 }
 
-bool RemoteWavelet::apply( AppliedWaveletDelta& appliedDelta, QString* errorMessage )
+bool RemoteWavelet::apply( AppliedWaveletDelta& appliedDelta, QString* errorMessage, bool restore )
 {
     // Make a copy of the delta because we might have to transform it
     WaveletDelta clientDelta( appliedDelta.signedDelta().delta() );
@@ -92,7 +94,7 @@ bool RemoteWavelet::apply( AppliedWaveletDelta& appliedDelta, QString* errorMess
     }
 
     // Send the delta to all local subscribers
-    commit( appliedDelta );
+    commit( appliedDelta, restore );
 
     return true;
 }

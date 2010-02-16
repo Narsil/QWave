@@ -56,7 +56,8 @@ SOURCES += main.cpp \
     actor/actorid.cpp \
     actor/actorfolk.cpp \
     actor/actordispatcher.cpp \
-    network/clientactorfolk.cpp
+    network/clientactorfolk.cpp \
+    model/wavefolk.cpp
 HEADERS += ../core/model/waveletdeltaoperation.h \
     ../core/model/waveletdelta.h \
     ../core/model/structureddocument.h \
@@ -113,7 +114,8 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     actor/actordispatcher.h \
     network/clientactorfolk.h \
     actor/pbmessage.h \
-    actor/recvpb.h
+    actor/recvpb.h \
+    model/wavefolk.h
 unix:LIBS += -lprotobuf \
     -lcrypto
 INCLUDEPATH += ./ \

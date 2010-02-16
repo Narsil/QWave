@@ -2,6 +2,7 @@
 #include "model/waveletdocument.h"
 #include "model/jid.h"
 #include "model/participant.h"
+#include "model/wave.h"
 #include "network/xmppcomponentconnection.h"
 #include "network/xmppvirtualconnection.h"
 #include <QDateTime>
@@ -9,9 +10,10 @@
 LocalWavelet::LocalWavelet(Wave* wave, const QString& waveletDomain, const QString& waveletId)
         : Wavelet( wave, waveletDomain, waveletId )
 {
+    wave->addGroup( this );
 }
 
-int LocalWavelet::apply( const protocol::ProtocolSignedDelta& protobufDelta, QString* errorMessage )
+int LocalWavelet::apply( const protocol::ProtocolSignedDelta& protobufDelta, QString* errorMessage, int operationsApplied, qint64 applicationTime )
 {
     bool ok;
     SignedWaveletDelta delta( &protobufDelta, &ok );
@@ -20,10 +22,10 @@ int LocalWavelet::apply( const protocol::ProtocolSignedDelta& protobufDelta, QSt
         errorMessage->append("Error decoding signedDelta");
         return -1;
     }
-    return apply( delta, errorMessage );
+    return apply( delta, errorMessage, operationsApplied, applicationTime );
 }
 
-int LocalWavelet::apply( const SignedWaveletDelta& signedDelta, QString* errorMessage )
+int LocalWavelet::apply( const SignedWaveletDelta& signedDelta, QString* errorMessage, int operationsApplied, qint64 applicationTime )
 {
     // Make a copy of the delta because we might have to transform it
     WaveletDelta clientDelta( signedDelta.delta() );
@@ -37,53 +39,6 @@ int LocalWavelet::apply( const SignedWaveletDelta& signedDelta, QString* errorMe
     bool transformed = transform( clientDelta, errorMessage, &ok );
     if ( !ok )
         return -1;
-
-//    // The delta needs to be transformed?
-//    if ( clientDelta.version().version < m_version )
-//    {
-//        transformed = true;
-//        //
-//        // Perform OT on the delta
-//        //
-//
-//        // Make a shallow copy of the server-deltas which need to participate in transformations.
-//        // These copies will be modified during OT
-//        QList<WaveletDelta> server;
-//        for( int v = clientDelta.version().version; v < m_deltas.count(); ++v )
-//            server.append( m_deltas[v].signedDelta().delta() );
-//
-//        // Loop over all client operations and transform them
-//        for( int c = 0; c < clientDelta.operations().count(); ++c )
-//        {
-//            for( int i = 0; i < server.count(); ++i )
-//            {
-//                WaveletDelta& serverDelta = server[i];
-//                for( int s = 0; s < serverDelta.operations().count(); ++s )
-//                {
-//                    bool ok;
-//                    QPair<WaveletDeltaOperation,WaveletDeltaOperation> pair = WaveletDeltaOperation::xform(serverDelta.operations()[s], clientDelta.operations()[c], &ok);
-//                    if ( !ok )
-//                    {
-//                        qDebug("Wavelet could not be applied");
-//                        errorMessage->append("Wavelet could not be applied");
-//                        return -1;
-//                    }
-//                    serverDelta.operations()[s] = pair.first;
-//                    clientDelta.operations()[c] = pair.second;
-//                }
-//            }
-//        }
-//        clientDelta.version().hash = m_hash;
-//        clientDelta.version().version = m_version;
-//    }
-
-//    // Track which participants are added by the delta
-//    QSet<QString> newParticipants;
-//
-//    // Prepare a delta for the digest
-//    WaveletDelta indexDelta;
-//    indexDelta.setAuthor( "digest-author" );
-//    indexDelta.version().version = 0;
 
     // TODO: Rollback if something went wrong, or report that only a subset of ops succeeded
 
@@ -158,9 +113,17 @@ int LocalWavelet::apply( const SignedWaveletDelta& signedDelta, QString* errorMe
         }
     }
 
-    int operationsApplied = clientDelta.operations().count();
-    // Time since 1.1.1970 in milliseconds
-    qint64 applicationTime = (qint64)(QDateTime::currentDateTime().toTime_t()) * 1000;
+    bool restore = ( operationsApplied != -1 );
+    if ( operationsApplied == -1 )
+        operationsApplied = clientDelta.operations().count();
+    else if ( operationsApplied != clientDelta.operations().count() )
+    {
+        errorMessage->append("Number of operations applied is different than expected.");
+        return -1;
+    }
+    if ( applicationTime == -1 )
+        // Time since 1.1.1970 in milliseconds
+        applicationTime = (qint64)(QDateTime::currentDateTime().toTime_t()) * 1000;
 
     // Construct a AppliedWaveletDelta and sign it (if required)
     AppliedWaveletDelta appliedDelta( signedDelta, applicationTime, operationsApplied );
@@ -168,7 +131,7 @@ int LocalWavelet::apply( const SignedWaveletDelta& signedDelta, QString* errorMe
         appliedDelta.setTransformedDelta( clientDelta );
 
     // Send the delta to all local subscribers
-    commit( appliedDelta );
+    commit( appliedDelta, restore );
 
     // Send the delta to all remote subscribers (if XMPP is enabled)
     XmppComponentConnection* comcon = XmppComponentConnection::connection();
@@ -182,43 +145,6 @@ int LocalWavelet::apply( const SignedWaveletDelta& signedDelta, QString* errorMe
             con->sendWaveletUpdate( url().toString(), appliedDelta );
         }
     }
-
-//    // Prepare a digest update
-//    DocumentMutation m;
-//    if ( !m_lastDigest.isEmpty() )
-//        m.deleteChars( m_lastDigest );
-//    m_lastDigest = digest();
-//    m.insertChars( m_lastDigest );
-//    WaveletDeltaOperation op;
-//    op.setMutation(m);
-//    indexDelta.addOperation(op);
-
-//    broadcastDigest( digest );
-//    // Send the digest delta to all connected participants
-//    foreach( QString p, m_participants )
-//    {
-//        // Digest deltas go only to local users
-//        JID jid(p);
-//        if ( !jid.isLocal() )
-//            continue;
-//        // A new participant? Send him an initial digest
-//        if ( newParticipants.contains(p) )
-//        {
-//            WaveletDelta digest = initialDigest();
-//            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
-//            {
-//                c->sendIndexUpdate(this, digest);
-//            }
-//        }
-//        // An old participant -> send him a digest update
-//        else
-//        {
-//            foreach( ClientConnection* c, ClientConnection::connectionsByParticipant(p) )
-//            {
-//                c->sendIndexUpdate(this, indexDelta);
-//            }
-//        }
-//    }
 
     return version();
 }

@@ -2,8 +2,8 @@
 #include "actordispatcher.h"
 #include "actorgroup.h"
 
-ActorFolk::ActorFolk(ActorId::Folk folk, QObject* parent)
-        : QObject( parent ), m_folk( folk )
+ActorFolk::ActorFolk(const QString& folk, QObject* parent)
+        : QObject( parent ), m_folk( folk ), m_isHierarchical( true )
 {
 }
 
@@ -21,7 +21,23 @@ bool ActorFolk::enqueue( const ActorId& actor, const QSharedPointer<IMessage>& m
 {
     Q_ASSERT( actor.folk() == m_folk );
 
-    ActorGroup* g = group( actor );
+    ActorGroup* g = 0;
+    if ( m_isHierarchical )
+    {
+        QStringList groups = actor.groups();
+        for( int i = 0; i < groups.length(); ++i )
+        {
+            QString gr = groups[i];
+            if ( i == 0 )
+                g = group( gr, message->createOnDemand() );
+            else
+                g = g->group( gr, message->createOnDemand() );
+            if ( !g )
+                return false;
+        }
+    }
+    else
+        g = group( actor.group(), message->createOnDemand() );
     if ( !g )
         return false;
     return g->enqueue( actor, message );
