@@ -99,6 +99,7 @@ void XmppVirtualConnection::dispatch( const QSharedPointer<IMessage>& message )
         if ( submitMsg )
         {
             new XmppSubmitRequestActor( this, message.dynamicCast<PBMessage<waveserver::ProtocolSubmitRequest> >() );
+            return;
         }
     }
 

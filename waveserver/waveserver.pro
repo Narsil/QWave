@@ -27,6 +27,7 @@ SOURCES += main.cpp \
     persistence/commitlog.cpp \
     app/settings.cpp \
     protocol/commitlog.pb.cc \
+    protocol/messages.pb.cc \
     model/jid.cpp \
     network/servercertificate.cpp \
     model/appliedwaveletdelta.cpp \
@@ -78,6 +79,7 @@ HEADERS += ../core/model/waveletdeltaoperation.h \
     persistence/commitlog.h \
     app/settings.h \
     protocol/commitlog.pb.h \
+    protocol/messages.pb.h \
     model/jid.h \
     network/servercertificate.h \
     model/appliedwaveletdelta.h \
