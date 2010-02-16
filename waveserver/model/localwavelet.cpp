@@ -5,6 +5,7 @@
 #include "model/wave.h"
 #include "network/xmppcomponentconnection.h"
 #include "network/xmppvirtualconnection.h"
+
 #include <QDateTime>
 
 LocalWavelet::LocalWavelet(Wave* wave, const QString& waveletDomain, const QString& waveletId)
@@ -176,4 +177,80 @@ bool LocalWavelet::isRemote() const
 bool LocalWavelet::isLocal() const
 {
     return true;
+}
+
+void LocalWavelet::dispatch( const QSharedPointer<IMessage>& message )
+{
+    PBMessage<messages::LocalSubmitRequest>* submitMsg = dynamic_cast< PBMessage<messages::LocalSubmitRequest>* >( message.data() );
+    if ( submitMsg )
+    {
+        new SubmitRequestActor( this, message.dynamicCast<PBMessage<messages::LocalSubmitRequest> >() );
+        return;
+    }
+
+    this->Wavelet::dispatch( message );
+}
+
+/****************************************************************************
+ *
+ * WaveletActor
+ *
+ ***************************************************************************/
+
+void LocalWavelet::WaveletActor::log( const char* error, const char* file, int line )
+{
+    QString d = m_wavelet->url().toString();
+    QString t = QDateTime::currentDateTime().toString();
+    qDebug("INFO in %s:%i talking to %s on behalf of %s: %s", file, line, d.toAscii().constData(), t.toAscii().constData(), error );
+}
+
+void LocalWavelet::WaveletActor::log( const QString& error, const char* file, int line )
+{
+    log( error.toAscii().constData(), file, line );
+}
+
+void LocalWavelet::WaveletActor::logErr( const char* error, const char* file, int line )
+{
+    QString d = m_wavelet->url().toString();
+    QString t = QDateTime::currentDateTime().toString();
+    qDebug("ERROR in %s:%i talking on behalf of %s at %s: %s", file, line, d.toAscii().constData(), t.toAscii().constData(), error );
+}
+
+void LocalWavelet::WaveletActor::logErr( const QString& error, const char* file, int line )
+{
+    logErr( error.toAscii().constData(), file, line );
+}
+
+/****************************************************************************
+ *
+ * SubmitRequestActor
+ *
+ ***************************************************************************/
+
+#define ERROR(msg) { logErr(msg, __FILE__, __LINE__); sendFailedSubmitResponse(msg); TERMINATE(); }
+#define LOG(msg) { log(msg, __FILE__, __LINE__); }
+
+void LocalWavelet::SubmitRequestActor::EXECUTE()
+{
+    BEGIN_EXECUTE;
+
+    END_EXECUTE;
+}
+
+void LocalWavelet::SubmitRequestActor::sendFailedSubmitResponse(const QString& error)
+{
+    // Send information back
+    if ( !m_message->sender().isNull() )
+    {
+        messages::SubmitResponse response;
+        response.set_operations_applied( 0 );
+        response.set_application_timestamp( timeStamp() );
+        response.set_error_message( error.toStdString() );
+        send( m_message->sender(), new PBMessage<messages::SubmitResponse>( response, m_message->id() ) );
+    }
+}
+
+qint64 LocalWavelet::SubmitRequestActor::timeStamp()
+{
+    return (qint64)(QDateTime::currentDateTime().toTime_t()) * 1000;
 }
