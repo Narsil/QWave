@@ -7,7 +7,6 @@
 RemoteWavelet::RemoteWavelet(Wave* wave, const QString& waveletDomain, const QString& waveletId)
         : Wavelet( wave, waveletDomain, waveletId )
 {
-    wave->addGroup( this );
 }
 
 bool RemoteWavelet::apply( AppliedWaveletDelta& appliedDelta, QString* errorMessage, bool restore )

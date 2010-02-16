@@ -2,8 +2,8 @@
 #include "actordispatcher.h"
 #include "actorgroup.h"
 
-ActorFolk::ActorFolk(const QString& folk, QObject* parent)
-        : QObject( parent ), m_folk( folk ), m_isHierarchical( true )
+ActorFolk::ActorFolk(const QString& folkId, QObject* parent)
+        : QObject( parent ), m_folkId( folkId ), m_isHierarchical( true )
 {
 }
 
@@ -19,7 +19,7 @@ void ActorFolk::deactivate()
 
 bool ActorFolk::enqueue( const ActorId& actor, const QSharedPointer<IMessage>& message )
 {
-    Q_ASSERT( actor.folk() == m_folk );
+    Q_ASSERT( actor.folk() == m_folkId );
 
     ActorGroup* g = 0;
     if ( m_isHierarchical )

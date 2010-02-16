@@ -5,6 +5,9 @@
 
 #include "actor/imessage.h"
 
+/**
+  * A message containing a protocol buffer message.
+  */
 template<class PB> class PBMessage : public IMessage
 {
 public:

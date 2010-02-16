@@ -4,14 +4,9 @@
 #include "wavefolk.h"
 #include "app/settings.h"
 
-// QHash<QString,Wave*>* Wave::s_waves = 0;
-
-Wave::Wave(const QString& domain, const QString& id)
-    : ActorGroup( domain + "$" + id ), m_domain(domain), m_id(id)
+Wave::Wave(WaveFolk* folk, const QString& domain, const QString& id)
+    : ActorGroup( domain + "$" + id, folk ), m_domain(domain), m_id(id)
 {
-//    if ( s_waves == 0 )
-//        s_waves = new QHash<QString,Wave*>();
-//    (*s_waves)[m_domain + "!" + m_id] = this;
 }
 
 Wave::~Wave()
@@ -50,33 +45,10 @@ Wavelet* Wave::wavelet( const QString& domain, const QString& id, bool create )
 {
     QString name = domain + "$" + id;
     return dynamic_cast<Wavelet*>(group( name, create ));
-
-//    Wavelet* wavelet = dynamic_cast<Wavelet*>(group( name, create ));
-//    if ( wavelet )
-//        return wavelet;
-//    if ( !create )
-//        return 0;
-//
-//    if ( domain == Settings::settings()->domain() )
-//        wavelet = new LocalWavelet(this, domain, id);
-//    else
-//        wavelet = new RemoteWavelet(this, domain, id);
-//    // m_wavelets[name] = wavelet;
-//    return wavelet;
 }
 
 Wave* Wave::wave(const QString& domain, const QString& id, bool create)
 {
     return WaveFolk::instance()->wave( domain, id, create );
-//    if ( s_waves != 0 )
-//    {
-//        Wave* wave = (*s_waves)[domain + "!" + id];
-//        if ( wave )
-//            return wave;
-//    }
-//    if ( !create )
-//        return 0;
-//
-//    return new Wave( domain, id );
 }
 

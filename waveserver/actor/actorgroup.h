@@ -12,11 +12,13 @@
 typedef QSharedPointer<IMessage> IMessagePtr;
 
 class ActorId;
+class ActorFolk;
 
 class ActorGroup : public QObject
 {
 public:
-    ActorGroup( const QString& groupId, QObject* parent = 0 );
+    ActorGroup( const QString& groupId, ActorFolk* folk );
+    ActorGroup( const QString& groupId, ActorGroup* parentFolk );
     virtual ~ActorGroup();
 
     void enqueue( IMessage* msg );
@@ -29,15 +31,11 @@ public:
     void addActor( Actor* actor );
     void removeActor( Actor* actor );
 
-    void addGroup( ActorGroup* group );
-    void removeGroup( ActorGroup* group );
-
     /**
-      * @internal
-      *
-      * Invoked by ActorGroup. Use ActorGroup::addGroup instead.
+      * @return the parent group or zero if this is a top-level group.
       */
-    void setParentGroup( ActorGroup* group ) { Q_ASSERT( m_parentGroup == 0 || m_parentGroup == group ); m_parentGroup = group; }
+    ActorFolk* folk() const;
+
     /**
       * @return the parent group or zero if this is a top-level group.
       */
@@ -51,11 +49,16 @@ public:
     virtual bool send( const ActorId& id, IMessage* msg );
 
     /**
-      * The ID of this group which is unique among its folk. In case of a hierarchical folk,
+      * @return the ID of this group which is unique among its parent-group (or folk if there is no parent-group).
+      * In case of a hierarchical folk,
       * the group ID is not the same as the absolute group ID.
       */
     inline QString groupId() const { return objectName(); }
     QString absGroupId() const;
+    /**
+      * @return an actor ID which specifies this group.
+      */
+    ActorId actorId() const;
 
     virtual Actor* actor( const ActorId& id, bool createOnDemand );
     virtual ActorGroup* group( const QString& groupId, bool createOnDemand );
@@ -67,6 +70,18 @@ protected:
     virtual void dispatch( const QSharedPointer<IMessage>& message );
 
 private:
+    /**
+      * @internal
+      */
+    void addGroup( ActorGroup* group );
+    /**
+      * @internal
+      */
+    void removeGroup( ActorGroup* group );
+
+    /**
+      * Dispatches all queued messages to the actors.
+      */
     void run();
     /**
       * The object takes over ownership of the message.
@@ -84,6 +99,7 @@ private:
       * The parent group. May be 0.
       */
     ActorGroup* m_parentGroup;
+    ActorFolk* m_folk;
     QList<ActorGroup*> m_groups;
 };
 

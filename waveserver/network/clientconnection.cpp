@@ -1,4 +1,5 @@
 #include "clientconnection.h"
+#include "clientactorfolk.h"
 #include "clientsubmitrequestactor.h"
 #include "network/rpc.h"
 #include "network/xmppcomponentconnection.h"
@@ -28,7 +29,7 @@
 QMultiHash<QString,ClientConnection*>* ClientConnection::s_connectionsByParticipant = 0;
 QHash<QString,ClientConnection*>* ClientConnection::s_connectionsById = 0;
 
-ClientConnection::ClientConnection(QTcpSocket* socket, QObject* parent)
+ClientConnection::ClientConnection(QTcpSocket* socket, ClientActorFolk* parent)
         : ActorGroup( QUuid::createUuid().toString(), parent), m_participant(0), m_digestVersion(0)
 {
 //    m_id = QUuid::createUuid().toString();

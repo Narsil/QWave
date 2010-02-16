@@ -82,7 +82,7 @@ bool Actor::send( const ActorId& destination, IMessage* msg )
     return m_group->send( destination, msg );
 }
 
-qint64 Actor::nextId() const
+qint64 Actor::nextId()
 {
     return ++s_id;
 }

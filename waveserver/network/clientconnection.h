@@ -17,6 +17,7 @@ class AppliedWaveletDelta;
 class QByteArray;
 class QTcpSocket;
 class Participant;
+class ClientActorFolk;
 
 namespace waveserver
 {
@@ -28,9 +29,11 @@ class ClientConnection : public ActorGroup
     Q_OBJECT
 public:
     /**
+      * @internal
+      *
       * Do not create a connection directly. Use ClientActorFolk instead.
       */
-    ClientConnection(QTcpSocket* socket, QObject* parent = 0);
+    ClientConnection(QTcpSocket* socket, ClientActorFolk* parent = 0);
     ~ClientConnection();
 
     Participant* participant() const { return m_participant; }
