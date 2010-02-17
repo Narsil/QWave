@@ -3,7 +3,7 @@
 #include "actorgroup.h"
 
 ActorFolk::ActorFolk(const QString& folkId, QObject* parent)
-        : QObject( parent ), m_folkId( folkId ), m_isHierarchical( true )
+        : QObject( parent ), m_folkId( folkId ), m_isHierarchical( false )
 {
 }
 
@@ -42,4 +42,3 @@ bool ActorFolk::enqueue( const ActorId& actor, const QSharedPointer<IMessage>& m
         return false;
     return g->enqueue( actor, message );
 }
-

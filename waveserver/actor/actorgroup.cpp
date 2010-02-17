@@ -63,19 +63,30 @@ void ActorGroup::addActor( Actor* actor )
     Q_ASSERT( !m_destructed );
     Q_ASSERT( folk() != 0 );
 
-    actor->setActorGroup( this );
+    qDebug("Add actor %s to %s", actor->actorId().toString().toAscii().constData(), this->actorId().toString().toAscii().constData() );
 
+    actor->setActorGroup( this );
+    m_actors.append( actor );
+
+    bool old = m_active;
+    m_active = true;
     if ( !actor->run() )
     {
+        m_active = old;
         qDebug("Actor finished on the first run");
         actor->deleteLater();
         return;
     }
-    m_actors.append( actor );
+    m_active = old;
+
+    if ( !m_active )
+        run();
 }
 
 void ActorGroup::removeActor( Actor* actor )
 {
+    qDebug("Remove actor");
+
     if ( m_destructed )
         return;
     m_actors.removeOne( actor );
@@ -122,7 +133,10 @@ bool ActorGroup::enqueue( const ActorId& actorId, const QSharedPointer<IMessage>
     {
         Actor* a = actor( actorId, false );
         if ( !a )
+        {
+            qDebug("Unknown actor %s in %s", actorId.toString().toAscii().constData(), this->actorId().toString().toAscii().constData() );
             return false;
+        }
         message->setReceiver( a );
     }
     enqueue(message);
@@ -178,7 +192,7 @@ QString ActorGroup::absGroupId() const
     if ( m_parentGroup )
     {
         QString id = m_parentGroup->groupId();
-        id += "$";
+        id += "/";
         id += objectName();
         return id;
     }
@@ -187,9 +201,10 @@ QString ActorGroup::absGroupId() const
 
 ActorId ActorGroup::actorId() const
 {
-    if ( !m_folk )
+    ActorFolk* f = folk();
+    if ( !f )
         return ActorId();
-    return ActorId( m_folk->folkId(), absGroupId() );
+    return ActorId( f->folkId(), absGroupId() );
 }
 
 ActorFolk* ActorGroup::folk() const

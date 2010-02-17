@@ -1,5 +1,6 @@
 #include "wavefolk.h"
-#include "wave.h"
+#include "model/wave.h"
+#include "model/waveurl.h"
 
 WaveFolk* WaveFolk::s_folk = 0;
 
@@ -48,4 +49,9 @@ WaveFolk* WaveFolk::instance()
     if ( s_folk == 0 )
         s_folk = new WaveFolk();
     return s_folk;
+}
+
+ActorId WaveFolk::actorId( const WaveUrl& url )
+{
+    return ActorId( "wave", url.waveDomain() + "$" + url.waveId() + "/" + url.waveletDomain() + "$" + url.waveletId() );
 }

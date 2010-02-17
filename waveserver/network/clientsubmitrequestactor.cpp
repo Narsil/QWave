@@ -14,6 +14,7 @@
 #include "actor/pbmessage.h"
 #include "actor/timeout.h"
 #include "actor/recvpb.h"
+#include "protocol/messages.pb.h"
 #include <QByteArray>
 
 #define CLIENTERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->sendSubmitResponse(0, 0, msg); TERMINATE(); }
@@ -27,6 +28,8 @@ ClientSubmitRequestActor::ClientSubmitRequestActor( ClientConnection* con, const
 
 void ClientSubmitRequestActor::EXECUTE()
 {
+    qDebug("EXECUTE SubmitRequestActor");
+
     BEGIN_EXECUTE;
 
     // Analyze the request
@@ -36,15 +39,15 @@ void ClientSubmitRequestActor::EXECUTE()
 
         QString waveletId = QString::fromStdString( m_update.wavelet_name() );
 
-        WaveUrl url( waveletId );
-        if ( url.isNull() ) { CLIENTERROR("Malformed wave url"); }
+        m_url = waveletId;
+        if ( m_url.isNull() ) { CLIENTERROR("Malformed wave url"); }
 
         // Find the wave
-        Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == connection()->domain()) );
+        Wave* wave = Wave::wave( m_url.waveDomain(), m_url.waveId(), (m_url.waveDomain() == connection()->domain()) );
         if ( !wave ) { CLIENTERROR("Could not create wave"); }
 
         // If the wavelet does not exist -> create it (but only if it is a local wavelet)
-        m_wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), (url.waveletDomain() == connection()->domain()) );
+        m_wavelet = wave->wavelet( m_url.waveletDomain(), m_url.waveletId(), (m_url.waveletDomain() == connection()->domain()) );
         if ( !m_wavelet ) { CLIENTERROR("Could not create wavelet"); }
     }
 
@@ -57,7 +60,7 @@ void ClientSubmitRequestActor::EXECUTE()
             if ( !m_wavelet->checkHashedVersion( m_update.delta(), &err ) ) { CLIENTERROR(QString("Could not apply delta %1. Delta is not sent to remote server.").arg(err)); }
 
             m_id = nextId();
-            bool ok = send( ActorId( "federation", m_wavelet->domain() ), new PBMessage<waveserver::ProtocolSubmitRequest>( m_update, m_id ) );
+            bool ok = send( ActorId( "federation", m_url.waveletDomain() ), new PBMessage<waveserver::ProtocolSubmitRequest>( m_update, m_id ) );
             if ( !ok ) { CLIENTERROR("Internal server error"); }
         }
 
@@ -73,19 +76,51 @@ void ClientSubmitRequestActor::EXECUTE()
 
         TERMINATE();
     }
+    else
+    {
+        // Send a submit request to the wavelet
+        {
+            m_id = nextId();
+            // Sign the delta
+            SignedWaveletDelta s( m_update.delta() );
+            // Construct the request
+            PBMessage<messages::LocalSubmitRequest>* msg = new PBMessage<messages::LocalSubmitRequest>( m_id );
+            msg->set_wavelet_name( m_update.wavelet_name() );
+            protocol::ProtocolSignedDelta* signedDelta = msg->mutable_signed_delta();
+            s.toProtobuf( signedDelta );
+            // Send the request
+            bool ok = send( m_wavelet->actorId(), msg );
+            if ( !ok ) { CLIENTERROR("Internal server error"); }
+        }
 
-    Q_ASSERT( m_wavelet->isLocal() );
+        // Wait for the response
+        yield( RecvPB<messages::SubmitResponse>( m_id ) | Timeout(10000) );
+        if ( REASON( RecvPB<messages::SubmitResponse> ) )
+        {
+            CLIENTLOG("Got submit response");
+            // Send a response to the client
 
-    LocalWavelet* localWavelet = dynamic_cast<LocalWavelet*>(m_wavelet);
-    // Apply the delta
-    QString err = "";
-    int version = localWavelet->apply( SignedWaveletDelta( m_update.delta() ), &err );
-    if ( !err.isEmpty() || version < 0 ) { CLIENTERROR(QString("Could not apply delta: %1").arg(err)); }
+            waveserver::ProtocolSubmitResponse response;
+            response.set_operations_applied( REASON->operations_applied() );
+            protocol::ProtocolHashedVersion* version = response.mutable_hashed_version_after_application();
+            version->MergeFrom( REASON->hashed_version_after_application() );
 
-    const AppliedWaveletDelta* applied = m_wavelet->delta(version - 1);
-    Q_ASSERT(applied);
-    // Send a response
-    connection()->sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
+            connection()->sendSubmitResponse( response );
+        }
+        else if ( REASON( Timeout ) ) { CLIENTERROR("Timeout waiting for response"); }
+    }
+//
+//
+//    LocalWavelet* localWavelet = dynamic_cast<LocalWavelet*>(m_wavelet);
+//    // Apply the delta
+//    QString err = "";
+//    int version = localWavelet->apply( SignedWaveletDelta( m_update.delta() ), &err );
+//    if ( !err.isEmpty() || version < 0 ) { CLIENTERROR(QString("Could not apply delta: %1").arg(err)); }
+//
+//    const AppliedWaveletDelta* applied = m_wavelet->delta(version - 1);
+//    Q_ASSERT(applied);
+//    // Send a response
+//    connection()->sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
 
     END_EXECUTE;
 }

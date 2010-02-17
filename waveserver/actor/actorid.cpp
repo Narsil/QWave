@@ -58,6 +58,9 @@ ActorId& ActorId::operator=( const ActorId& id )
 
 QString ActorId::toString() const
 {
+    if ( isNull() )
+        return QString::null;
+
     QUrl url;
     url.setScheme("actor");
     url.setHost( m_folk );

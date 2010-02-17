@@ -20,7 +20,7 @@ public:
         PBMessage<PB>* ptr = dynamic_cast<PBMessage<PB>*>( msg.data() );
         if ( ptr )
         {
-            if ( m_id == -1 || m_id == ptr->id() )
+            if ( m_id == -1 || m_id == ptr->Id() )
             {
                 m_message = msg.dynamicCast<PBMessage<PB> >();
                 return this;
@@ -42,8 +42,8 @@ public:
     RecvPB( WaitingConditionImpl* x ) { m_ptr = dynamic_cast<RecvPBImpl<PB>*>( x ); if ( m_ptr ) m_ptr->m_refCount++; }
     ~RecvPB() { if ( m_ptr ) { m_ptr->m_refCount--; if ( m_ptr->m_refCount == 0 ) delete m_ptr; } }
 
-    PB* operator->() const { return &m_ptr->m_message.data()->protoBuf(); }
-    PB& operator*() const { return m_ptr->m_message.data()->protoBuf(); }
+    PB* operator->() const { return m_ptr->m_message.data(); }
+    PB& operator*() const { return *m_ptr->m_message.data(); }
     operator bool() const { return m_ptr != 0; }
 
     RecvPB<PB>& operator=( const RecvPB<PB>& x ) { if ( m_ptr ) { m_ptr->m_refCount--; if ( m_ptr->m_refCount == 0 ) delete m_ptr; } m_ptr = x.m_ptr; if ( m_ptr ) m_ptr->m_refCount++; return *this; }
