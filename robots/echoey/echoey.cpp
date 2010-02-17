@@ -18,6 +18,7 @@ void Echoey::waveAdded(Wave *wave)
 
 void Echoey::participantAdded(Participant *participant,Wavelet* wavelet)
 {
+    Q_UNUSED(wavelet);
     QString msg("Hello ");
     msg+=participant->address();
 //    wavelet->createRootBlip(msg);
@@ -25,6 +26,7 @@ void Echoey::participantAdded(Participant *participant,Wavelet* wavelet)
 
 void Echoey::participantRemoved(Participant *participant,Wavelet* wavelet)
 {
+    Q_UNUSED(wavelet);
     QString msg("Goodbye ");
     msg+=participant->address();
 //    wavelet->createRootBlip(msg);
@@ -32,11 +34,13 @@ void Echoey::participantRemoved(Participant *participant,Wavelet* wavelet)
 
 void Echoey::conversationChanged(Wavelet* wavelet)
 {
+    Q_UNUSED(wavelet);
 //    wavelet->createRootBlip("Hello World ! ");
 }
 
 void Echoey::onBlipSubmitted(Blip* blip)
 {
+    Q_UNUSED(blip);
 //    QString text= "Hello World !";
 //    text+= blip->id();
 //    blip->createFollowUpBlip(text);
