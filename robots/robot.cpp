@@ -36,11 +36,15 @@ void Robot::wavedigestAdded(Wave* wave)
 
 void Robot::onBlipSubmitted(Blip* blip)
 {
+    Q_UNUSED(blip);
+
     qDebug()<<"New Blip Submitted";
 }
 
 void Robot::conversationChanged(Wavelet* wavelet)
 {
+    Q_UNUSED(wavelet);
+
     qDebug()<<"Conversation Changed";
 }
 
