@@ -8,6 +8,7 @@
 #include "actor/actorid.h"
 #include "actor/pbmessage.h"
 #include "protocol/messages.pb.h"
+#include "model/signedwaveletdelta.h"
 
 class LocalWavelet : public Wavelet
 {
@@ -21,7 +22,7 @@ public:
     /**
       * @return operations_applied or -1 on error.
       */
-    int apply( const SignedWaveletDelta& clientDelta, QString* errorMessage, int operationsApplied = -1, qint64 applicationTime = -1 );
+    int apply( const SignedWaveletDelta& signedDelta, QString* errorMessage, int operationsApplied = -1, qint64 applicationTime = -1 );
 
     virtual bool isRemote() const;
     virtual bool isLocal() const;
@@ -33,7 +34,7 @@ private:
     class WaveletActor : public Actor
     {
     public:
-        WaveletActor( LocalWavelet* wavelet ) : m_wavelet( wavelet ) { }
+       WaveletActor( LocalWavelet* wavelet );
 
        virtual const ActorId& actorId() const { return m_actorId; }
 
@@ -43,7 +44,6 @@ private:
        void logErr( const char* error, const char* file, int line );
        void logErr( const QString& error, const char* file, int line );
 
-   private:
        LocalWavelet* m_wavelet;
        ActorId m_actorId;
     };
@@ -61,6 +61,7 @@ private:
         void sendFailedSubmitResponse(const QString& err);
 
         QSharedPointer<PBMessage<messages::LocalSubmitRequest> > m_message;
+        SignedWaveletDelta m_signedDelta;
     };
 
     void subscribeRemote( const JID& remoteJid );

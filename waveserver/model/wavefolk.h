@@ -4,7 +4,10 @@
 #include <QHash>
 
 #include "actor/actorfolk.h"
-#include "wave.h"
+#include "actor/actorid.h"
+#include "model/wave.h"
+
+class WaveUrl;
 
 class WaveFolk : public ActorFolk
 {
@@ -14,6 +17,8 @@ public:
     Wave* wave( const QString& domain, const QString& id, bool createOnDemand );
 
     static WaveFolk* instance();
+
+    static ActorId actorId( const WaveUrl& url );
 
 protected:
     virtual ActorGroup* group( const QString& id, bool createOnDemand );

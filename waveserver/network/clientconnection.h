@@ -24,6 +24,11 @@ namespace waveserver
     class ProtocolSubmitResponse;
 }
 
+namespace protocol
+{
+    class ProtocolHashedVersion;
+}
+
 class ClientConnection : public ActorGroup
 {
     Q_OBJECT
@@ -37,10 +42,6 @@ public:
     ~ClientConnection();
 
     Participant* participant() const { return m_participant; }
-    /**
-      * A locally unique ID for this connection.
-      */
-//    QString id() const { return m_id; }
     /**
       * The domain of this wave server.
       */

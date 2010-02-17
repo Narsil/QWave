@@ -33,8 +33,8 @@ void XmppSubmitRequestActor::EXECUTE()
 
     BEGIN_EXECUTE;
 
-    m_delta = SignedWaveletDelta( m_message->protoBuf().delta() );
-    m_url = WaveUrl( QString::fromStdString( m_message->protoBuf().wavelet_name() ) );
+    m_delta = SignedWaveletDelta( m_message->delta() );
+    m_url = WaveUrl( QString::fromStdString( m_message->wavelet_name() ) );
 
     // Wait until the connection is ready
     if ( !connection()->isReady() )
@@ -157,7 +157,7 @@ void XmppSubmitRequestActor::EXECUTE()
         response.set_operations_applied( m_operationsApplied );
         response.mutable_hashed_version_after_application()->set_history_hash( m_hash.data(), m_hash.length() );
         response.mutable_hashed_version_after_application()->set_version( m_version );
-        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->id() ) );
+        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->Id() ) );
     }
 
     END_EXECUTE;
@@ -169,6 +169,6 @@ void XmppSubmitRequestActor::sendErrorResponse()
     {
         waveserver::ProtocolSubmitResponse response;
         response.set_operations_applied( 0 );
-        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->id() ) );
+        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->Id() ) );
     }
 }

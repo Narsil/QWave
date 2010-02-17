@@ -3,6 +3,7 @@
 #include "model/jid.h"
 #include "model/participant.h"
 #include "model/wave.h"
+#include "model/wavefolk.h"
 #include "network/xmppcomponentconnection.h"
 #include "network/xmppvirtualconnection.h"
 
@@ -197,11 +198,15 @@ void LocalWavelet::dispatch( const QSharedPointer<IMessage>& message )
  *
  ***************************************************************************/
 
+LocalWavelet::WaveletActor::WaveletActor( LocalWavelet* wavelet ) : m_wavelet( wavelet ), m_actorId( WaveFolk::actorId( m_wavelet->url() ) )
+{
+}
+
 void LocalWavelet::WaveletActor::log( const char* error, const char* file, int line )
 {
     QString d = m_wavelet->url().toString();
     QString t = QDateTime::currentDateTime().toString();
-    qDebug("INFO in %s:%i talking to %s on behalf of %s: %s", file, line, d.toAscii().constData(), t.toAscii().constData(), error );
+    qDebug("INFO in %s:%i talking to %s at %s: %s", file, line, d.toAscii().constData(), t.toAscii().constData(), error );
 }
 
 void LocalWavelet::WaveletActor::log( const QString& error, const char* file, int line )
@@ -213,7 +218,7 @@ void LocalWavelet::WaveletActor::logErr( const char* error, const char* file, in
 {
     QString d = m_wavelet->url().toString();
     QString t = QDateTime::currentDateTime().toString();
-    qDebug("ERROR in %s:%i talking on behalf of %s at %s: %s", file, line, d.toAscii().constData(), t.toAscii().constData(), error );
+    qDebug("ERROR in %s:%i talking to %s at %s: %s", file, line, d.toAscii().constData(), t.toAscii().constData(), error );
 }
 
 void LocalWavelet::WaveletActor::logErr( const QString& error, const char* file, int line )
@@ -232,7 +237,135 @@ void LocalWavelet::WaveletActor::logErr( const QString& error, const char* file,
 
 void LocalWavelet::SubmitRequestActor::EXECUTE()
 {
+    qDebug("EXECUTE WaveletSubmitRequestActor");
+
     BEGIN_EXECUTE;
+
+    // Decode the delta
+    {
+        bool ok;
+        m_signedDelta = SignedWaveletDelta( &m_message->signed_delta(), &ok );
+        if ( !ok ) ERROR("Could not decode the signed delta");
+
+        // Make a copy of the delta because we might have to transform it
+        WaveletDelta clientDelta( m_signedDelta.delta() );
+
+        QString errorMessage;
+        // Check its applicability
+        if ( !m_wavelet->checkHashedVersion( clientDelta, &errorMessage ) )
+            ERROR( errorMessage );
+
+        // Transform if required
+        bool transformed = m_wavelet->transform( clientDelta, &errorMessage, &ok );
+        if ( !ok )
+            ERROR( errorMessage );
+
+        // TODO: Rollback if something went wrong, or report that only a subset of ops succeeded
+
+        for( QList<WaveletDeltaOperation>::const_iterator it = clientDelta.operations().begin(); it != clientDelta.operations().end(); it++ )
+        {
+            QString docId = (*it).documentId();
+            WaveletDocument* doc = m_wavelet->m_documents[docId];
+            if ( !doc )
+            {
+                doc = new WaveletDocument();
+                m_wavelet->m_documents[docId] = doc;
+            }
+
+            if ( (*it).hasMutation() )
+            {
+                bool check = doc->apply( (*it).mutation(), clientDelta.author() );
+                if ( !check ) { ERROR( "Failed to apply delta to " + docId); }
+                // Remember that the digest will need an update
+            }
+            if ( (*it).hasAddParticipant() )
+            {
+                QString p = (*it).addParticipant();
+                JID jid(p);
+                if ( !jid.isValid() ) { ERROR("Invalid JID " + p ); }
+                if ( !m_wavelet->m_participants.contains( p ) )
+                {
+                    m_wavelet->m_participants.insert( p );
+                    // Is this a remote user?
+                    if ( !jid.isLocal() )
+                        m_wavelet->subscribeRemote( jid );
+                    else
+                    {
+                        // Add the wavelet to the participant (and  make sure that such a participant exists.
+                        // TODO: Error if we know that this participant is not known?
+                        Participant::participant( p, true )->addWavelet(m_wavelet);
+                    }
+                }
+            }
+            if ( (*it).hasRemoveParticipant() )
+            {
+                QString p = (*it).removeParticipant();
+                JID jid(p);
+                if ( !jid.isValid() ) { ERROR("Invalid JID " + p ); }
+                if ( m_wavelet->m_participants.contains( p ) )
+                {
+                    m_wavelet->m_participants.remove( p );
+
+                    // Is it a remote user?
+                    if ( !jid.isLocal() )
+                        m_wavelet->unsubscribeRemote( jid );
+                    else
+                    {
+                        // Remove the wavelet from the participant
+                        Participant* pptr = Participant::participant( p, false );
+                        if ( pptr )
+                            pptr->removeWavelet(m_wavelet);
+                    }
+                }
+            }
+        }
+
+        int operationsApplied = -1;
+        qint64 applicationTime = -1;
+        bool restore = ( operationsApplied != -1 );
+        if ( operationsApplied == -1 )
+            operationsApplied = clientDelta.operations().count();
+        else if ( operationsApplied != clientDelta.operations().count() ) { ERROR("Number of operations applied is different than expected."); }
+        if ( applicationTime == -1 )
+            // Time since 1.1.1970 in milliseconds
+            applicationTime = timeStamp();
+
+        // Construct a AppliedWaveletDelta and sign it (if required)
+        AppliedWaveletDelta appliedDelta( m_signedDelta, applicationTime, operationsApplied );
+        if ( transformed )
+            appliedDelta.setTransformedDelta( clientDelta );
+
+        // Send the delta to all local subscribers
+        m_wavelet->commit( appliedDelta, restore );
+
+        // Send information back
+        if ( !m_message->sender().isNull() )
+        {
+            LOG("Sending response to caller");
+            PBMessage<messages::SubmitResponse>* response = new PBMessage<messages::SubmitResponse>( m_message->Id() );
+            response->set_operations_applied( operationsApplied );
+            response->set_application_timestamp( applicationTime );
+            QByteArray hash = appliedDelta.resultingVersion().hash;
+            response->mutable_hashed_version_after_application()->set_history_hash( hash.constData(), hash.length() );
+            response->mutable_hashed_version_after_application()->set_version( appliedDelta.resultingVersion().version );
+            send( m_message->sender(), response );
+        }
+
+        // Send the delta to all remote subscribers (if XMPP is enabled)
+        XmppComponentConnection* comcon = XmppComponentConnection::connection();
+        if ( comcon )
+        {
+            foreach( QString rid, m_wavelet->m_remoteSubscribers.keys() )
+            {
+                XmppVirtualConnection* con = comcon->virtualConnection( rid );
+                if ( !con )
+                    continue;
+                con->sendWaveletUpdate( m_wavelet->url().toString(), appliedDelta );
+            }
+        }
+    }
+
+    LOG("Submit request completed");
 
     END_EXECUTE;
 }
@@ -246,7 +379,7 @@ void LocalWavelet::SubmitRequestActor::sendFailedSubmitResponse(const QString& e
         response.set_operations_applied( 0 );
         response.set_application_timestamp( timeStamp() );
         response.set_error_message( error.toStdString() );
-        send( m_message->sender(), new PBMessage<messages::SubmitResponse>( response, m_message->id() ) );
+        send( m_message->sender(), new PBMessage<messages::SubmitResponse>( response, m_message->Id() ) );
     }
 }
 
