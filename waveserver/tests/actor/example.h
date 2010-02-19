@@ -8,7 +8,7 @@
 class MyMessage : public IMessage
 {
 public:
-    MyMessage( const QString& str ) : m_str(str) { }
+    MyMessage( const ActorId& actorId, const QString& str ) : IMessage( actorId ), m_str(str) { }
 
     QString m_str;
 };
@@ -20,9 +20,9 @@ class OtherMessage : public IMessage
 class Example : public Actor
 {
 public:
-    Example();
+    Example(const QString& id, ActorGroup* group);
 
-    virtual void EXECUTE();
+    virtual void execute();
 
 private:
     int i;

@@ -8,8 +8,6 @@ WaveFolk::WaveFolk(QObject* parent)
         : ActorFolk( "wave", parent )
 {
     setHierarchical( true );
-    // Start dispatching messages
-    activate();
 }
 
 ActorGroup* WaveFolk::group( const QString& groupId, bool createOnDemand )

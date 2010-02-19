@@ -180,16 +180,16 @@ bool LocalWavelet::isLocal() const
     return true;
 }
 
-void LocalWavelet::dispatch( const QSharedPointer<IMessage>& message )
+void LocalWavelet::customEvent( QEvent* event )
 {
-    PBMessage<messages::LocalSubmitRequest>* submitMsg = dynamic_cast< PBMessage<messages::LocalSubmitRequest>* >( message.data() );
+    PBMessage<messages::LocalSubmitRequest>* submitMsg = dynamic_cast< PBMessage<messages::LocalSubmitRequest>* >( event );
     if ( submitMsg )
     {
-        new SubmitRequestActor( this, message.dynamicCast<PBMessage<messages::LocalSubmitRequest> >() );
+        new SubmitRequestActor( this, submitMsg );
         return;
     }
 
-    this->Wavelet::dispatch( message );
+    this->Wavelet::customEvent( event );
 }
 
 /****************************************************************************
@@ -198,7 +198,9 @@ void LocalWavelet::dispatch( const QSharedPointer<IMessage>& message )
  *
  ***************************************************************************/
 
-LocalWavelet::WaveletActor::WaveletActor( LocalWavelet* wavelet ) : m_wavelet( wavelet ), m_actorId( WaveFolk::actorId( m_wavelet->url() ) )
+qint64 LocalWavelet::WaveletActor::s_id = 0;
+
+LocalWavelet::WaveletActor::WaveletActor( LocalWavelet* wavelet ) : Actor( QString::number( s_id++), wavelet ), m_wavelet(wavelet)
 {
 }
 
@@ -235,7 +237,7 @@ void LocalWavelet::WaveletActor::logErr( const QString& error, const char* file,
 #define ERROR(msg) { logErr(msg, __FILE__, __LINE__); sendFailedSubmitResponse(msg); TERMINATE(); }
 #define LOG(msg) { log(msg, __FILE__, __LINE__); }
 
-void LocalWavelet::SubmitRequestActor::EXECUTE()
+void LocalWavelet::SubmitRequestActor::execute()
 {
     qDebug("EXECUTE WaveletSubmitRequestActor");
 
@@ -244,7 +246,7 @@ void LocalWavelet::SubmitRequestActor::EXECUTE()
     // Decode the delta
     {
         bool ok;
-        m_signedDelta = SignedWaveletDelta( &m_message->signed_delta(), &ok );
+        m_signedDelta = SignedWaveletDelta( &m_message.signed_delta(), &ok );
         if ( !ok ) ERROR("Could not decode the signed delta");
 
         // Make a copy of the delta because we might have to transform it
@@ -339,16 +341,16 @@ void LocalWavelet::SubmitRequestActor::EXECUTE()
         m_wavelet->commit( appliedDelta, restore );
 
         // Send information back
-        if ( !m_message->sender().isNull() )
+        if ( !m_message.sender().isNull() )
         {
             LOG("Sending response to caller");
-            PBMessage<messages::SubmitResponse>* response = new PBMessage<messages::SubmitResponse>( m_message->Id() );
+            PBMessage<messages::SubmitResponse>* response = new PBMessage<messages::SubmitResponse>( m_message.sender(), m_message.id() );
             response->set_operations_applied( operationsApplied );
             response->set_application_timestamp( applicationTime );
             QByteArray hash = appliedDelta.resultingVersion().hash;
             response->mutable_hashed_version_after_application()->set_history_hash( hash.constData(), hash.length() );
             response->mutable_hashed_version_after_application()->set_version( appliedDelta.resultingVersion().version );
-            send( m_message->sender(), response );
+            post( response );
         }
 
         // Send the delta to all remote subscribers (if XMPP is enabled)
@@ -373,13 +375,13 @@ void LocalWavelet::SubmitRequestActor::EXECUTE()
 void LocalWavelet::SubmitRequestActor::sendFailedSubmitResponse(const QString& error)
 {
     // Send information back
-    if ( !m_message->sender().isNull() )
+    if ( !m_message.sender().isNull() )
     {
-        messages::SubmitResponse response;
-        response.set_operations_applied( 0 );
-        response.set_application_timestamp( timeStamp() );
-        response.set_error_message( error.toStdString() );
-        send( m_message->sender(), new PBMessage<messages::SubmitResponse>( response, m_message->Id() ) );
+        PBMessage<messages::SubmitResponse>* response = new PBMessage<messages::SubmitResponse>( m_message.sender(), m_message.id() );
+        response->set_operations_applied( 0 );
+        response->set_application_timestamp( timeStamp() );
+        response->set_error_message( error.toStdString() );
+        post( response );
     }
 }
 

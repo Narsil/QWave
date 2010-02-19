@@ -15,13 +15,12 @@
 #define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
 #define XMPPLOG(msg) { log(msg, __FILE__, __LINE__); }
 
-XmppSubmitResponseActor::XmppSubmitResponseActor(XmppVirtualConnection* con, const QSharedPointer<XmppStanza>& stanza)
-        : XmppActor(con), m_stanza(stanza)
+XmppSubmitResponseActor::XmppSubmitResponseActor(XmppVirtualConnection* con, XmppStanza* stanza)
+        : XmppActor(con), m_stanza(*stanza)
 {
-    con->addActor( this );
 }
 
-void XmppSubmitResponseActor::EXECUTE()
+void XmppSubmitResponseActor::execute()
 {
     qDebug("EXECUTE SubmitResponse");
 
@@ -30,7 +29,7 @@ void XmppSubmitResponseActor::EXECUTE()
     // Analyze the request and try to apply the submitted delta
     {
         // Check the stanza
-        XmppTag* pubsub = m_stanza->child("pubsub");
+        XmppTag* pubsub = m_stanza.child("pubsub");
         XmppTag* publish = pubsub ? pubsub->child("publish") : 0;
         XmppTag* item = publish ? publish->child( "item" ) : 0;
         XmppTag* request = item ? item->child("submit-request") : 0;
@@ -85,7 +84,7 @@ void XmppSubmitResponseActor::EXECUTE()
         QXmlStreamWriter writer( &send );
         writer.writeStartElement("iq");
         writer.writeAttribute("type", "result" );
-        writer.writeAttribute("id", m_stanza->id() );
+        writer.writeAttribute("id", m_stanza.stanzaId() );
         writer.writeAttribute("to", connection()->domain() );
         writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
         writer.writeStartElement("pubsub");

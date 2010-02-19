@@ -15,6 +15,7 @@
 #include <QXmlStreamWriter>
 #include <QCryptographicHash>
 #include <QtGlobal>
+#include <QCoreApplication>
 
 XmppComponentConnection* XmppComponentConnection::s_connection = 0;
 
@@ -39,9 +40,6 @@ XmppComponentConnection::XmppComponentConnection(QObject* parent)
     Q_ASSERT(ok);
 
     m_socket->connectToHost( Settings::settings()->xmppServerName(), Settings::settings()->xmppComponentPort());
-
-    // Start dispatching messages
-    activate();
 }
 
 XmppComponentConnection::~XmppComponentConnection()
@@ -268,7 +266,7 @@ void XmppComponentConnection::readBytes()
 
                         // Send the stanze as an IMessage to the actor group that processes messages from this remote host.
                         // Ownership of the message is transfered -> no delete required.
-                        con->enqueue( stanza );
+                        QCoreApplication::postEvent( con, stanza );
                     }
                     else
                         m_currentTag = m_currentTag->parent();

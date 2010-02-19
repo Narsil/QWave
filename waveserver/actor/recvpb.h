@@ -8,28 +8,28 @@
 template<class PB> class RecvPBImpl : public WaitingConditionImpl
 {
 public:
-    RecvPBImpl() : m_id(-1) { }
-    RecvPBImpl( qint64 id ) : m_id(id) { }
+    RecvPBImpl() : m_message(0), m_id(-1) { }
+    RecvPBImpl( qint64 id ) : m_message(0), m_id(id) { }
 
-    QSharedPointer<PBMessage<PB> > message() const { return m_message; }
+    inline PBMessage<PB>* message() const { return m_message; }
 
-    virtual WaitingConditionImpl* handleMessage( const QSharedPointer<IMessage>& msg )
+    virtual WaitingConditionImpl* handleMessage( QEvent* event )
     {
         if ( m_message )
             return this;
-        PBMessage<PB>* ptr = dynamic_cast<PBMessage<PB>*>( msg.data() );
+        PBMessage<PB>* ptr = dynamic_cast<PBMessage<PB>*>( event );
         if ( ptr )
         {
-            if ( m_id == -1 || m_id == ptr->Id() )
+            if ( m_id == -1 || m_id == ptr->id() )
             {
-                m_message = msg.dynamicCast<PBMessage<PB> >();
+                m_message = ptr;
                 return this;
             }
         }
         return 0;
     }
 
-    QSharedPointer<PBMessage<PB> > m_message;
+    PBMessage<PB>* m_message;
     qint64 m_id;
 };
 
@@ -42,15 +42,15 @@ public:
     RecvPB( WaitingConditionImpl* x ) { m_ptr = dynamic_cast<RecvPBImpl<PB>*>( x ); if ( m_ptr ) m_ptr->m_refCount++; }
     ~RecvPB() { if ( m_ptr ) { m_ptr->m_refCount--; if ( m_ptr->m_refCount == 0 ) delete m_ptr; } }
 
-    PB* operator->() const { return m_ptr->m_message.data(); }
-    PB& operator*() const { return *m_ptr->m_message.data(); }
+    PB* operator->() const { return m_ptr->m_message; }
+    PB& operator*() const { return *m_ptr->m_message; }
     operator bool() const { return m_ptr != 0; }
 
     RecvPB<PB>& operator=( const RecvPB<PB>& x ) { if ( m_ptr ) { m_ptr->m_refCount--; if ( m_ptr->m_refCount == 0 ) delete m_ptr; } m_ptr = x.m_ptr; if ( m_ptr ) m_ptr->m_refCount++; return *this; }
     bool operator==( const RecvPB<PB>& x ) const { return m_ptr == x.m_ptr; }
     bool operator!=( const RecvPB<PB>& x) const { return m_ptr != x.m_ptr; }
 
-    const PBMessage<PB>& message() const { return *(m_ptr->m_message.data()); }
+    const PBMessage<PB>& message() const { return *(m_ptr->m_message); }
 
     RecvPBImpl<PB>* donate() const { if ( m_ptr ) { m_ptr->m_refCount++; } return m_ptr; }
 

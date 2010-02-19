@@ -12,22 +12,24 @@ class ActorFolk : public QObject
 {
 public:
     ActorFolk(const QString& folk, QObject* parent = 0);
+    ~ActorFolk();
 
-    void activate();
-    void deactivate();
-
-    inline QString folkId() const { return m_folkId; }
-
-    bool enqueue( const ActorId& actor, const QSharedPointer<IMessage>& message );
+    inline QString folkId() const { return objectName(); }
 
     bool isHierarchical() const { return m_isHierarchical; }
     void setHierarchical(bool enable) { m_isHierarchical = enable; }
 
+    ActorGroup* group( const ActorId& id, bool createOnDemand );
+
+    template<class T> T* findDirectChild( const QString& name );
+
 protected:
-    virtual ActorGroup* group( const QString& id, bool createOnDemand ) = 0;
+    /**
+      * The id is not a hierarchical name.
+      */
+    virtual ActorGroup* group( const QString& id, bool createOnDemand );
 
 private:
-    QString m_folkId;
     bool m_isHierarchical;
 };
 

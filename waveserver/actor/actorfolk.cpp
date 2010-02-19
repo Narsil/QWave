@@ -1,44 +1,63 @@
 #include "actorfolk.h"
 #include "actordispatcher.h"
 #include "actorgroup.h"
+#include "imessage.h"
 
 ActorFolk::ActorFolk(const QString& folkId, QObject* parent)
-        : QObject( parent ), m_folkId( folkId ), m_isHierarchical( false )
+        : QObject( parent ), m_isHierarchical( false )
 {
-}
-
-void ActorFolk::activate()
-{
+    setObjectName( folkId );
     ActorDispatcher::dispatcher()->addFolk( this );
 }
 
-void ActorFolk::deactivate()
+ActorFolk::~ActorFolk()
 {
     ActorDispatcher::dispatcher()->removeFolk( this );
 }
 
-bool ActorFolk::enqueue( const ActorId& actor, const QSharedPointer<IMessage>& message )
+ActorGroup* ActorFolk::group( const ActorId& id, bool createOnDemand )
 {
-    Q_ASSERT( actor.folk() == m_folkId );
+    Q_UNUSED( createOnDemand )
 
-    ActorGroup* g = 0;
+    Q_ASSERT( id.folk() == folkId() );
+
     if ( m_isHierarchical )
     {
-        QStringList groups = actor.groups();
+        QStringList groups = id.groups();
+        ActorGroup* g = 0;
         for( int i = 0; i < groups.length(); ++i )
         {
             QString gr = groups[i];
             if ( i == 0 )
-                g = group( gr, message->createOnDemand() );
+                g = group( gr, createOnDemand );
             else
-                g = g->group( gr, message->createOnDemand() );
+                g = g->group( gr, createOnDemand );
             if ( !g )
-                return false;
+            {
+                qDebug("Could not resolve group %s", gr.toAscii().constData() );
+                return 0;
+            }
         }
+        return g;
     }
-    else
-        g = group( actor.group(), message->createOnDemand() );
-    if ( !g )
-        return false;
-    return g->enqueue( actor, message );
+
+    return group(id.group(), createOnDemand );
+}
+
+ActorGroup* ActorFolk::group( const QString& id, bool createOnDemand )
+{
+    Q_UNUSED( createOnDemand )
+
+    return findDirectChild<ActorGroup>( id );
+}
+
+template<class T> T* ActorFolk::findDirectChild( const QString& name )
+{
+    for( int i = 0; i < children().length(); ++i )
+    {
+        QObject* c = children().at(i);
+        if ( c->objectName() == name )
+            return dynamic_cast<T*>( c );
+    }
+    return 0;
 }

@@ -15,10 +15,9 @@
 XmppWaveletUpdateActor::XmppWaveletUpdateActor(XmppVirtualConnection* con, const QString& waveletName, const AppliedWaveletDelta& waveletDelta)
         : XmppActor(con), m_waveletName( waveletName ), m_base64( waveletDelta.toBase64() )
 {
-    con->addActor( this );
 }
 
-void XmppWaveletUpdateActor::EXECUTE()
+void XmppWaveletUpdateActor::execute()
 {
     qDebug("EXECUTE");
 

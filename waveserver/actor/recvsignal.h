@@ -20,9 +20,9 @@ class RecvSignalImpl : public QObject, public WaitingConditionImpl
 public:
     RecvSignalImpl(QObject* obj, const char* signal);
 
-    virtual WaitingConditionImpl* handleMessage( const QSharedPointer<IMessage>& msg )
+    virtual WaitingConditionImpl* handleMessage( QEvent* event )
     {
-        SignalMessage* m = dynamic_cast<SignalMessage*>( msg.data() );
+        SignalMessage* m = dynamic_cast<SignalMessage*>( event );
         if ( m && m->ptr == this )
             return this;
         return 0;

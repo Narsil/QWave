@@ -11,7 +11,7 @@ public:
     XmppDiscoResponseActor(XmppVirtualConnection* con, const QString& id, XmppStanza::Kind kind);
 
 protected:
-    virtual void EXECUTE();
+    virtual void execute();
 
 private:
     QString m_id;

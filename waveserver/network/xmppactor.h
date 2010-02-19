@@ -17,11 +17,8 @@ public:
     void logErr( const char* error, const char* file, int line );
     void logErr( const QString& error, const char* file, int line );
 
-    virtual const ActorId& actorId() const { return m_actorId; }
-
 private:
     XmppVirtualConnection* m_connection;
-    ActorId m_actorId;
 
     static qint64 s_id;
 };

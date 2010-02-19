@@ -90,7 +90,7 @@ protected:
     /**
       * Creates new actors based on incoming messages.
       */
-    virtual void dispatch( const QSharedPointer<IMessage>& message );
+    virtual void customEvent( QEvent* event );
 
 private:
     XmppComponentConnection* m_component;

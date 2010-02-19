@@ -13,19 +13,18 @@
 #define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
 #define XMPPLOG(msg) { log(msg, __FILE__, __LINE__); }
 
-XmppPostSignerResponseActor::XmppPostSignerResponseActor(XmppVirtualConnection* con, const QSharedPointer<XmppStanza>& stanza)
-        : XmppActor(con), m_stanza(stanza)
+XmppPostSignerResponseActor::XmppPostSignerResponseActor(XmppVirtualConnection* con, XmppStanza* stanza)
+        : XmppActor(con), m_stanza(*stanza)
 {
-    con->addActor( this );
 }
 
-void XmppPostSignerResponseActor::EXECUTE()
+void XmppPostSignerResponseActor::execute()
 {
     qDebug("EXECUTE PostSignerResponse");
 
     // Find the corresponding certificate
     {
-        XmppTag* pubsub = m_stanza->child("pubsub");
+        XmppTag* pubsub = m_stanza.child("pubsub");
         XmppTag* publish = pubsub ? pubsub->child("publish") : 0;
         XmppTag* item = publish ? publish->child( "item" ) : 0;
         XmppTag* signature = item ? item->child("signature") : 0;
@@ -41,7 +40,7 @@ void XmppPostSignerResponseActor::EXECUTE()
         {
             QString str;
             // Extract the certificate
-            foreach( XmppTagPtr t, certificate->children() )
+            foreach( XmppTag* t, certificate->children() )
             {
                 if ( t->isText() || t->isCData() )
                     str += t->text();
@@ -82,7 +81,7 @@ void XmppPostSignerResponseActor::EXECUTE()
         QXmlStreamWriter writer( &send );
         writer.writeStartElement("iq");
         writer.writeAttribute("type", "result" );
-        writer.writeAttribute("id", m_stanza->id() );
+        writer.writeAttribute("id", m_stanza.stanzaId() );
         writer.writeAttribute("to", connection()->domain() );
         writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
         writer.writeStartElement("pubsub");

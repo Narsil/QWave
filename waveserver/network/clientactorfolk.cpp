@@ -5,8 +5,6 @@ ClientActorFolk* ClientActorFolk::s_folk = 0;
 ClientActorFolk::ClientActorFolk(QObject* parent)
         : ActorFolk( "client", parent )
 {
-    // Start dispatching messages
-    activate();
 }
 
 ClientConnection* ClientActorFolk::newClientConnection( QTcpSocket* socket )

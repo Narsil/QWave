@@ -2,51 +2,29 @@
 #define ACTORGROUP_H
 
 #include <QObject>
-#include <QQueue>
-#include <QSharedPointer>
-#include <QList>
+#include <QString>
 
-#include "imessage.h"
-#include "actor.h"
+#include "actorid.h"
 
-typedef QSharedPointer<IMessage> IMessagePtr;
-
-class ActorId;
+class Actor;
 class ActorFolk;
 
 class ActorGroup : public QObject
 {
 public:
     ActorGroup( const QString& groupId, ActorFolk* folk );
-    ActorGroup( const QString& groupId, ActorGroup* parentFolk );
+    ActorGroup( const QString& groupId, ActorGroup* parentGroup );
     virtual ~ActorGroup();
 
-    void enqueue( IMessage* msg );
-    void enqueue( const QSharedPointer<IMessage>& message );
     /**
-      * If an actor has been specified but could not been found, the function returns false, otherwise true.
-      */
-    bool enqueue( const ActorId& actorId, const QSharedPointer<IMessage>& message );
-
-    void addActor( Actor* actor );
-    void removeActor( Actor* actor );
-
-    /**
-      * @return the parent group or zero if this is a top-level group.
+      * @return the folk to which this group belongs.
       */
     ActorFolk* folk() const;
 
     /**
       * @return the parent group or zero if this is a top-level group.
       */
-    ActorGroup* parentGroup() const { return m_parentGroup; }
-
-    /**
-      * @internal
-      *
-      * Use Actor::send to send messages. This is only an intermediate help function.
-      */
-    virtual bool send( const ActorId& id, IMessage* msg );
+    ActorGroup* parentGroup() const { return dynamic_cast<ActorGroup*>( parent() ); }
 
     /**
       * @return the ID of this group which is unique among its parent-group (or folk if there is no parent-group).
@@ -60,47 +38,17 @@ public:
       */
     ActorId actorId() const;
 
-    virtual Actor* actor( const ActorId& id, bool createOnDemand );
-    virtual ActorGroup* group( const QString& groupId, bool createOnDemand );
+    virtual Actor* actor( const QString& id, bool createOnDemand );
+    virtual ActorGroup* group( const QString& groupId, bool createOnDemand );        
+
+    template<class T> T* findDirectChild( const QString& name );
 
 protected:
     /**
-      * Overload this function if you want to intercept the dispatching.
+      * By default all events not consumed by the ActorGroup itself are broadcasted to all
+      * actors in the group. The event is not broadcasted to sub groups.
       */
-    virtual void dispatch( const QSharedPointer<IMessage>& message );
-
-private:
-    /**
-      * @internal
-      */
-    void addGroup( ActorGroup* group );
-    /**
-      * @internal
-      */
-    void removeGroup( ActorGroup* group );
-
-    /**
-      * Dispatches all queued messages to the actors.
-      */
-    void run();
-    /**
-      * The object takes over ownership of the message.
-      */
-    void process( const QSharedPointer<IMessage>& message, Actor* actor );
-
-    bool m_destructed;
-    QQueue<IMessagePtr> m_queue;
-    QList<Actor*> m_actors;
-    /**
-      * True, if a member of this group is currently processing a message.
-      */
-    bool m_active;
-    /**
-      * The parent group. May be 0.
-      */
-    ActorGroup* m_parentGroup;
-    ActorFolk* m_folk;
-    QList<ActorGroup*> m_groups;
+    void customEvent( QEvent* event );
 };
 
 #endif // ACTORGROUP_H

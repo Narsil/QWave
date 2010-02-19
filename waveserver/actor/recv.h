@@ -7,23 +7,25 @@
 template<class T> class RecvImpl : public WaitingConditionImpl
 {
 public:
-    RecvImpl() {  }
+    RecvImpl() : m_message(0) {  }
     ~RecvImpl() {  }
 
-    const QSharedPointer<T>& message() const { return m_message; }
+    inline T* message() const { return m_message; }
 
-    virtual WaitingConditionImpl* handleMessage( const QSharedPointer<IMessage>& msg )
+    virtual WaitingConditionImpl* handleMessage( QEvent* event )
     {
         if ( m_message )
             return this;
-        m_message = msg.dynamicCast<T>();
+        if ( event->type() != (QEvent::Type)IMessage::Message )
+            return 0;
+        m_message = dynamic_cast<T*>( event );
         if ( m_message )
             return this;
         return 0;
     }
 
 private:
-    QSharedPointer<T> m_message;
+    T* m_message;
 };
 
 template<class M> class Recv : public WaitingCondition
@@ -34,7 +36,7 @@ public:
     Recv( const Recv<M>& x ) { m_ptr = const_cast<RecvImpl<M>*>(x.m_ptr); if ( m_ptr ) m_ptr->m_refCount++; }
     ~Recv() { if ( m_ptr ) { m_ptr->m_refCount--; if ( m_ptr->m_refCount == 0 ) delete m_ptr; } }
 
-    M* operator->() const { return m_ptr->message().data(); }
+    M* operator->() const { return m_ptr->message(); }
     M& operator*() const { return *(m_ptr->message()); }
     operator bool() const { return m_ptr != 0; }
 
@@ -45,8 +47,6 @@ public:
     RecvImpl<M>* donate() const { if ( m_ptr ) { m_ptr->m_refCount++; } return m_ptr; }
 
     const M& message() const { Q_ASSERT( m_ptr ); return *(m_ptr->message()); }
-
-    typedef RecvImpl<M> ImplType;
 
 private:
     RecvImpl<M>* m_ptr;

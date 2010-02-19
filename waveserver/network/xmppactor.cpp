@@ -8,7 +8,7 @@
 qint64 XmppActor::s_id = 0;
 
 XmppActor::XmppActor(XmppVirtualConnection* con)
-        : Actor(), m_connection(con), m_actorId( con, QString::number( s_id++ ) )
+        : Actor(QString::number( s_id++ ), con), m_connection(con)
 {
 }
 

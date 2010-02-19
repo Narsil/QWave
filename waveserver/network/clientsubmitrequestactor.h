@@ -14,7 +14,7 @@ public:
     ClientSubmitRequestActor( ClientConnection* con, const QByteArray& data );
 
 protected:
-    void EXECUTE();
+    void execute();
 
 private:
     QByteArray m_data;

@@ -2,6 +2,8 @@
 #include "actor.h"
 #include "actorgroup.h"
 
+#include <QCoreApplication>
+
 RecvSignalImpl::RecvSignalImpl(QObject* obj, const char* signal)
 {
     bool ok = connect( obj, signal, SLOT(trigger()));
@@ -12,6 +14,6 @@ void RecvSignalImpl::trigger()
 {
     qDebug("Signal");
     IMessage* msg = new SignalMessage( this );
-    msg->setReceiver( actor() );
-    actor()->actorGroup()->enqueue( msg );
+    msg->setReceiver( actor()->actorId() );
+    QCoreApplication::postEvent( actor(), msg );
 }

@@ -28,15 +28,13 @@ public:
     virtual bool isLocal() const;
 
 protected:
-    virtual void dispatch( const QSharedPointer<IMessage>& message );
+    virtual void customEvent( QEvent* event );
 
 private:
     class WaveletActor : public Actor
     {
     public:
        WaveletActor( LocalWavelet* wavelet );
-
-       virtual const ActorId& actorId() const { return m_actorId; }
 
    protected:
        void log( const char* error, const char* file, int line );
@@ -45,22 +43,24 @@ private:
        void logErr( const QString& error, const char* file, int line );
 
        LocalWavelet* m_wavelet;
-       ActorId m_actorId;
+
+    private:
+       static qint64 s_id;
     };
 
     class SubmitRequestActor : public WaveletActor
     {
     public:
-        SubmitRequestActor( LocalWavelet* wavelet, const QSharedPointer<PBMessage<messages::LocalSubmitRequest> >& message ) : WaveletActor( wavelet ), m_message( message ) { wavelet->addActor( this ); }
+        SubmitRequestActor( LocalWavelet* wavelet, PBMessage<messages::LocalSubmitRequest>* message ) : WaveletActor( wavelet ), m_message( *message ) { }
 
     protected:
-        void EXECUTE();
+        void execute();
 
     private:
         qint64 timeStamp();
         void sendFailedSubmitResponse(const QString& err);
 
-        QSharedPointer<PBMessage<messages::LocalSubmitRequest> > m_message;
+        PBMessage<messages::LocalSubmitRequest> m_message;
         SignedWaveletDelta m_signedDelta;
     };
 
