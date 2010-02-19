@@ -12,7 +12,7 @@ public:
     XmppWaveletUpdateActor(XmppVirtualConnection* con, const QString& waveletName, const AppliedWaveletDelta& waveletDelta);
 
 protected:
-    virtual void EXECUTE();
+    virtual void execute();
 
 private:
     QString m_waveletName;

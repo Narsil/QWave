@@ -1,8 +1,6 @@
 #ifndef WAITINGCONDITION_H
 #define WAITINGCONDITION_H
 
-#include <QSharedPointer>
-
 #include "imessage.h"
 
 class Actor;
@@ -16,7 +14,7 @@ public:
     WaitingConditionImpl() : m_refCount(0), m_actor(0) { }
     virtual ~WaitingConditionImpl() { }
 
-    virtual WaitingConditionImpl* handleMessage( const QSharedPointer<IMessage>& msg ) { Q_UNUSED(msg); return 0; }
+    virtual WaitingConditionImpl* handleMessage( QEvent* event ) { Q_UNUSED(event); return 0; }
 
     Actor* actor() const { return m_actor; }
     /**

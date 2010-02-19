@@ -4,9 +4,9 @@
 #include <QObject>
 #include <QSharedPointer>
 #include "waitingcondition.h"
-#include "imessage.h"
+#include "actor/imessage.h"
+#include "actor/actorid.h"
 
-#define EXECUTE(x) execute()
 #define TERMINATE() m_state = -1; return;
 #define BEGIN_EXECUTE switch(m_state) { case 0:
 #define END_EXECUTE ; } m_state = -1;
@@ -18,6 +18,7 @@ template<class R> R _REASON(WaitingConditionImpl* ptr) { return R( ptr ); }
 
 class ActorGroup;
 class ActorId;
+class QTimerEvent;
 
 /**
   * An actor can be used much like a C# or Python iterator.
@@ -37,29 +38,34 @@ class ActorId;
 class Actor : public QObject
 {
 public:
-    Actor();
+    Actor(ActorGroup* parent);
+    Actor(const QString& id, ActorGroup* parent);
     virtual ~Actor();
 
-    bool run();
-
-    /**
-      * @internal
-      */
-    bool process( const QSharedPointer<IMessage>& message );
     /**
       * @internal
       *
       * Invoked by ActorGroup. Use ActorGroup::addActor instead.
       */
-    void setActorGroup( ActorGroup* group ) { Q_ASSERT( m_group == 0 || m_group == group ); m_group = group; }
-    ActorGroup* actorGroup() const { return m_group; }
+    ActorGroup* group() const;
 
     /**
       * This function takes ownership of the message being passed. Do not modify the message after it has been passed to send.
+      *
+      * @return true if the message could be sent. If the message travels over the network it could still be lost, i.e.
+      *         the function does not wait for an ACK.
       */
-    virtual bool send( const ActorId& destination, IMessage* msg );
+    virtual bool send( IMessage* msg );
+    /**
+      * This function takes ownership of the message being passed. Do not modify the message after it has been passed to send.
+      *
+      * @return true if the message could be sent. If the message travels over the network it could still be lost, i.e.
+      *         the function does not wait for an ACK.
+      */
+    virtual bool post( IMessage* msg );
 
-    virtual const ActorId& actorId() const = 0;
+    void setActorId( const QString& id ) { m_id = ActorId( group(), id ); setObjectName(id); }
+    const ActorId& actorId() const { return m_id; }
 
 protected:
     /**
@@ -70,7 +76,10 @@ protected:
     /**
       * This function is the main loop of the actor.
       */
-    virtual void EXECUTE() = 0;
+    virtual void execute() = 0;
+
+    virtual void customEvent( QEvent* event );
+    virtual void timerEvent( QTimerEvent* event );
 
     /**
       * @internal
@@ -88,10 +97,11 @@ protected:
     int m_state;
 
 private:
+    bool run();
     void deleteWait();
     void deleteReason();
 
-    ActorGroup* m_group;
+    ActorId m_id;
 
     static qint64 s_id;
 };

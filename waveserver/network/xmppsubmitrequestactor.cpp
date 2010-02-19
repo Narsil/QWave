@@ -11,8 +11,6 @@
 #include "model/wave.h"
 #include "model/wavelet.h"
 #include "model/certificatestore.h"
-#include "protocol/common.pb.h"
-#include "protocol/waveclient-rpc.pb.h"
 #include <QXmlStreamWriter>
 #include <QList>
 #include <QByteArray>
@@ -21,20 +19,19 @@
 #define XMPPLOG(msg) { log(msg, __FILE__, __LINE__); }
 
 
-XmppSubmitRequestActor::XmppSubmitRequestActor(XmppVirtualConnection* con, const QSharedPointer<PBMessage<waveserver::ProtocolSubmitRequest> >& message )
-        : XmppActor(con), m_message( message )
+XmppSubmitRequestActor::XmppSubmitRequestActor(XmppVirtualConnection* con, PBMessage<waveserver::ProtocolSubmitRequest>* message )
+        : XmppActor(con), m_message( *message )
 {
-    con->addActor( this );
 }
 
-void XmppSubmitRequestActor::EXECUTE()
+void XmppSubmitRequestActor::execute()
 {
     qDebug("EXECUTE SubmitRequest Actor");
 
     BEGIN_EXECUTE;
 
-    m_delta = SignedWaveletDelta( m_message->delta() );
-    m_url = WaveUrl( QString::fromStdString( m_message->wavelet_name() ) );
+    m_delta = SignedWaveletDelta( m_message.delta() );
+    m_url = WaveUrl( QString::fromStdString( m_message.wavelet_name() ) );
 
     // Wait until the connection is ready
     if ( !connection()->isReady() )
@@ -150,14 +147,14 @@ void XmppSubmitRequestActor::EXECUTE()
     else if ( REASON( RecvXmpp<XmppStanza::Error> ) ) { XMPPERROR("Peer reported an error"); }
 
     // Send information back
-    if ( !m_message->sender().isNull() )
+    if ( !m_message.sender().isNull() )
     {
-        XMPPLOG("Sending response to " + m_message->sender().toString() );
+        XMPPLOG("Sending response to " + m_message.sender().toString() );
         waveserver::ProtocolSubmitResponse response;
         response.set_operations_applied( m_operationsApplied );
         response.mutable_hashed_version_after_application()->set_history_hash( m_hash.data(), m_hash.length() );
         response.mutable_hashed_version_after_application()->set_version( m_version );
-        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->Id() ) );
+        post( new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message.sender(), m_message.id() ) );
     }
 
     END_EXECUTE;
@@ -165,10 +162,10 @@ void XmppSubmitRequestActor::EXECUTE()
 
 void XmppSubmitRequestActor::sendErrorResponse()
 {
-    if ( !m_message->sender().isNull() )
+    if ( !m_message.sender().isNull() )
     {
         waveserver::ProtocolSubmitResponse response;
         response.set_operations_applied( 0 );
-        send( m_message->sender(), new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message->Id() ) );
+        post( new PBMessage<waveserver::ProtocolSubmitResponse>( response, m_message.sender(), m_message.id() ) );
     }
 }

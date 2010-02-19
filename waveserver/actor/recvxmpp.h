@@ -8,21 +8,21 @@
 template<XmppStanza::Kind _kind> class RecvXmppImpl : public WaitingConditionImpl
 {
 public:
-    RecvXmppImpl() { }
-    RecvXmppImpl( const QString& id ) : m_id(id) { }
+    RecvXmppImpl() : m_message(0) { }
+    RecvXmppImpl( const QString& stanzaId ) : m_message(0), m_stanzaId(stanzaId) { }
 
-    QSharedPointer<XmppStanza> message() const { return m_message; }
+    inline XmppStanza* message() const { return m_message; }
 
-    virtual WaitingConditionImpl* handleMessage( const QSharedPointer<IMessage>& msg )
+    virtual WaitingConditionImpl* handleMessage( QEvent* event )
     {
         if ( m_message )
             return this;
-        XmppStanza* ptr = dynamic_cast<XmppStanza*>( msg.data() );
+        XmppStanza* ptr = dynamic_cast<XmppStanza*>( event );
         if ( ptr && ptr->kind() == _kind )
         {
-            if ( m_id.isNull() || m_id == ptr->id() )
+            if ( m_stanzaId.isNull() || m_stanzaId == ptr->stanzaId() )
             {
-                m_message = msg.dynamicCast<XmppStanza>();
+                m_message = ptr;
                 return this;
             }
         }
@@ -30,8 +30,8 @@ public:
     }
 
 private:
-    QSharedPointer<XmppStanza> m_message;
-    QString m_id;
+    XmppStanza* m_message;
+    QString m_stanzaId;
 };
 
 template<XmppStanza::Kind M> class RecvXmpp : public WaitingCondition
@@ -43,7 +43,7 @@ public:
     RecvXmpp( WaitingConditionImpl* x ) { m_ptr = dynamic_cast<RecvXmppImpl<M>*>( x ); if ( m_ptr ) m_ptr->m_refCount++; }
     ~RecvXmpp() { if ( m_ptr ) { m_ptr->m_refCount--; if ( m_ptr->m_refCount == 0 ) delete m_ptr; } }
 
-    XmppStanza* operator->() const { return m_ptr->message().data(); }
+    XmppStanza* operator->() const { return m_ptr->message(); }
     XmppStanza& operator*() const { return *(m_ptr->message()); }
     operator bool() const { return m_ptr != 0; }
 

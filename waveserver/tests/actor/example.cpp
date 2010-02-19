@@ -9,11 +9,12 @@
 #include "actorgroup.h"
 #include <QDateTime>
 
-Example::Example()
+Example::Example(const QString& id, ActorGroup* group)
+        : Actor( id, group )
 {
 }
 
-void Example::EXECUTE()
+void Example::execute()
 {
     BEGIN_EXECUTE;
 
@@ -30,8 +31,8 @@ void Example::EXECUTE()
         while( k > 0 )
         {
             qDebug("Hello 2");
-
-            actorGroup()->enqueue( new MyMessage("Hallo Welt") );
+            // Send message to ourself
+            post( new MyMessage( actorId(), "Hallo Welt") );
 
             yield( Recv<MyMessage>() | Timeout(300) );
             if ( REASON( Timeout ) )

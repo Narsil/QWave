@@ -1,7 +1,6 @@
 #ifndef XMPPSUBMITRESPONSEACTOR_H
 #define XMPPSUBMITRESPONSEACTOR_H
 
-#include <QSharedPointer>
 #include <QString>
 #include "xmppstanza.h"
 #include "xmppactor.h"
@@ -13,13 +12,13 @@ class AppliedWaveletDelta;
 class XmppSubmitResponseActor : public XmppActor
 {
 public:
-    XmppSubmitResponseActor(XmppVirtualConnection* con, const QSharedPointer<XmppStanza>& stanza);
+    XmppSubmitResponseActor(XmppVirtualConnection* con, XmppStanza* stanza);
 
 protected:
-    virtual void EXECUTE();
+    virtual void execute();
 
 private:
-    QSharedPointer<XmppStanza> m_stanza;
+    XmppStanza m_stanza;
     LocalWavelet* m_wavelet;
     SignedWaveletDelta m_delta;
     const AppliedWaveletDelta* m_applied;

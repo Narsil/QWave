@@ -10,6 +10,23 @@ XmppTag::XmppTag(const QString& qualifiedName, const QXmlStreamAttributes& attri
     }
 }
 
+XmppTag::XmppTag(const XmppTag& tag )
+        : m_type( tag.m_type ), m_qualifiedName( tag.m_qualifiedName ), m_attributes( tag.m_attributes )
+{
+    foreach( XmppTag* t, tag.m_children )
+    {
+        XmppTag* c = new XmppTag(*t);
+        c->m_parent = this;
+        m_children.append( c );
+    }
+}
+
+XmppTag::~XmppTag()
+{
+    foreach( XmppTag* t, m_children )
+        delete t;
+}
+
 void XmppTag::add( const QString& text )
 {
     if ( m_children.count() == 0 || !m_children.last()->isText() )
@@ -25,10 +42,10 @@ void XmppTag::addCData( const QString& text )
 
 XmppTag* XmppTag::child( const QString& qualifiedName ) const
 {
-    foreach( QSharedPointer<XmppTag> tag, m_children )
+    foreach( XmppTag* tag, m_children )
     {
         if ( tag->isElement() && tag->qualifiedName() == qualifiedName )
-            return tag.data();
+            return tag;
     }
     return 0;
 }
@@ -36,10 +53,10 @@ XmppTag* XmppTag::child( const QString& qualifiedName ) const
 QList<XmppTag*> XmppTag::children( const QString& qualifiedName ) const
 {
     QList<XmppTag*> result;
-    foreach( QSharedPointer<XmppTag> tag, m_children )
+    foreach( XmppTag* tag, m_children )
     {
         if ( tag->isElement() && tag->qualifiedName() == qualifiedName )
-            result.append( tag.data() );
+            result.append( tag );
     }
     return result;
 }
@@ -64,7 +81,7 @@ void XmppTag::write( QXmlStreamWriter& writer ) const
             {
                 writer.writeAttribute( key, m_attributes[key] );
             }
-            foreach( QSharedPointer<XmppTag> tag, m_children )
+            foreach( XmppTag* tag, m_children )
             {
                 tag->write( writer );
             }

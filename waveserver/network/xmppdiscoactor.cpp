@@ -14,10 +14,9 @@
 XmppDiscoActor::XmppDiscoActor(XmppVirtualConnection* con)
         : XmppActor(con)
 {
-    con->addActor( this );
 }
 
-void XmppDiscoActor::EXECUTE()
+void XmppDiscoActor::execute()
 {
     qDebug("EXECUTE Disco");
 

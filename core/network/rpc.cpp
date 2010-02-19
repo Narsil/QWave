@@ -194,7 +194,7 @@ bool RPC::readBytesIntern()
     qDebug("Got message with payload size %i", payload);
 
     // Message is complete
-    emit messageReceived( methodName, QByteArray::fromRawData(ptr + offset, payload));
+    emit messageReceived( methodName, QByteArray(ptr + offset, payload));
 
     // Prepare for new message
     m_buffer.clear();

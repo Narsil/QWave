@@ -12,10 +12,9 @@
 XmppDiscoResponseActor::XmppDiscoResponseActor(XmppVirtualConnection* con, const QString& id, XmppStanza::Kind kind)
         : XmppActor(con), m_id(id), m_kind(kind)
 {
-    con->addActor( this );
 }
 
-void XmppDiscoResponseActor::EXECUTE()
+void XmppDiscoResponseActor::execute()
 {
     qDebug("EXECUTE DiscoResponse");
 

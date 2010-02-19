@@ -9,7 +9,7 @@ public:
     XmppDiscoActor(XmppVirtualConnection* con);
 
 protected:
-    virtual void EXECUTE();
+    virtual void execute();
 
 private:
     QString m_id;

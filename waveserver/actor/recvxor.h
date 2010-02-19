@@ -9,12 +9,12 @@ public:
     RecvXorImpl(WaitingConditionImpl* wait1, WaitingConditionImpl* wait2) : m_wait1(wait1), m_wait2(wait2) {  }
     ~RecvXorImpl() { if ( m_wait1 ) { m_wait1->m_refCount--; if ( m_wait1->m_refCount == 0 ) delete m_wait1; } if ( m_wait1) { m_wait2->m_refCount--; if ( m_wait2->m_refCount == 0 ) delete m_wait2; } }
 
-    virtual WaitingConditionImpl* handleMessage( const QSharedPointer<IMessage>& msg )
+    virtual WaitingConditionImpl* handleMessage( QEvent* event )
     {
-        WaitingConditionImpl* result = m_wait1->handleMessage( msg );
+        WaitingConditionImpl* result = m_wait1->handleMessage( event );
         if ( result )
             return result;
-        result = m_wait2->handleMessage( msg );
+        result = m_wait2->handleMessage( event );
         if ( result )
             return result;
         return 0;

@@ -8,24 +8,21 @@
 #include "model/signedwaveletdelta.h"
 #include "model/waveurl.h"
 #include "actor/pbmessage.h"
-
-namespace waveserver
-{
-    class ProtocolSubmitRequest;
-}
+#include "protocol/common.pb.h"
+#include "protocol/waveclient-rpc.pb.h"
 
 class XmppSubmitRequestActor : public XmppActor
 {
 public:
-    XmppSubmitRequestActor(XmppVirtualConnection* con, const QSharedPointer<PBMessage<waveserver::ProtocolSubmitRequest> >& message );
+    XmppSubmitRequestActor(XmppVirtualConnection* con, PBMessage<waveserver::ProtocolSubmitRequest>* message );
 
 protected:
-    virtual void EXECUTE();
+    virtual void execute();
 
 private:
     void sendErrorResponse();
 
-    QSharedPointer<PBMessage<waveserver::ProtocolSubmitRequest> > m_message;
+    PBMessage<waveserver::ProtocolSubmitRequest> m_message;
     WaveUrl m_url;
     SignedWaveletDelta m_delta;
     QString m_id;

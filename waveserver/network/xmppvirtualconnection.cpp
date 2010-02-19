@@ -60,50 +60,50 @@ void XmppVirtualConnection::setReady()
     emit ready();
 }
 
-void XmppVirtualConnection::dispatch( const QSharedPointer<IMessage>& message )
+void XmppVirtualConnection::customEvent( QEvent* event )
 {
     if ( m_ready )
     {
-        XmppStanza* stanza = dynamic_cast<XmppStanza*>( message.data() );
+        XmppStanza* stanza = dynamic_cast<XmppStanza*>( event );
         if ( stanza )
         {
             switch( stanza->kind() )
             {
                 case XmppStanza::WaveletUpdate:
-                    new XmppWaveletUpdateResponseActor( this, message.dynamicCast<XmppStanza>() );
+                    new XmppWaveletUpdateResponseActor( this, stanza );
                     return;
                 case XmppStanza::HistoryRequest:
-                    new XmppHistoryResponseActor( this, message.dynamicCast<XmppStanza>() );
+                    new XmppHistoryResponseActor( this, stanza );
                     return;
                 case XmppStanza::SignerRequest:
-                    new XmppSignerResponseActor( this, message.dynamicCast<XmppStanza>() );
+                    new XmppSignerResponseActor( this, stanza );
                     return;
                 case XmppStanza::PostSigner:
-                    new XmppPostSignerResponseActor( this, message.dynamicCast<XmppStanza>() );
+                    new XmppPostSignerResponseActor( this, stanza );
                     return;
                 case XmppStanza::SubmitRequest:
-                    new XmppSubmitResponseActor( this, message.dynamicCast<XmppStanza>() );
+                    new XmppSubmitResponseActor( this, stanza );
                     return;
                 case XmppStanza::DiscoInfo:
-                    new XmppDiscoResponseActor( this, stanza->id(), XmppStanza::DiscoInfo );
+                    new XmppDiscoResponseActor( this, stanza->stanzaId(), XmppStanza::DiscoInfo );
                     return;
                 case XmppStanza::DiscoItems:
-                    new XmppDiscoResponseActor( this, stanza->id(), XmppStanza::DiscoItems );
+                    new XmppDiscoResponseActor( this, stanza->stanzaId(), XmppStanza::DiscoItems );
                     return;
                 default:
                     qDebug("Dispatch %i", stanza->kind() );
                     break;
             }
         }
-        PBMessage<waveserver::ProtocolSubmitRequest>* submitMsg = dynamic_cast< PBMessage<waveserver::ProtocolSubmitRequest>* >( message.data() );
+        PBMessage<waveserver::ProtocolSubmitRequest>* submitMsg = dynamic_cast< PBMessage<waveserver::ProtocolSubmitRequest>* >( event );
         if ( submitMsg )
         {
-            new XmppSubmitRequestActor( this, message.dynamicCast<PBMessage<waveserver::ProtocolSubmitRequest> >() );
+            new XmppSubmitRequestActor( this, submitMsg );
             return;
         }
     }
 
-    this->ActorGroup::dispatch( message );
+    this->ActorGroup::customEvent( event );
 }
 
 void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const AppliedWaveletDelta& waveletDelta)

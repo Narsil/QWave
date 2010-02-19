@@ -16,13 +16,12 @@
 #define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
 #define XMPPLOG(msg) { log(msg, __FILE__, __LINE__); }
 
-XmppWaveletUpdateResponseActor::XmppWaveletUpdateResponseActor(XmppVirtualConnection* con, const QSharedPointer<XmppStanza>& stanza)
-        : XmppActor(con), m_stanza(stanza)
+XmppWaveletUpdateResponseActor::XmppWaveletUpdateResponseActor(XmppVirtualConnection* con, XmppStanza* stanza)
+        : XmppActor(con), m_stanza(*stanza)
 {
-    con->addActor( this );
 }
 
-void XmppWaveletUpdateResponseActor::EXECUTE()
+void XmppWaveletUpdateResponseActor::execute()
 {
     qDebug("EXECUTE WaveletUpdateResponse");
 
@@ -30,7 +29,7 @@ void XmppWaveletUpdateResponseActor::EXECUTE()
 
     // Analyze the received stanza
     {
-        XmppTag* event = m_stanza->child("event");
+        XmppTag* event = m_stanza.child("event");
         XmppTag* items = event ? event->child("items") : 0;
         XmppTag* item = items ? items->child("item") : 0;
         XmppTag* update = item ? item->child("wavelet-update") : 0;
@@ -52,7 +51,7 @@ void XmppWaveletUpdateResponseActor::EXECUTE()
             XmppTag* appliedDelta = lst[i];
             QString str;
             // Extract the base64 encoded delta
-            foreach( XmppTagPtr t, appliedDelta->children() )
+            foreach( XmppTag* t, appliedDelta->children() )
             {
                 if ( t->isText() || t->isCData() )
                    str += t->text();
@@ -76,7 +75,7 @@ void XmppWaveletUpdateResponseActor::EXECUTE()
         QString send;
         QXmlStreamWriter writer( &send );
         writer.writeStartElement("message");
-        writer.writeAttribute("id", m_stanza->id() );
+        writer.writeAttribute("id", m_stanza.stanzaId() );
         writer.writeAttribute("to", connection()->domain() );
         writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
         writer.writeStartElement("received");
@@ -229,7 +228,7 @@ void XmppWaveletUpdateResponseActor::EXECUTE()
                 {
                     QString str;
                     // Extract the base64 encoded delta
-                    foreach( XmppTagPtr t, appliedDelta->children() )
+                    foreach( XmppTag* t, appliedDelta->children() )
                     {
                         if ( t->isText() || t->isCData() )
                             str += t->text();

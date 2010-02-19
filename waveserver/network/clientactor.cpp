@@ -8,9 +8,8 @@
 quint64 ClientActor::s_id = 0;
 
 ClientActor::ClientActor( ClientConnection* con )
-    : m_connection( con ), m_actorId( con, QString::number( s_id++ ) )
+    : Actor( QString::number( s_id++ ), con ), m_connection( con )
 {
-    setObjectName( m_actorId.actor() );
 }
 
 void ClientActor::log( const char* error, const char* file, int line )

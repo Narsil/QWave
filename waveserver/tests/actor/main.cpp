@@ -1,36 +1,15 @@
 #include <QtCore/QCoreApplication>
 #include "example.h"
 #include "actorgroup.h"
-//#include <iostream>
-//#include <typeinfo>
-
-namespace Foo
-{
-class A
-{
-public:
-    virtual void dummy() { }
-};
-
-class B : public A
-{
-};
-}
+#include "actorfolk.h"
 
 int main(int argc, char *argv[])
 {
     QCoreApplication a(argc, argv);
 
-    ActorGroup group;
-    Example* e = new Example();
-    group.addActor( e );
+    ActorFolk* folk = new ActorFolk("myfolk", &a );
+    ActorGroup* group = new ActorGroup( "mygroup", folk );
+    Example* e = new Example( "myactor", group );
 
     return a.exec();
-
-//    for( int i = 0; i < 40; ++i )
-//    {
-//        group.process( new MyMessage() );
-//    }
-//
-//    return 1;
 }

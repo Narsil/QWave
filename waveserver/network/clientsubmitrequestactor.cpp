@@ -23,10 +23,9 @@
 ClientSubmitRequestActor::ClientSubmitRequestActor( ClientConnection* con, const QByteArray& data )
         : ClientActor( con ), m_data(data)
 {
-    con->addActor( this );
 }
 
-void ClientSubmitRequestActor::EXECUTE()
+void ClientSubmitRequestActor::execute()
 {
     qDebug("EXECUTE SubmitRequestActor");
 
@@ -60,7 +59,9 @@ void ClientSubmitRequestActor::EXECUTE()
             if ( !m_wavelet->checkHashedVersion( m_update.delta(), &err ) ) { CLIENTERROR(QString("Could not apply delta %1. Delta is not sent to remote server.").arg(err)); }
 
             m_id = nextId();
-            bool ok = send( ActorId( "federation", m_url.waveletDomain() ), new PBMessage<waveserver::ProtocolSubmitRequest>( m_update, m_id ) );
+            IMessage* msg = new PBMessage<waveserver::ProtocolSubmitRequest>( m_update, ActorId( "federation", m_url.waveletDomain() ), m_id );
+            msg->setCreateOnDemand( true );
+            bool ok = post( msg );
             if ( !ok ) { CLIENTERROR("Internal server error"); }
         }
 
@@ -84,12 +85,13 @@ void ClientSubmitRequestActor::EXECUTE()
             // Sign the delta
             SignedWaveletDelta s( m_update.delta() );
             // Construct the request
-            PBMessage<messages::LocalSubmitRequest>* msg = new PBMessage<messages::LocalSubmitRequest>( m_id );
+            PBMessage<messages::LocalSubmitRequest>* msg = new PBMessage<messages::LocalSubmitRequest>( m_wavelet->actorId(), m_id );
             msg->set_wavelet_name( m_update.wavelet_name() );
             protocol::ProtocolSignedDelta* signedDelta = msg->mutable_signed_delta();
             s.toProtobuf( signedDelta );
+            msg->setCreateOnDemand(true);
             // Send the request
-            bool ok = send( m_wavelet->actorId(), msg );
+            bool ok = post( msg );
             if ( !ok ) { CLIENTERROR("Internal server error"); }
         }
 
@@ -99,7 +101,6 @@ void ClientSubmitRequestActor::EXECUTE()
         {
             CLIENTLOG("Got submit response");
             // Send a response to the client
-
             waveserver::ProtocolSubmitResponse response;
             response.set_operations_applied( REASON->operations_applied() );
             protocol::ProtocolHashedVersion* version = response.mutable_hashed_version_after_application();

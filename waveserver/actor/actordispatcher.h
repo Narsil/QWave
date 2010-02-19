@@ -2,28 +2,31 @@
 #define ACTORDISPATCHER_H
 
 #include <QObject>
-#include <QSharedPointer>
 #include <QHash>
-#include "actor/imessage.h"
+
 #include "actor/actorid.h"
 
+class IMessage;
 class ActorFolk;
 
 class ActorDispatcher : public QObject
 {
 public:
     /**
-      * @internal Use ActorFolk::activate instead.
+      * @internal
       */
     void addFolk( ActorFolk* folk );
     /**
-      * @internal Use ActorFolk::deactivate instead.
+      * @internal
       */
     void removeFolk( ActorFolk* folk );
+
     ActorFolk* folk( const QString& folk );
 
-    bool send( const ActorId& actor, const QSharedPointer<IMessage>& message );
-    bool send( const ActorId& actor, IMessage* msg );
+    bool send( IMessage* msg );
+    bool post( IMessage* msg );
+
+    QObject* lookup( const ActorId& id, bool createOnDemand );
 
     static ActorDispatcher* dispatcher();
 

@@ -12,19 +12,18 @@
 #define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
 #define XMPPLOG(msg) { log(msg, __FILE__, __LINE__); }
 
-XmppHistoryResponseActor::XmppHistoryResponseActor(XmppVirtualConnection* con, const QSharedPointer<XmppStanza>& stanza)
-        : XmppActor(con), m_stanza(stanza)
+XmppHistoryResponseActor::XmppHistoryResponseActor(XmppVirtualConnection* con, XmppStanza* stanza)
+        : XmppActor(con), m_stanza(*stanza)
 {
-    con->addActor( this );
 }
 
-void XmppHistoryResponseActor::EXECUTE()
+void XmppHistoryResponseActor::execute()
 {
     qDebug("EXECUTE SignerResponse");
 
     // Analyze the request
     {
-        XmppTag* pubsub = m_stanza->child("pubsub");
+        XmppTag* pubsub = m_stanza.child("pubsub");
         XmppTag* items = pubsub ? pubsub->child( "items" ) : 0;
         XmppTag* history = items ? items->child("delta-history") : 0;
         if ( !history ) { XMPPERROR("Malformed delta-hiistory request"); }
@@ -60,7 +59,7 @@ void XmppHistoryResponseActor::EXECUTE()
 
         writer.writeStartElement("iq");
         writer.writeAttribute("type", "result" );
-        writer.writeAttribute("id", m_stanza->id() );
+        writer.writeAttribute("id", m_stanza.stanzaId() );
         writer.writeAttribute("to", connection()->domain() );
         writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
         writer.writeStartElement("pubsub");

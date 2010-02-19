@@ -6,12 +6,10 @@
 #include <QXmlStreamAttributes>
 #include <QList>
 #include <QHash>
-#include <QSharedPointer>
 
 #include "actor/imessage.h"
 
 class XmppTag;
-typedef QSharedPointer<XmppTag> XmppTagPtr;
 
 class XmppTag
 {
@@ -27,6 +25,8 @@ public:
     XmppTag(const QString& qualifiedName, const QXmlStreamAttributes& attribs, XmppTag* parent = 0 );
     XmppTag(const QString& text, XmppTag* parent = 0) : m_parent(parent), m_type(Text), m_qualifiedName(text) { }
     XmppTag(const QString& text, TagType type, XmppTag* parent = 0) : m_parent(parent), m_type(type), m_qualifiedName(text) { }
+    XmppTag(const XmppTag& tag );
+    virtual ~XmppTag();
 
     XmppTag* parent() const { return m_parent; }
 
@@ -44,12 +44,15 @@ public:
     QString operator[] ( const QString& qualifiedName ) const;
     bool hasAttribute(const QString& qualifiedName ) const { return m_attributes.contains( qualifiedName ); }
 
-    QList<XmppTagPtr>& children() { return m_children; }
-    const QList<XmppTagPtr>& children() const { return m_children; }
-    XmppTag* child( const QString& qualifiedName ) const;
-    XmppTag* childAt( int index ) const { return m_children[index].data(); }
+    QList<XmppTag*>& children() { return m_children; }
+    const QList<XmppTag*>& children() const { return m_children; }
     QList<XmppTag*> children( const QString& qualifiedName ) const;
-    void add( XmppTag* tag ) { m_children.append( XmppTagPtr( tag ) ); }
+    XmppTag* child( const QString& qualifiedName ) const;    
+    XmppTag* childAt( int index ) const { return m_children[index]; }
+    /**
+      * The tag takes ownership of the child tag.
+      */
+    void add( XmppTag* tag ) { m_children.append( tag ); tag->m_parent = this; }
     void add( const QString& text );
     void addCData( const QString& text );
 
@@ -65,7 +68,7 @@ private:
     TagType m_type;
     QString m_qualifiedName;
     QHash<QString,QString> m_attributes;
-    QList<XmppTagPtr> m_children;
+    QList<XmppTag*> m_children;
 };
 
 class XmppStanza : public IMessage, public XmppTag
@@ -73,10 +76,11 @@ class XmppStanza : public IMessage, public XmppTag
 public:
     XmppStanza( const QString& qualifiedName ) : XmppTag( qualifiedName, Element ), m_kind(Unknown) { }
     XmppStanza( const QString& qualifiedName, const QXmlStreamAttributes& attribs ) : XmppTag( qualifiedName, attribs ), m_kind(Unknown) { }
+    XmppStanza( const XmppStanza& stanza ) : IMessage( stanza ), XmppTag( stanza ), m_kind( stanza.m_kind ) { }
 
     QString from() const { return attributes()["from"]; }
     QString to() const { return attributes()["to"]; }
-    QString id() const { return attributes()["id"]; }
+    QString stanzaId() const { return attributes()["id"]; }
     QString type() const { return attributes()["type"]; }
 
     enum Kind

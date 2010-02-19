@@ -1,7 +1,6 @@
 #ifndef XMPPWAVELETUPDATERESPONSEACTOR_H
 #define XMPPWAVELETUPDATERESPONSEACTOR_H
 
-#include <QSharedPointer>
 #include <QList>
 #include "network/xmppstanza.h"
 #include "network/xmppactor.h"
@@ -14,13 +13,13 @@ class ServerCertificate;
 class XmppWaveletUpdateResponseActor : public XmppActor
 {
 public:
-    XmppWaveletUpdateResponseActor(XmppVirtualConnection* con, const QSharedPointer<XmppStanza>& stanza);
+    XmppWaveletUpdateResponseActor(XmppVirtualConnection* con, XmppStanza* stanza);
 
 protected:
-    virtual void EXECUTE();
+    virtual void execute();
 
 private:
-    QSharedPointer<XmppStanza> m_stanza;
+    XmppStanza m_stanza;
     RemoteWavelet* m_wavelet;
     int i;
 //    int count;

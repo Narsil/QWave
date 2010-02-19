@@ -1,46 +1,36 @@
 #ifndef TIMEOUT_H
 #define TIMEOUT_H
 
-#include <QObject>
-#include "waitingcondition.h"
-#include "recvxor.h"
-
-class QTimer;
-class TimeoutImpl;
+#include "actor/actor.h"
+#include "actor/waitingcondition.h"
+#include "actor/recvxor.h"
 
 /**
   * @internal
   */
-class TimeoutMessage : public IMessage
+class TimeoutImpl : public WaitingConditionImpl
 {
 public:
-    TimeoutMessage( TimeoutImpl* p ) : ptr(p) { }
-    TimeoutImpl* ptr;
-};
+    TimeoutImpl(int interval) : m_interval(interval), m_timerId(-1) { }
+    ~TimeoutImpl() { if ( m_timerId != -1 ) actor()->killTimer( m_timerId ); }
 
-/**
-  * @internal
-  */
-class TimeoutImpl : public QObject, public WaitingConditionImpl
-{
-    Q_OBJECT
-public:
-    TimeoutImpl(int timeout);
-    ~TimeoutImpl();
-
-    virtual WaitingConditionImpl* handleMessage( const QSharedPointer<IMessage>& msg )
+    virtual WaitingConditionImpl* handleMessage( QEvent* event )
     {
-        TimeoutMessage* m = dynamic_cast<TimeoutMessage*>( msg.data() );
-        if ( m && m->ptr == this )
+        if ( event->type() == QEvent::Timer && static_cast<QTimerEvent*>(event)->timerId() == m_timerId )
+        {
+            actor()->killTimer( m_timerId );
+            m_timerId = -1;
+            event->setAccepted( true );
             return this;
+        }
         return 0;
     }
 
-private slots:
-    void timeout();
+    virtual void setActor( Actor* actor ) { this->WaitingConditionImpl::setActor(actor); m_timerId = actor->startTimer( m_interval ); }
 
 private:
-    QTimer* m_timer;
+    int m_interval;
+    int m_timerId;
 };
 
 /**
