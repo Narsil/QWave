@@ -60,6 +60,8 @@ bool NetworkAdapter::openWavelet(Wavelet* wavelet)
 
 void NetworkAdapter::sendOpenWave(const QString& waveId, const QString& waveletId)
 {
+    m_openingWaves.append(waveId);
+    qDebug()<<"Opening wave"<<waveId;
     std::ostringstream str;
     waveserver::ProtocolOpenRequest req;
     req.set_participant_id( environment()->localUser()->address().toStdString());
@@ -118,17 +120,7 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
             {
                 wave = environment()->createWave(url.waveDomain(), url.waveletId());
                 environment()->inbox()->addWave(wave);
-            }
-
-            // Apply all updates to the wave digest
-            // Edited digest do not exist in robot framework
-//            for( int i = 0; i < update.applied_delta_size(); ++i )
-//            {
-//                WaveletDelta wd = Converter::convert( update.applied_delta(i) );
-//                wave->wavelet()->processor()->handleReceive( wd );
-//            }
-//            openWavelet(wave->wavelet());
-            
+            }            
         }
         // Wavelet?
         else
@@ -137,25 +129,42 @@ void NetworkAdapter::messageReceived(const QString& methodName, const QByteArray
             if ( !wavelet )
                 return;
 
+            wavelet->processor()->setSuspendSending(true);
+            if(m_openingWaves.contains(url.waveDomain()+"!"+url.waveId())){
+                emit waveOpened(environment()->wave(url.waveDomain(), url.waveId()));
+                m_openingWaves.removeAll(url.waveDomain()+"!"+url.waveId());
+            }
+
             QByteArray resultingHash( update.resulting_version().history_hash().data(), update.resulting_version().history_hash().length() );
             int resultingVersion = update.resulting_version().version();
             wavelet->processor()->setResultingHash( resultingVersion, resultingHash);
 
-            wavelet->processor()->setSuspendSending(true);
             for( int i = 0; i < update.applied_delta_size(); ++i )
             {                
                 WaveletDelta wd = Converter::convert( update.applied_delta(i) );
                 wavelet->processor()->handleReceive( wd );
             }
             wavelet->processor()->setSuspendSending(false);
+
         }
     }
     else if ( methodName == "waveserver.ProtocolSubmitResponse" )
     {
         waveserver::ProtocolSubmitResponse response;
         response.ParseFromArray(data.constData(), data.length());
+        if(response.has_error_message()){
+            handleError(QString::fromStdString(response.error_message()));
+            qDebug()<<QString::fromStdString(response.DebugString());
+        }
         qDebug("msg<< %s", response.DebugString().data());
     }
+}
+
+void NetworkAdapter::handleError(const QString& error)
+{
+    if (error == "Could not apply delta: Applying at invalid version number")
+        //QWave server error
+        qDebug()<<"Handling version error";
 }
 
 Environment* NetworkAdapter::environment() const

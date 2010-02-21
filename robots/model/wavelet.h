@@ -85,7 +85,7 @@ signals:
     /**
       * Consumed but the Robot
       */
-    void newBlipSubmitted(Blip* blip);
+    void newBlipAdded(Blip* blip);
     /**
       * Emitted when the number of blips or the number of read/unread blip changed.
       *

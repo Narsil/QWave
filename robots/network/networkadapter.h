@@ -9,6 +9,7 @@ class QByteArray;
 class DocumentMutation;
 class Environment;
 class RPC;
+class Wave;
 class Wavelet;
 class WaveletDelta;
 class Participant;
@@ -26,12 +27,14 @@ public:
     quint32 serverPort() const { return m_serverPort; }
     bool isOnline() const { return m_isOnline; }
     bool hasConnectionError() const { return m_hasConnectionError; }
+    void handleError(const QString& error);
 
     bool openWavelet(Wavelet* wavelet);
     void submit(const WaveletDelta& delta, Wavelet* wavelet);
 
 signals:
     void connectionStatus( const QString& status );
+    void waveOpened(Wave* wave);
 
 private slots:
     void getOnline();
@@ -44,6 +47,7 @@ private:
 
     RPC* m_rpc;
     QList<QString> m_openWaves;
+    QList<QString> m_openingWaves;
     bool m_isOnline;
     bool m_hasConnectionError;
     QString m_serverName;
