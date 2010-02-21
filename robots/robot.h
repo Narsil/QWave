@@ -9,6 +9,7 @@ class Wave;
 class Participant;
 class Wavelet;
 class Blip;
+class DocumentMutation;
 
 class Robot:public QObject
 {
@@ -18,8 +19,10 @@ public:
     QString address() { return m_environment->localUser()->address();}
 protected slots:
     /**
-      *  Not triggered at the moment
-      *  Will be triggered when the wave is opened
+      * triggered when wave is opened but as document
+      * is not updated yet, reacting withing this slot
+      * usually produces errors. Need history error
+      * corrections.
       */
     virtual void waveAdded(Wave* wave);
 
@@ -27,10 +30,10 @@ protected slots:
       * Triggered when incoming wave arrive,
       * if you derive it, reimplement connections.
       */
-    virtual void wavedigestAdded(Wave * wave);
+    virtual void waveAddedOverhead(Wave * wave);
 
     /**
-      * triggered when connection status is modified.( Not enabled yet)
+      * triggered when connection status is modified.s
       */
     virtual void setConnectionStatus(const QString &status);
 
@@ -52,10 +55,20 @@ protected slots:
     virtual void conversationChanged(Wavelet* wavelet);
 
     /**
-      * triggered on a new blip. Buggy and random
-      * behaviour
+      * triggered on a new blip.
       */
-    virtual void onBlipSubmitted(Blip* blip);
+    virtual void newBlipAdded(Blip* blip);
+
+    /**
+      * triggered on new blip, connects blip signals to robot
+      * use preferably newBlipAdded
+      */
+    virtual void newBlipAddedOverhead(Blip* blip);
+
+    /**
+      * triggered whenever a blip has been modified
+      */
+    virtual void blipChanged(Blip* blip, const DocumentMutation& mutation);
 protected:
     Environment* m_environment;
 };

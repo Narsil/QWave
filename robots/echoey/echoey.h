@@ -2,6 +2,8 @@
 #define ECHOEY_H
 #include "robot.h"
 
+#include <QHash>
+
 class Environment;
 class Participant;
 class Wavelet;
@@ -13,11 +15,13 @@ Q_OBJECT
 public:
     Echoey(Environment* environment);
 protected slots:
-    virtual void waveAdded(Wave *wave);
     virtual void participantAdded(Participant* participant,Wavelet* wavelet);
     virtual void participantRemoved(Participant* participant,Wavelet* wavelet);
-    virtual void onBlipSubmitted(Blip* blip);
-    virtual void conversationChanged(Wavelet *wavelet);
+    virtual void newBlipAdded(Blip* blip);
+    virtual void blipChanged(Blip* blip, const DocumentMutation& mutation);
+protected:
+    QHash<Blip*,Blip*> m_followUpBlips;
+
 };
 
 #endif // ECHOEY_H

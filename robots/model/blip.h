@@ -93,6 +93,11 @@ public:
       */
     void addThread(BlipThread* thread);
 
+    /**
+      * Used by someone else to send changes
+      * ( use receive to just apply some changes )
+      */
+    void mutate(const DocumentMutation&  mutation);
     int childBlipCount() const;
     int unreadChildBlipCount() const;
     bool isUnread() const { return m_unread; }
@@ -138,7 +143,7 @@ signals:
       * A more fine granular way of receiving these updates is to hook into the
       * signals emitted by the blip's BlipDocument.
       */
-    void update( const DocumentMutation& mutation );
+    void update( Blip* blip, const DocumentMutation& mutation );
     void unreadChanged();
 
 private:

@@ -45,6 +45,7 @@ void Wavelet::updateConversation(const QString& author)
 {
     QHash<QString,Blip*> blips( m_blips );
     QHash<QString,BlipThread*> blipThreads( m_blipThreads );
+    QList<Blip*> newBlips;
     m_blips.clear();
     m_blipThreads.clear();
     m_rootBlips.clear();
@@ -108,7 +109,7 @@ void Wavelet::updateConversation(const QString& author)
                         if ( author == m_wave->environment()->localUser()->address() )
                             blip->setUnread(false);
                         else
-                            emit newBlipSubmitted(blip);
+                            newBlips.append(blip);
                         connect( blip, SIGNAL(unreadChanged()), SIGNAL(blipCountChanged()));
                     }
                     // The blip already exists
@@ -180,6 +181,10 @@ void Wavelet::updateConversation(const QString& author)
     }
 
     emit blipCountChanged();
+
+    foreach (Blip* blip, newBlips){
+        emit newBlipAdded(blip);
+    }
 }
 
 void Wavelet::print_()

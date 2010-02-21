@@ -103,7 +103,18 @@ QList<QString> Blip::authors() const
 void Blip::receive( const DocumentMutation& mutation, const QString& author )
 {
     m_doc->apply(mutation, author);
-    emit update(mutation);
+    if (author != environment()->localUser()->address())
+        emit update(this,mutation);
+}
+
+
+void Blip::mutate( const DocumentMutation& mutation){
+    WaveletDeltaOperation op;
+    WaveletDelta delta ;
+    op.setMutation(mutation);
+    op.setDocumentId(id());
+    delta.addOperation(op);
+    wavelet()->processor()->handleSend(delta);
 }
 
 void Blip::print_(int indent)
@@ -138,9 +149,9 @@ Blip* Blip::createFollowUpBlip(const QString& text)
     DocumentMutation m2;
     QHash<QString,QString> map;
     // WaveSandBox crashes when this is enabled 
-    map["name"] = environment()->localUser()->address();
-    m2.insertStart("contributor", map);
-    m2.insertEnd();
+//    map["name"] = environment()->localUser()->address();
+//    m2.insertStart("contributor", map);
+//    m2.insertEnd();
     map.clear();
     m2.insertStart("body", map);
     m2.insertStart("line", map);
@@ -182,9 +193,9 @@ Blip* Blip::createReplyBlip(const QString& text)
     DocumentMutation m2;
     QHash<QString,QString> map;
     // WaveSandBox crashes when this is enabled
-    map["name"] = environment()->localUser()->address();
-    m2.insertStart("contributor", map);
-    m2.insertEnd();
+//    map["name"] = environment()->localUser()->address();
+//    m2.insertStart("contributor", map);
+//    m2.insertEnd();
     map.clear();
     m2.insertStart("body", map);
     m2.insertStart("line", map);

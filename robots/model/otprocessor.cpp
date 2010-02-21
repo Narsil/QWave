@@ -46,7 +46,6 @@ void OTProcessor::setResultingHash(int version, const QByteArray& hash)
 
 void OTProcessor::submitNext()
 {
-    qDebug("SUBMITTING NEXT");
     // TODO: This is a strange way of handling offline scenarios
     if ( !m_environment->networkAdapter()->isOnline() )
         return;
@@ -56,6 +55,7 @@ void OTProcessor::submitNext()
     if (m_suspendSending )
         return;
 
+    qDebug("SUBMITTING NEXT");
     //Apply all operations before sending
     foreach( WaveletDeltaOperation op, m_outgoingDeltas[0].operations() )
     {
