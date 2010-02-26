@@ -1,6 +1,5 @@
 #include "clientactor.h"
 #include "clientconnection.h"
-#include "model/participant.h"
 #include <QString>
 #include <QDateTime>
 #include <QtGlobal>
