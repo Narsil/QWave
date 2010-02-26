@@ -6,6 +6,7 @@
 #include "network/xmppactor.h"
 #include "model/appliedwaveletdelta.h"
 #include "model/signature.h"
+#include "model/waveurl.h"
 
 class RemoteWavelet;
 class ServerCertificate;
@@ -28,6 +29,7 @@ private:
     QString m_id;    
     QList<AppliedWaveletDelta> m_deltas;
     AppliedWaveletDelta m_delta;
+    WaveUrl m_url;
 };
 
 #endif // XMPPWAVELETUPDATERESPONSE_H

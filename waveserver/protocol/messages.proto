@@ -8,7 +8,7 @@ package messages;
 /**
  * Send to a RemoteWavelet
  */
-message RemoteSubmitRequest {
+message RemoteWaveletUpdate {
   required string wavelet_name = 1;
   required protocol.ProtocolAppliedWaveletDelta applied_delta = 2;
 }
@@ -21,9 +21,158 @@ message LocalSubmitRequest {
   required protocol.ProtocolSignedDelta signed_delta = 2;
 }
 
+/**
+ * Answer to a submit request.
+ */
 message SubmitResponse {
   required int32 operations_applied = 1;
   required int64 application_timestamp =  2;
   optional string error_message = 3;
   optional protocol.ProtocolHashedVersion hashed_version_after_application = 4;
 }
+
+/**
+ * Sent to a Wavelet to subscribe a client
+ */
+message SubscribeWavelet {
+    required bool content = 1;
+    required bool index = 2;
+    required string actor_id = 3;
+    required bool subscribe = 4;
+}
+
+/**
+ * Sent to a client when it has subscribed to a wavelet.
+ */
+message WaveletDigest {
+    required string wavelet_name = 1;
+    required protocol.ProtocolWaveletDelta digest_delta = 2;
+}
+
+/**
+ * Sent to the client to notify him of a new wavelet.
+ */
+message WaveletNotify {
+    required string wavelet_name = 1;
+}
+
+/**
+  * Sent to XMPP to propagate the wavelet update.
+  */
+message WaveletUpdate {
+    required string wavelet_name = 1;
+    /**
+     * A serialized protocol.ProtocolWaveletDelta.
+     */
+    required bytes applied_delta = 2;
+}
+
+/**
+ * Send this message to a store to ask for persisting a wavelet update.
+ */
+message PersistWaveletUpdate {
+    required string wavelet_name = 1;
+    required bytes applied_delta = 2;
+    /**
+     * The version at which the delta has been applied.
+     */
+    required int64 applied_at_version = 3;
+    /**
+     * The version at which the delta can be applied without transformation.
+     */
+    required int64 applies_to_version = 4;
+    required int32 operations_applied = 5;
+    repeated string add_user = 6;
+    repeated string remove_user = 7;
+}
+
+/**
+ * Sent by the store in response to a request for persisting something.
+ */
+message PersistAck {
+    required bool ok = 1;
+    optional string error = 2;
+}
+
+/**
+ * This message is sent to the store to ask for wavelet history
+ */
+message QueryWaveletUpdates {
+    required string wavelet_name = 1;
+    required int32 start_version = 2;
+    required int32 end_version = 3;
+}
+
+/**
+ * Sent in response to QueryWaveletUpdates.
+ */
+message QueryWaveletUpdatesResponse {
+    required int32 start_version = 1;
+    required int32 end_version = 2;
+    repeated bytes applied_delta = 3;
+    required bool ok = 5;
+    optional string error = 4;
+}
+
+/**
+ * Sent to the store to request all wavelets in which a participant is involved.
+ */
+message QueryParticipantWavelets {
+    required string participant = 1;
+}
+
+/**
+ * Response to QueryParticipantWavelets
+ */
+message QueryParticipantWaveletsResponse {
+    repeated string wavelet_name = 1;
+    required bool ok = 2;
+    optional string error = 3;
+}
+
+/**
+ * This format is used internally to store a wavelet update.
+ */
+message StoreWaveletUpdate {
+    required bytes applied_delta = 1;
+    /**
+     * The version at which the delta has been applied.
+     */
+    required int64 applied_at_version = 2;
+    /**
+     * The version at which the delta can be applied without transformation.
+     */
+    required int64 applies_to_version = 3;
+    required int32 operations_applied = 4;
+}
+
+/**
+ * Sent to a participant to tell him that he has been added or removed from a wavelet.
+ */
+/*
+message ParticipantAddRemoveWavelet {
+    required string wavelet_name = 1;
+    required bool add = 2;
+}
+*/
+
+/**
+ * Response to ParticipantAddRemoveWavelet
+ */
+/*
+message ParticipantAck {
+    required bool ok = 1;
+    optional string error = 2;
+}
+*/
+
+/*
+message ParticipantQueryWavelets {
+}
+
+message ParticipantQueryWaveletsResponse {
+    repeated string wavelet_name = 1;
+    required bool ok = 2;
+    optional string error = 3;
+}
+*/

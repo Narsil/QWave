@@ -2,14 +2,14 @@
 #define XMPPWAVELETUPDATEACTOR_H
 
 #include <QString>
-#include "xmppactor.h"
-
-class AppliedWaveletDelta;
+#include "network/xmppactor.h"
+#include "protocol/messages.pb.h"
+#include "actor/pbmessage.h"
 
 class XmppWaveletUpdateActor : public XmppActor
 {
 public:
-    XmppWaveletUpdateActor(XmppVirtualConnection* con, const QString& waveletName, const AppliedWaveletDelta& waveletDelta);
+    XmppWaveletUpdateActor(XmppVirtualConnection* con, PBMessage<messages::WaveletUpdate>* event);
 
 protected:
     virtual void execute();

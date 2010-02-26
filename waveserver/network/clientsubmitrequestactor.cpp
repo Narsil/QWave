@@ -17,7 +17,7 @@
 #include "protocol/messages.pb.h"
 #include <QByteArray>
 
-#define CLIENTERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->sendSubmitResponse(0, 0, msg); TERMINATE(); }
+#define CLIENTERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->sendFailedSubmitResponse(msg); TERMINATE(); }
 #define CLIENTLOG(msg) { log(msg, __FILE__, __LINE__); }
 
 ClientSubmitRequestActor::ClientSubmitRequestActor( ClientConnection* con, const QByteArray& data )

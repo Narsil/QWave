@@ -3,9 +3,8 @@
 #include "network/xmppcomponentconnection.h"
 #include "network/servercertificate.h"
 #include "app/settings.h"
-#include "persistence/commitlog.h"
-
-#include "model/waveletdelta.h"
+#include "persistence/storefolk.h"
+#include "model/wavefolk.h"
 
 int main(int argc, char *argv[])
 {
@@ -30,6 +29,11 @@ int main(int argc, char *argv[])
     }
     // Enfore the loading of the certificate and private key
     LocalServerCertificate::certificate();
+
+    // Instantiate the store
+    StoreFolk::store();
+    // Instantiate the wave folk
+    WaveFolk::instance();
 
     if ( Settings::settings()->federationEnabled() )
     {
@@ -63,11 +67,6 @@ int main(int argc, char *argv[])
         // Connect to the XMPP component
         new XmppComponentConnection( &a );
     }
-
-    // Recover by reading the commit log
-    bool ok = CommitLog::commitLog()->applyAll();
-    if( !ok )
-        qDebug("FAILED reading and applying commit log");
 
     // Listen to clients
     ServerSocket socket;

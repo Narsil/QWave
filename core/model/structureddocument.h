@@ -57,6 +57,7 @@ public:
         bool isNull() const { return d.data() == 0; }
         QString value(const QString& key) const { if ( isNull() ) return QString::null; return d->map[key]; }
         QList<QString> keys() const { if ( isNull() ) return QList<QString>(); return d->map.keys(); }
+        bool contains( const QString& key ) const { if ( isNull() ) return false; return d->map.contains(key); }
 
         Annotation merge(const AnnotationChange& map) const;
 

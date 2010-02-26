@@ -8,6 +8,7 @@
 
 class Actor;
 class ActorFolk;
+class IMessage;
 
 class ActorGroup : public QObject
 {
@@ -40,6 +41,14 @@ public:
 
     virtual Actor* actor( const QString& id, bool createOnDemand );
     virtual ActorGroup* group( const QString& groupId, bool createOnDemand );        
+
+    /**
+      * This function takes ownership of the message being passed. Do not modify the message after it has been passed to send.
+      *
+      * @return true if the message could be sent. If the message travels over the network it could still be lost, i.e.
+      *         the function does not wait for an ACK.
+      */
+    virtual bool post( IMessage* msg );
 
     template<class T> T* findDirectChild( const QString& name );
 

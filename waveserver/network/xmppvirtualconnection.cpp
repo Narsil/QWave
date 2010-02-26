@@ -18,6 +18,7 @@
 #include "network/converter.h"
 #include "protocol/common.pb.h"
 #include "protocol/waveclient-rpc.pb.h"
+#include "protocol/messages.pb.h"
 #include "model/waveurl.h"
 #include "network/servercertificate.h"
 #include "actor/pbmessage.h"
@@ -95,20 +96,22 @@ void XmppVirtualConnection::customEvent( QEvent* event )
                     break;
             }
         }
-        PBMessage<waveserver::ProtocolSubmitRequest>* submitMsg = dynamic_cast< PBMessage<waveserver::ProtocolSubmitRequest>* >( event );
-        if ( submitMsg )
-        {
-            new XmppSubmitRequestActor( this, submitMsg );
-            return;
-        }
+    }
+
+    PBMessage<waveserver::ProtocolSubmitRequest>* submitMsg = dynamic_cast< PBMessage<waveserver::ProtocolSubmitRequest>* >( event );
+    if ( submitMsg )
+    {
+        new XmppSubmitRequestActor( this, submitMsg );
+        return;
+    }
+    PBMessage<messages::WaveletUpdate>* waveletUpdate = dynamic_cast< PBMessage<messages::WaveletUpdate>* >( event );
+    if ( waveletUpdate )
+    {
+        new XmppWaveletUpdateActor( this, waveletUpdate );
+        return;
     }
 
     this->ActorGroup::customEvent( event );
-}
-
-void XmppVirtualConnection::sendWaveletUpdate(const QString& waveletName, const AppliedWaveletDelta& waveletDelta)
-{
-    new XmppWaveletUpdateActor( this, waveletName, waveletDelta );
 }
 
 void XmppVirtualConnection::xmppError()

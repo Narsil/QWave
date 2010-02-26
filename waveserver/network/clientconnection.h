@@ -11,22 +11,19 @@
 #include "actor/actorgroup.h"
 
 class RPC;
-class Wavelet;
-class WaveletDelta;
-class AppliedWaveletDelta;
 class QByteArray;
 class QTcpSocket;
-class Participant;
 class ClientActorFolk;
 
 namespace waveserver
 {
     class ProtocolSubmitResponse;
+    class ProtocolWaveletUpdate;
 }
 
 namespace protocol
 {
-    class ProtocolHashedVersion;
+    class ProtocolWaveletDelta;
 }
 
 class ClientConnection : public ActorGroup
@@ -41,34 +38,51 @@ public:
     ClientConnection(QTcpSocket* socket, ClientActorFolk* parent = 0);
     ~ClientConnection();
 
-    Participant* participant() const { return m_participant; }
+    QString participant() const { return m_participant; }
     /**
       * The domain of this wave server.
       */
     QString domain() const;
 
-    void sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedWaveletDelta>& delta );
+    /**
+      * @internal
+      *
+      * Called from ClientSubmitRequestActor.
+      */
     void sendSubmitResponse( const waveserver::ProtocolSubmitResponse& response );
-    void sendSubmitResponse( qint32 operations_applied, const WaveletDelta::HashedVersion* hashedVersionAfterApplication, const QString& errorMessage = QString::null );
-    void sendIndexUpdate(Wavelet* wavelet, const WaveletDelta& indexDelta);
+    /**
+      * @internal
+      *
+      * Called from ClientSubmitRequestActor.
+      */
+    void sendFailedSubmitResponse( const QString& errorMessage );
 
-    static ClientConnection* connectionById( const QString& id );
-    static QList<ClientConnection*> connectionsByParticipant( const QString& participant );
+protected:
+    virtual void customEvent( QEvent* event );
 
 private slots:
+    /**
+      * Connected to the RPC.
+      */
     void getOffline();
+    /**
+      * Connected to the RPC.
+      */
     void networkError();
+    /**
+      * Connected to the RPC.
+      */
     void messageReceived(const QString& methodName, const QByteArray& data);
 
 private:
+    void sendIndexUpdate(const QString& waveletName, protocol::ProtocolWaveletDelta* delta);
+    void sendWaveletUpdate( const waveserver::ProtocolWaveletUpdate& update );
+
     RPC* m_rpc;
-    Participant* m_participant;
-//    QString m_id;
+    QString m_participant;
     qint64 m_digestVersion;
     QByteArray m_digestHash;
-
-    static QMultiHash<QString,ClientConnection*>* s_connectionsByParticipant;
-    static QHash<QString,ClientConnection*>* s_connectionsById;
+    bool m_waveletsOpened;
 };
 
 #endif // CLIENTCONNECTION_H

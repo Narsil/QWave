@@ -6,15 +6,18 @@ QT += network \
 QT -= gui
 TARGET = waveserver
 target.depends = core
-core.commands = cd ../core && qmake && make
+core.commands = cd \
+    ../core \
+    && \
+    qmake \
+    && \
+    make
 QMAKE_EXTRA_TARGETS += core
 PRE_TARGETDEPS += core
 TEMPLATE = app
 SOURCES += main.cpp \
     model/wavelet.cpp \
     model/waveletdocument.cpp \
-    model/participant.cpp \
-    model/waveusage.cpp \
     model/wave.cpp \
     model/waveurl.cpp \
     network/serversocket.cpp \
@@ -54,17 +57,19 @@ SOURCES += main.cpp \
     actor/actorfolk.cpp \
     actor/actordispatcher.cpp \
     network/clientactorfolk.cpp \
-    model/wavefolk.cpp
-HEADERS += ../core/model/waveletdeltaoperation.h \
-    ../core/model/waveletdelta.h \
-    ../core/model/structureddocument.h \
-    ../core/model/documentmutation.h \
-    model/wavelet.h \
-    network/clientactorfolk.cpp
+    model/wavefolk.cpp \
+    persistence/storefolk.cpp \
+    persistence/store.cpp \
+    actor/recvcriticalsection.cpp \
+    network/clientindexwaveactor.cpp \
+    network/clientparticipant.cpp
 HEADERS += model/wavelet.h \
+    persistence/storefolk.h \
+    persistence/store.h \
+    actor/recvcriticalsection.h \
+    network/clientindexwaveactor.h \
+    network/clientparticipant.h \
     model/waveletdocument.h \
-    model/participant.h \
-    model/waveusage.h \
     model/wave.h \
     model/waveurl.h \
     network/serversocket.h \
@@ -114,7 +119,8 @@ HEADERS += model/wavelet.h \
     model/wavefolk.h
 unix:LIBS += -lprotobuf \
     -lcrypto \
-    -lqwavecore -L../core
+    -lqwavecore \
+    -L../core
 INCLUDEPATH += ./ \
     ../ \
     ../core/ \

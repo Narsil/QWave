@@ -1,6 +1,7 @@
 #include "actorgroup.h"
 #include "actor.h"
 #include "actorfolk.h"
+#include "actordispatcher.h"
 #include <QCoreApplication>
 
 ActorGroup::ActorGroup(const QString& groupId, ActorFolk* folk)
@@ -84,4 +85,11 @@ void ActorGroup::customEvent( QEvent* event )
         if ( a )
             a->event( event );
     }
+}
+
+bool ActorGroup::post( IMessage* msg )
+{
+    if ( msg->sender().isNull() )
+        msg->setSender( actorId() );
+    return ActorDispatcher::dispatcher()->post( msg );
 }

@@ -17,7 +17,7 @@ public:
     PBMessage( const PBMessage<PB>& message ) : IMessage( message ), PB() { MergeFrom( message ); }
     PBMessage( const QByteArray& data, const ActorId& receiver, qint64 id = -1 ) : IMessage( receiver, id ), PB() { this->ParseFromArray( data.constData(), data.length() ); }
 
-    QByteArray serialize() const { QByteArray ba( this->ByteSize(), 0 ); this->SerializeToArray( ba.constData(), ba.length() ); return ba; }
+    QByteArray serialize() const { QByteArray ba( this->ByteSize(), 0 ); this->SerializeToArray( ba.data(), ba.length() ); return ba; }
 };
 
 #endif // PBMESSAGE_H
