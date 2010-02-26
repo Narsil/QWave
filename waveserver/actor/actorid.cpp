@@ -32,15 +32,15 @@ ActorId::ActorId( const QString& actorid )
         return;
     }
 
-    int index = path.lastIndexOf( '/', 1 );
-    if ( index == -1 )
+    int index = path.lastIndexOf( '/' );
+    if ( index == -1 || index == 0 )
     {
         m_folk = QString::null;
         return;
     }
 
     if ( index == path.length() - 1 )
-        m_group = path.mid(1);
+        m_group = path.mid(1, path.length() - 2);
     else
     {
         m_group = path.mid(1, index - 1);
@@ -68,6 +68,8 @@ QString ActorId::toString() const
     QString path = "/" + m_group;
     if ( !m_actor.isEmpty() )
         path += "/" + m_actor;
+    else
+        path += "/";
     url.setPath( path );
 
     return url.toString();

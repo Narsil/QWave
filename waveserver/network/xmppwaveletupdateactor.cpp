@@ -6,20 +6,22 @@
 #include "actor/recvxmpp.h"
 #include "actor/timeout.h"
 #include "actor/recvsignal.h"
-#include "model/appliedwaveletdelta.h"
 #include <QXmlStreamWriter>
 
 #define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
 #define XMPPLOG(msg) { log(msg, __FILE__, __LINE__); }
 
-XmppWaveletUpdateActor::XmppWaveletUpdateActor(XmppVirtualConnection* con, const QString& waveletName, const AppliedWaveletDelta& waveletDelta)
-        : XmppActor(con), m_waveletName( waveletName ), m_base64( waveletDelta.toBase64() )
+XmppWaveletUpdateActor::XmppWaveletUpdateActor(XmppVirtualConnection* con, PBMessage<messages::WaveletUpdate>* event)
+        : XmppActor(con)
 {
+    m_waveletName = QString::fromStdString( event->wavelet_name() );
+    QByteArray ba( event->applied_delta().data(), event->applied_delta().length() );
+    m_base64 = QString::fromAscii( ba.toBase64() );
 }
 
 void XmppWaveletUpdateActor::execute()
 {
-    qDebug("EXECUTE");
+    qDebug("EXECUTE WaveletUpdateActor");
 
     BEGIN_EXECUTE;
 

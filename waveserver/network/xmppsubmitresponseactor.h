@@ -2,13 +2,18 @@
 #define XMPPSUBMITRESPONSEACTOR_H
 
 #include <QString>
-#include "xmppstanza.h"
-#include "xmppactor.h"
-#include "model/signedwaveletdelta.h"
+#include "network/xmppstanza.h"
+#include "network/xmppactor.h"
+#include "protocol/common.pb.h"
+#include "model/waveurl.h"
 
 class LocalWavelet;
 class AppliedWaveletDelta;
 
+/**
+  * Handles an incoming submit-request and forwards it to a LocalWavelet instance.
+  * In addition it checks and verifies the signatures for the submitted delta.
+  */
 class XmppSubmitResponseActor : public XmppActor
 {
 public:
@@ -18,10 +23,10 @@ protected:
     virtual void execute();
 
 private:
+    qint64 m_id;
     XmppStanza m_stanza;
-    LocalWavelet* m_wavelet;
-    SignedWaveletDelta m_delta;
-    const AppliedWaveletDelta* m_applied;
+    WaveUrl m_url;
+    protocol::ProtocolSignedDelta m_signedDelta;
 };
 
 #endif // XMPPSUBMITRESPONSEACTOR_H

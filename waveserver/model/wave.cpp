@@ -11,7 +11,6 @@ Wave::Wave(WaveFolk* folk, const QString& domain, const QString& id)
 
 Wave::~Wave()
 {
-//    s_waves->remove(m_domain + "!" + m_id);
 }
 
 ActorGroup* Wave::group( const QString& groupId, bool createOnDemand )

@@ -10,6 +10,9 @@
 #include "model/appliedwaveletdelta.h"
 #include "waveurl.h"
 #include "actor/actorgroup.h"
+#include "actor/recvcriticalsection.h"
+#include "actor/pbmessage.h"
+#include "protocol/messages.pb.h"
 
 class Wave;
 class WaveletDocument;
@@ -22,6 +25,11 @@ namespace protocol
 {
     class ProtocolWaveletDelta;
     class ProtocolSignedDelta;
+}
+
+namespace waveserver
+{
+    class ProtocolWaveletUpdate;
 }
 
 class Wavelet : public ActorGroup
@@ -57,6 +65,7 @@ public:
       */
     QByteArray hash() const { return m_hash; }
 
+    // TBR
     const AppliedWaveletDelta* delta( int version ) { return &(m_deltas[version]); }
 
     /**
@@ -68,10 +77,70 @@ public:
     bool checkHashedVersion( const protocol::ProtocolWaveletDelta& protobufDelta, QString* errorMessage );
     bool checkHashedVersion( const WaveletDelta& clientDelta, QString* errorMessage );
 
-    void subscribe( ClientConnection* connection );
-    void unsubscribe( ClientConnection* connection );
+    CriticalSection* criticalSection() { return &m_criticalSection; }
 
 protected:
+    /**
+      * Abstract base class for actors.
+      */
+    class WaveletActor : public Actor
+    {
+    public:
+       WaveletActor( Wavelet* wavelet );
+
+   protected:
+       void log( const char* error, const char* file, int line );
+       void log( const QString& error, const char* file, int line );
+       void logErr( const char* error, const char* file, int line );
+       void logErr( const QString& error, const char* file, int line );
+
+       Wavelet* m_wavelet;
+
+    private:
+       static qint64 s_id;
+    };
+
+    /**
+      * Initializes the wavelet from the store.
+      */
+    class InitActor : public WaveletActor
+    {
+    public:
+        InitActor( Wavelet* wavelet);
+
+    protected:
+        void execute();
+
+    private:
+        qint64 m_msgId;
+    };
+
+protected:
+    /**
+      * Called from 'apply' when a participant has been added.
+      */
+    virtual void onAddParticipant( const JID& jid ) = 0;
+    /**
+      * Called from 'apply' when a participant has been removed.
+      */
+    virtual void onRemoveParticipant( const JID& jid ) = 0;
+
+    /**
+      * This function must be called when a local participant is removed from the wavelet.
+      * It unsubscribes all client connections.
+      */
+    void unsubscribeAllClients( const QString& participant );
+    /**
+      * This function must be called when a local participant is added to the wavelet.
+      * It sends a messages::WaveletNotify message to all client connections of this participant.
+      */
+    void notifyAllClients( const QString& participant );
+
+    virtual void customEvent( QEvent* event );
+
+    /**
+      * A list of all wavelet documents in this wavelet.
+      */
     QHash<QString,WaveletDocument*> m_documents;
     /**
       * The JIDs of all participants in this wave.
@@ -82,12 +151,39 @@ protected:
       */
     QString m_lastDigest;
 
-    void commit( const AppliedWaveletDelta& appliedDelta, bool restore );
-    bool transform( WaveletDelta& clientDelta, QString* errorMessage, bool* ok );
+    /**
+      * Tests and translates a delta. The result can be applied to the wavelet. This function does not change the wavelet itself.
+      * If the returned delta is null, some error has occured and the delta must be rejected.
+      */
+    AppliedWaveletDelta process( const protocol::ProtocolSignedDelta* signed_delta, const protocol::ProtocolAppliedWaveletDelta* applied_delta, QSet<QString>* addedLocalUsers, QSet<QString>* removedLocalUser, QString* errorMessage );
+    /**
+      * Applies the delta to the wavelet. This does NOT persist the change. It just applied it to the in-memory representation of the wave.
+      */
+    bool apply( const AppliedWaveletDelta& appliedDelta, QString* errorMessage );
 
 private:
+    /**
+      * Transforms a delta such that it can be applied to the wavelet.
+      */
+    bool transform( WaveletDelta& clientDelta, QString* errorMessage, bool* ok );
+
+    /**
+      * Subscribes or unsubscribes a client connection.
+      */
+    class SubscribeActor : public WaveletActor
+    {
+    public:
+        SubscribeActor( Wavelet* wavelet, const PBMessage<messages::SubscribeWavelet>& message);
+
+    protected:
+        void execute();
+
+        PBMessage<messages::SubscribeWavelet> m_message;
+    };
+
     void broadcast( const AppliedWaveletDelta& delta );
     void broadcastDigest(const WaveletDelta& digest );
+    void toWaveletUpdate( waveserver::ProtocolWaveletUpdate* update );
 
     /**
       * The latest version.
@@ -101,15 +197,20 @@ private:
     QString m_domain;
     QString m_id;
     /**
-      * A set of ClientConnection Ids.
+      * A set of ClientConnection ActorIds.
       */
-    QSet<QString> m_subscribers;
+    QSet<QByteArray> m_contentSubscribers;
+    /**
+      * A set of ClientConnection ActorIds.
+      */
+    QSet<QByteArray> m_indexSubscribers;
     /**
       * History of all transformed and applied deltas.
       * The position in this array reflects the version number. Since one delta can span multiple versions
       * it is possible that some entries in this list are 0.
       */
     QList<AppliedWaveletDelta> m_deltas;
+    CriticalSection m_criticalSection;
 };
 
 #endif // WAVELET_H

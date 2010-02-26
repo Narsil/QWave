@@ -19,6 +19,8 @@ RPC::RPC(QTcpSocket* socket, QObject* parent)
 
 RPC::~RPC()
 {
+    if ( m_socket )
+        delete m_socket;
 }
 
 void RPC::open(const QString& host, quint16 port)

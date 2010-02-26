@@ -6,11 +6,13 @@
 #include "actor/recvsignal.h"
 #include "actor/recvxmpp.h"
 #include "actor/timeout.h"
+#include "actor/pbmessage.h"
 #include "network/servercertificate.h"
-#include "model/waveurl.h"
 #include "model/wave.h"
 #include "model/remotewavelet.h"
 #include "model/certificatestore.h"
+#include "model/wavefolk.h"
+#include "protocol/messages.pb.h"
 #include <QXmlStreamWriter>
 
 #define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
@@ -35,12 +37,12 @@ void XmppWaveletUpdateResponseActor::execute()
         XmppTag* update = item ? item->child("wavelet-update") : 0;
         if ( !update ) { XMPPERROR("Malformed history response. Missing wavelet-update."); }
 
-        WaveUrl url( update->attribute("wavelet-name") );
-        if ( url.isNull() ) { XMPPERROR("Malformed wavelet name " + url.toString() ); }
+        m_url = WaveUrl( update->attribute("wavelet-name") );
+        if ( m_url.isNull() ) { XMPPERROR("Malformed wavelet name " + m_url.toString() ); }
 
-        Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), true );
+        Wave* wave = Wave::wave( m_url.waveDomain(), m_url.waveId(), true );
         if ( !wave ) { XMPPERROR("Unknown wave"); }
-        Wavelet* w = wave->wavelet( url.waveletDomain(), url.waveletId(), true );
+        Wavelet* w = wave->wavelet( m_url.waveletDomain(), m_url.waveletId(), true );
         if ( !w ) { XMPPERROR("Unknown wavelet"); }
         if ( !w->isRemote() ) { XMPPERROR("Wavelet update requests for local wavelets cannot be accepted"); }
         m_wavelet = dynamic_cast<RemoteWavelet*>(w);
@@ -63,7 +65,7 @@ void XmppWaveletUpdateResponseActor::execute()
             m_deltas.append( d );
         }
 
-        // TODO: What about a comit notice?
+        // TODO: What about a commit notice?
     }
 
     // Wait until the connection is ready
@@ -257,12 +259,11 @@ void XmppWaveletUpdateResponseActor::execute()
 
         XMPPLOG(QString("Applying delta at version %1").arg( m_delta.signedDelta().delta().version().version ) );
 
-        // Apply the delta to the wavelet
-        {
-            QString err;
-            bool ok = m_wavelet->apply( m_delta, &err );
-            if ( !ok ) { XMPPERROR("Error applying delta: " + err ); }
-        }
+        PBMessage<messages::RemoteWaveletUpdate>* update = new PBMessage<messages::RemoteWaveletUpdate>( WaveFolk::actorId( m_url ) );
+        update->set_wavelet_name( m_url.toString().toStdString() );
+        m_delta.toProtobuf( update->mutable_applied_delta() );
+        post( update );
+
     }
 
     qDebug("Everthing has been applied");

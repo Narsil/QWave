@@ -1,9 +1,8 @@
 #include "clientconnection.h"
 #include "clientactorfolk.h"
 #include "clientsubmitrequestactor.h"
+#include "clientindexwaveactor.h"
 #include "network/rpc.h"
-#include "network/xmppcomponentconnection.h"
-#include "network/xmppvirtualconnection.h"
 #include "protocol/common.pb.h"
 #include "protocol/waveclient-rpc.pb.h"
 #include "network/converter.h"
@@ -15,7 +14,7 @@
 #include "model/remotewavelet.h"
 #include "model/participant.h"
 #include "app/settings.h"
-#include "persistence/commitlog.h"
+#include "model/wavefolk.h"
 
 #include <QTcpSocket>
 #include <QByteArray>
@@ -26,20 +25,9 @@
 #include <sstream>
 #include <string>
 
-QMultiHash<QString,ClientConnection*>* ClientConnection::s_connectionsByParticipant = 0;
-QHash<QString,ClientConnection*>* ClientConnection::s_connectionsById = 0;
-
 ClientConnection::ClientConnection(QTcpSocket* socket, ClientActorFolk* parent)
-        : ActorGroup( QUuid::createUuid().toString(), parent), m_participant(0), m_digestVersion(0)
+        : ActorGroup( QUuid::createUuid().toString(), parent), m_digestVersion(0), m_waveletsOpened( false )
 {
-//    m_id = QUuid::createUuid().toString();
-
-    if ( s_connectionsByParticipant == 0 )
-        s_connectionsByParticipant = new QMultiHash<QString,ClientConnection*>();
-    if ( s_connectionsById == 0 )
-        s_connectionsById = new QMultiHash<QString,ClientConnection*>();
-    (*s_connectionsById)[ groupId() ] = this;
-
     m_rpc = new RPC(socket, this);
     bool check = connect( m_rpc, SIGNAL(offline()), SLOT(getOffline()));
     Q_ASSERT(check);
@@ -51,9 +39,8 @@ ClientConnection::ClientConnection(QTcpSocket* socket, ClientActorFolk* parent)
 
 ClientConnection::~ClientConnection()
 {
-    if ( m_participant )
-        s_connectionsByParticipant->remove( m_participant->toString(), this );
-    s_connectionsById->remove( groupId() );
+    qDebug("DELETE ClientConnection");
+    // TODO: unsubscribe all wavelets
 }
 
 void ClientConnection::messageReceived(const QString& methodName, const QByteArray& data)
@@ -61,8 +48,12 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
     if ( methodName == "waveserver.ProtocolOpenRequest" )
     {
         waveserver::ProtocolOpenRequest open;
-        open.ParseFromArray(data.constData(), data.length());
-        // TODO: Check for parsing errors
+        if ( !open.ParseFromArray(data.constData(), data.length()) )
+        {
+            qDebug("Malformed request");
+            getOffline();
+            return;
+        }
 
         qDebug("msg<< %s", open.DebugString().data());
 
@@ -83,7 +74,7 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         }
 
         // No participant or a different one than before? -> not allowed
-        if ( m_participant && m_participant->toString() != participantId )
+        if ( !m_participant.isNull() && m_participant != participantId )
         {
             qDebug("Cannot change user for open connection");
             getOffline();
@@ -91,167 +82,66 @@ void ClientConnection::messageReceived(const QString& methodName, const QByteArr
         }
 
         // This is the first time to encounter the JID of our client?
-        if ( !m_participant )
+        if ( m_participant.isNull() )
         {
-            m_participant = Participant::participant( participantId, true );
-            s_connectionsByParticipant->insert( m_participant->toString(), this );
+            m_participant = participantId;
         }
 
         QString waveId = QString::fromStdString( open.wave_id() );
-
         if ( waveId == "!indexwave" )
         {
-            // Send a digest for all waves in which the user participates
-            foreach( Wavelet* wavelet, m_participant->wavelets() )
-            {
-                this->sendIndexUpdate( wavelet, wavelet->initialDigest() );
-            }
+            new ClientIndexWaveActor( this );
             return;
         }
+        m_waveletsOpened = true;
 
-        for( int w = 0; w < open.wavelet_id_prefix_size(); ++w )
+        for( int i = 0; i < open.wavelet_id_prefix_size(); ++i )
         {
-            QString waveletId = QString::fromStdString( open.wavelet_id_prefix(w) );
-            int index = waveId.indexOf( '!' );
-            if ( index == -1 )
+            QString waveletId = QString::fromStdString( open.wavelet_id_prefix(i) );
+
+            int index1 = waveId.indexOf('!');
+            int index2 = waveletId.indexOf('!');
+            if ( index1 == -1 || index2 == -1 )
+            {
+                qDebug("Malformed wave id or wavelet id");
+                getOffline();
+                return;
+            }
+
+            WaveUrl url( waveId.left(index1), waveId.mid(index1+1), waveletId.left(index2), waveletId.mid(index2+1) );
+            if ( url.isNull() )
             {
                 qDebug("Malformed wave id");
                 getOffline();
                 return;
             }
-            QString waveDomain = waveId.left(index);
-            waveId = waveId.mid( index + 1 );
-            index = waveletId.indexOf( '!' );
-            if ( index == -1 )
+
+            // Subscribe to this wavelet
+            PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( WaveFolk::actorId( url ) );
+            subscribe->setCreateOnDemand( true );
+            subscribe->set_content( true );
+            subscribe->set_index( true );
+            subscribe->set_subscribe( true );
+            subscribe->set_actor_id( actorId().toString().toStdString() );
+            bool ok = post( subscribe );
+            if ( !ok )
             {
-                qDebug("Malformed wavelet id");
+                qDebug("Could not subscribe to wavelet");
                 getOffline();
                 return;
             }
-            QString waveletDomain = waveletId.left(index);
-            waveletId = waveletId.mid( index + 1 );
-
-            WaveUrl url( waveDomain, waveId, waveletDomain, waveletId );
-            Wave* wave = Wave::wave( waveDomain, waveId, (waveDomain == domain()) );
-            if ( !wave )
-            {
-                qDebug("Could not find or create wave %s", url.toString().toAscii().constData() );
-                continue;
-            }
-            Wavelet* wavelet = wave->wavelet( waveletDomain, waveletId, (waveletDomain == domain()) );
-            if ( !wavelet )
-            {
-                qDebug("Could not find or create wavelet %s", url.toString().toAscii().constData() );
-                continue;
-            }
-
-            wavelet->subscribe(this);
         }
     }
     else if ( methodName == "waveserver.ProtocolSubmitRequest" )
     {
         new ClientSubmitRequestActor( this, data );
-//        waveserver::ProtocolSubmitRequest update;
-//        update.ParseFromArray(data.constData(), data.length());
-//        qDebug("msg<< %s", update.DebugString().data());
-//
-//        // Write it to the commit log
-//        CommitLog::commitLog()->write(update);
-//
-//        QString waveletId = QString::fromStdString( update.wavelet_name() );
-//
-//        WaveUrl url( waveletId );
-//        if ( url.isNull() )
-//        {
-//            qDebug("Malformed wave url");
-//            sendSubmitResponse( 0, 0, "Malformed wave url");
-//            return;
-//        }
-//
-//        // Find the wave
-//        Wave* wave = Wave::wave( url.waveDomain(), url.waveId(), (url.waveDomain() == domain()) );
-//        if ( !wave )
-//        {
-//            qDebug("Could not create wave");
-//            sendSubmitResponse( 0, 0, "Could not create wave");
-//            return;
-//        }
-//
-//        // If the wavelet does not exist -> create it (but only if it is a local wavelet)
-//        Wavelet* wavelet = wave->wavelet( url.waveletDomain(), url.waveletId(), (url.waveletDomain() == domain()) );
-//        if ( !wavelet )
-//        {
-//            qDebug("Could not create wavelet");
-//            sendSubmitResponse( 0, 0, "Could not create wavelet");
-//            return;
-//        }
-//
-//        if ( wavelet->isRemote() )
-//        {
-//            // Is the delta applicable? If not we can reject it right now
-//            QString err = "";
-//            if ( !wavelet->checkHashedVersion( update.delta(), &err ) )
-//            {
-//                qDebug("Could not apply delta %s. Delta is not sent to remote server.", err.toAscii().constData() );
-//                sendSubmitResponse( 0, 0, err );
-//                return;
-//            }
-//
-//            // Send the delta to all remote subscribers (if XMPP is enabled)
-//            XmppComponentConnection* comcon = XmppComponentConnection::connection();
-//            if ( !comcon )
-//            {
-//                qDebug("XMPP not configured. No access to remote wavelets");
-//                sendSubmitResponse( 0, 0, "XMPP not configured. No access to remote wavelets");
-//                return;
-//            }
-//            XmppVirtualConnection* con = comcon->virtualConnection( wavelet->domain() );
-//            if ( !con )
-//            {
-//                qDebug("XMPP failure. No access to remote wavelets");
-//                sendSubmitResponse( 0, 0, "XMPP failure. No access to remote wavelets");
-//                return;
-//            }
-//
-//            // Send a submit-request
-//            con->sendSubmitRequest( url, update.delta() );
-//
-//            // TODO: Queue a job which waits for the response
-//            return;
-//        }
-//
-//        Q_ASSERT( wavelet->isLocal() );
-//
-//        LocalWavelet* localWavelet = dynamic_cast<LocalWavelet*>(wavelet);
-//        // Apply the delta
-//        QString err = "";
-//        int version = localWavelet->apply( SignedWaveletDelta( update.delta() ), &err );
-//        if ( !err.isEmpty() || version < 0 )
-//        {
-//            qDebug("Could not apply delta: %s", err.toAscii().constData() );
-//            sendSubmitResponse( 0, 0, err );
-//            return;
-//        }
-//
-//        const AppliedWaveletDelta* applied = wavelet->delta(version - 1);
-//        Q_ASSERT(applied);
-//        // Send a response
-//        sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
     }
 }
 
-void ClientConnection::sendSubmitResponse( qint32 operationsApplied, const WaveletDelta::HashedVersion* hashedVersionAfterApplication, const QString& errorMessage )
+void ClientConnection::sendFailedSubmitResponse( const QString& errorMessage )
 {
     waveserver::ProtocolSubmitResponse response;
-    response.set_operations_applied( operationsApplied );
-    if ( !errorMessage.isNull() )
-        response.set_error_message( errorMessage.toStdString() );
-    if ( hashedVersionAfterApplication )
-    {
-        protocol::ProtocolHashedVersion* version = response.mutable_hashed_version_after_application();
-        version->set_history_hash( hashedVersionAfterApplication->hash.data(), hashedVersionAfterApplication->hash.length() );
-        version->set_version( hashedVersionAfterApplication->version );
-    }
+    response.set_error_message( errorMessage.toStdString() );
 
     qDebug("SubmitResponse>> %s", response.DebugString().data());
 
@@ -271,26 +161,8 @@ void ClientConnection::sendSubmitResponse( const waveserver::ProtocolSubmitRespo
     m_rpc->send("waveserver.ProtocolSubmitResponse", buffer.constData(), buffer.length());
 }
 
-void ClientConnection::sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedWaveletDelta>& deltas )
+void ClientConnection::sendWaveletUpdate( const waveserver::ProtocolWaveletUpdate& update )
 {
-    // Do nothing if there is nothing to send
-    if ( deltas.count() == 0 )
-        return;
-
-    waveserver::ProtocolWaveletUpdate update;
-    update.set_wavelet_name( wavelet->url().toString().toStdString() );
-    update.mutable_resulting_version()->set_version( deltas.last().resultingVersion().version );
-    QByteArray resultingHash = deltas.last().resultingVersion().hash;
-    update.mutable_resulting_version()->set_history_hash( resultingHash.constData(), resultingHash.length() );
-    for( int i = 0; i < deltas.count(); ++i )
-    {
-        const AppliedWaveletDelta& appliedDelta = deltas[i];
-        if ( appliedDelta.isNull() )
-            continue;
-        protocol::ProtocolWaveletDelta* delta = update.add_applied_delta();
-        Converter::convert( delta, appliedDelta.transformedDelta() );
-    }
-
     qDebug("WaveletUpdate>> %s", update.DebugString().data());
 
     QByteArray buffer( update.ByteSize(), 0 );
@@ -299,25 +171,26 @@ void ClientConnection::sendWaveletUpdate( Wavelet* wavelet, const QList<AppliedW
     m_rpc->send("waveserver.ProtocolWaveletUpdate", buffer.constData(), buffer.length());
 }
 
-void ClientConnection::sendIndexUpdate(Wavelet* wavelet, const WaveletDelta& indexDelta)
+void ClientConnection::sendIndexUpdate(const QString& waveletName, protocol::ProtocolWaveletDelta* delta)
 {
-    // Fix the version number and hash
-    WaveletDelta sendDelta( indexDelta );
-    sendDelta.version().version = m_digestVersion;
-    sendDelta.version().hash = m_digestHash;
+    WaveUrl wurl( waveletName );
+    Q_ASSERT( !wurl.isNull() );
+
+    // Set the digest version and hash
+    delta->mutable_hashed_version()->set_history_hash( m_digestHash.constData(), m_digestHash.length() );
+    delta->mutable_hashed_version()->set_version( m_digestVersion );
 
     // TODO: Building the indexwave ID is very strange with respect to the domain used
     QUrl url;
     url.setScheme("wave");
-    url.setHost(wavelet->domain() );
-    url.setPath( "/!indexwave/" + wavelet->wave()->id() );
+    url.setHost( wurl.waveletDomain() );
+    url.setPath( "/!indexwave/" + wurl.waveId() );
+
     waveserver::ProtocolWaveletUpdate update;
     update.set_wavelet_name( url.toString().toStdString() );
     update.mutable_resulting_version()->set_version( ++m_digestVersion );
     update.mutable_resulting_version()->set_history_hash( m_digestHash.constData(), m_digestHash.length() );
-
-    protocol::ProtocolWaveletDelta* delta = update.add_applied_delta();
-    Converter::convert( delta, sendDelta );
+    update.add_applied_delta()->MergeFrom( *delta );
 
     qDebug("Index WaveletUpdate>> %s", update.DebugString().data());
 
@@ -337,26 +210,35 @@ void ClientConnection::networkError()
     this->deleteLater();
 }
 
-ClientConnection* ClientConnection::connectionById( const QString& id )
-{
-    if ( s_connectionsById == 0 )
-        return 0;
-    return (*s_connectionsById)[id];
-}
-
-QList<ClientConnection*> ClientConnection::connectionsByParticipant( const QString& participant )
-{
-    QList<ClientConnection*> result;
-    if ( s_connectionsByParticipant )
-    {
-        QMultiHash<QString,ClientConnection*>::iterator it = s_connectionsByParticipant->find( participant );
-        for( ; it != s_connectionsByParticipant->end() && it.key() == participant; ++it )
-            result.append(*it);
-    }
-    return result;
-}
-
 QString ClientConnection::domain() const
 {
     return Settings::settings()->domain();
+}
+
+void ClientConnection::customEvent( QEvent* event )
+{
+    PBMessage<waveserver::ProtocolWaveletUpdate>* update = dynamic_cast<PBMessage<waveserver::ProtocolWaveletUpdate>*>(event);
+    if ( update )
+    {
+        sendWaveletUpdate( *update );
+        return;
+    }
+    PBMessage<messages::WaveletDigest>* digest = dynamic_cast<PBMessage<messages::WaveletDigest>*>(event);
+    if ( digest )
+    {
+        sendIndexUpdate( QString::fromStdString( digest->wavelet_name() ), digest->mutable_digest_delta() );
+        return;
+    }
+    PBMessage<messages::WaveletNotify>* notify = dynamic_cast<PBMessage<messages::WaveletNotify>*>(event);
+    if ( notify )
+    {
+        // There is a new wavelet in which the connected user is a participant -> subscribe to it to receive updates and digest
+        PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( notify->sender() );
+        subscribe->set_subscribe( true );
+        subscribe->set_index( true );
+        subscribe->set_actor_id( actorId().toString().toStdString() );
+        subscribe->set_content( m_waveletsOpened );
+        post( subscribe );
+        return;
+    }
 }

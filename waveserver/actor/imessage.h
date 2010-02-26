@@ -14,7 +14,8 @@ public:
     enum EventType
     {
         Message = QEvent::User,
-        Create = QEvent::User + 1
+        Create = QEvent::User + 1,
+        EnterCriticalSection = QEvent::User + 2
     };
 
     IMessage() : QEvent( (QEvent::Type)Message ), m_id(-1), m_createOnDemand(false) { }
