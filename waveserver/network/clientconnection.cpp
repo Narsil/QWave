@@ -12,9 +12,9 @@
 #include "model/waveurl.h"
 #include "model/localwavelet.h"
 #include "model/remotewavelet.h"
-#include "model/participant.h"
 #include "app/settings.h"
 #include "model/wavefolk.h"
+#include "model/jid.h"
 
 #include <QTcpSocket>
 #include <QByteArray>
