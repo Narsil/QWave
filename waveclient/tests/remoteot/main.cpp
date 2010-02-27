@@ -28,6 +28,7 @@
     void cleanupTestCase();
 
 private:
+    Settings* settings;
     Environment* m_environment1;
     Environment* m_environment2;
     // Used to make blip names unique
@@ -41,15 +42,11 @@ void RemoteOT::initTestCase()
     // Create a random name for use in the blip
     m_rand = QString("b%1b").arg( QDateTime::currentDateTime().toTime_t() );
     m_wavename = QString("w+%1").arg( QDateTime::currentDateTime().toTime_t() );
-    // m_wavename = "w+testwave";
 
     // Connect JoeDoe to the server
     m_environment1 = new Environment("remoteot1");
-    Settings* settings = m_environment1->settings();
-    settings->setServerName("localhost");
-    settings->setServerPort(9876);
-    // settings->setServerPort(9123);
-    settings->setUserAddress( "joedoe@" + settings->serverName() );
+    settings = m_environment1->settings();
+    settings->setUserAddress( "joedoe@" + settings->waveDomain() );
     settings->setUserName("JoeDoe");
     m_environment1->configure();
 
@@ -64,10 +61,7 @@ void RemoteOT::initTestCase()
     // Connect Jane to the server
     m_environment2 = new Environment("remoteot2");
     settings = m_environment2->settings();
-    settings->setServerName("localhost");
-    settings->setServerPort(9876);
-    // settings->setServerPort(9123);
-    settings->setUserAddress( "jane@" + settings->serverName() );
+    settings->setUserAddress( "jane@" + settings->waveDomain() );
     settings->setUserName("Jane");
     m_environment2->configure();
 
@@ -80,7 +74,7 @@ void RemoteOT::initTestCase()
         QFAIL("Connection error");
 
     // Create a wave on behalf of user 1
-    Wave* wave1 = m_environment1->createWave( m_environment1->networkAdapter()->serverName(), m_wavename);
+    Wave* wave1 = m_environment1->createWave( settings->waveDomain(), m_wavename);
     // Add the new wave to the inbox.
     m_environment1->inbox()->addWave(wave1);
     // Get the root wavelet
@@ -156,7 +150,7 @@ void RemoteOT::initTestCase()
         QTest::qWait(250);
 
     // Open the wave for user 2
-    Wave* wave2 = m_environment2->createWave( m_environment1->networkAdapter()->serverName(), m_wavename);
+    Wave* wave2 = m_environment2->createWave( settings->waveDomain(), m_wavename);
     // Add the new wave to the inbox.
     m_environment2->inbox()->addWave(wave2);
     // Get the root wavelet
@@ -174,7 +168,7 @@ void RemoteOT::initTestCase()
 void RemoteOT::concurrentEdit()
 {
     // Get the wavelet for user1 we just created
-    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet1 = m_environment1->wave(settings->waveDomain(), m_wavename)->wavelet();
     // Write 'Hallo' to the blip
     DocumentMutation m1;
     m1.retain(5);
@@ -185,7 +179,7 @@ void RemoteOT::concurrentEdit()
     wavelet1->processor()->handleSend( m1, "b+" + m_rand + "1" );
 
     // Get the same wavelet for user2
-    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(settings->waveDomain(), m_wavename)->wavelet();
     // Concurrently write 'Welt' to the same blip
     DocumentMutation m2;
     m2.retain(5);
@@ -225,8 +219,8 @@ void RemoteOT::concurrentEdit()
 void RemoteOT::concurrentEdit2()
 {
     // Get the wavelets for both users
-    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
-    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet1 = m_environment1->wave(settings->waveDomain(), m_wavename)->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(settings->waveDomain(), m_wavename)->wavelet();
 
     int v1 = wavelet1->processor()->serverVersion();
     int v2 = wavelet2->processor()->serverVersion();
@@ -275,8 +269,8 @@ void RemoteOT::concurrentEdit2()
 void RemoteOT::concurrentEdit3()
 {
     // Get the wavelets for both users
-    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
-    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet1 = m_environment1->wave(settings->waveDomain(), m_wavename)->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(settings->waveDomain(), m_wavename)->wavelet();
 
     int v1 = wavelet1->processor()->serverVersion();
     int v2 = wavelet2->processor()->serverVersion();
@@ -349,8 +343,8 @@ void RemoteOT::concurrentEdit3()
 void RemoteOT::concurrentEdit4()
 {
     // Get the wavelets for both users
-    Wavelet* wavelet1 = m_environment1->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
-    Wavelet* wavelet2 = m_environment2->wave(m_environment1->networkAdapter()->serverName(), m_wavename)->wavelet();
+    Wavelet* wavelet1 = m_environment1->wave(settings->waveDomain(), m_wavename)->wavelet();
+    Wavelet* wavelet2 = m_environment2->wave(settings->waveDomain(), m_wavename)->wavelet();
 
     int v1 = wavelet1->processor()->serverVersion();
     int v2 = wavelet2->processor()->serverVersion();
