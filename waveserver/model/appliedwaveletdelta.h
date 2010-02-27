@@ -25,8 +25,9 @@ public:
       * This is the original signed delta.
       */
     const SignedWaveletDelta& signedDelta() const { return m_signedDelta; }
-    const WaveletDelta::HashedVersion& resultingVersion() const;
+//    const WaveletDelta::HashedVersion& resultingVersion() const;
 
+    void setAppliedAt( qint64 version, const QByteArray& hash );
     const WaveletDelta::HashedVersion& appliedAt() const { return m_appliedAt; }
 
     bool hasTransformedDelta() const { return !m_transformedDelta.isNull(); }
@@ -50,7 +51,7 @@ public:
 private:
     bool m_null;
     SignedWaveletDelta m_signedDelta;
-    WaveletDelta::HashedVersion m_resultingVersion;
+//    WaveletDelta::HashedVersion m_resultingVersion;
     qint64 m_applicationTime;
     int m_operationsApplied;
     /**

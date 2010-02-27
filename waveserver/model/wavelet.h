@@ -68,7 +68,7 @@ public:
     /**
       * The resuling rolling hash of the current version.
       */
-    QByteArray hash() const { return m_hash; }
+    const QByteArray& hash() const { return m_hash; }
 
     // TBR
     const AppliedWaveletDelta* delta( int version ) { return &(m_deltas[version]); }

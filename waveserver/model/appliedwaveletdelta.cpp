@@ -1,10 +1,10 @@
 #include "appliedwaveletdelta.h"
 #include "protocol/common.pb.h"
-#include "protocol/waveclient-rpc.pb.h"
-#include "network/servercertificate.h"
+// #include "protocol/waveclient-rpc.pb.h"
+// #include "network/servercertificate.h"
 #include "network/converter.h"
 #include "signature.h"
-#include <openssl/sha.h>
+//#include <openssl/sha.h>
 
 AppliedWaveletDelta::AppliedWaveletDelta()
         : m_null(true), m_operationsApplied(0)
@@ -12,7 +12,7 @@ AppliedWaveletDelta::AppliedWaveletDelta()
 }
 
 AppliedWaveletDelta::AppliedWaveletDelta( const AppliedWaveletDelta& delta )
-        : m_null(delta.m_null), m_signedDelta( delta.m_signedDelta ), m_resultingVersion( delta.m_resultingVersion ), m_applicationTime( delta.m_applicationTime ), m_operationsApplied( delta.m_operationsApplied ), m_appliedAt( delta.m_appliedAt ), m_transformedDelta( delta.m_transformedDelta )
+        : m_null(delta.m_null), m_signedDelta( delta.m_signedDelta ) /*, m_resultingVersion( delta.m_resultingVersion )*/ , m_applicationTime( delta.m_applicationTime ), m_operationsApplied( delta.m_operationsApplied ), m_appliedAt( delta.m_appliedAt ), m_transformedDelta( delta.m_transformedDelta )
 {
 }
 
@@ -87,20 +87,26 @@ AppliedWaveletDelta AppliedWaveletDelta::fromBase64( const QString& base64, bool
     return AppliedWaveletDelta( &appliedDelta, ok );
 }
 
-const WaveletDelta::HashedVersion& AppliedWaveletDelta::resultingVersion() const
+//const WaveletDelta::HashedVersion& AppliedWaveletDelta::resultingVersion() const
+//{
+//    if ( !m_resultingVersion.hash.isNull() )
+//        return m_resultingVersion;
+//
+//    QByteArray ba2 = toBinary();
+//    ba2.prepend( m_signedDelta.delta().version().hash );
+//
+//    QByteArray hashBuffer( 32, 0 );
+//    SHA256( (const unsigned char*)ba2.constData(), ba2.length(), (unsigned char*)hashBuffer.data() );
+//    // Copy over the first 20 bytes
+//    ((AppliedWaveletDelta*)this)->m_resultingVersion.hash.resize(20);
+//    for( int i = 0; i < 20; ++i )
+//        ((AppliedWaveletDelta*)this)->m_resultingVersion.hash.data()[i] = hashBuffer.data()[i];
+//    ((AppliedWaveletDelta*)this)->m_resultingVersion.version = m_signedDelta.delta().version().version + m_operationsApplied;
+//    return m_resultingVersion;
+//}
+
+void AppliedWaveletDelta::setAppliedAt( qint64 version, const QByteArray& hash )
 {
-    if ( !m_resultingVersion.hash.isNull() )
-        return m_resultingVersion;
-
-    QByteArray ba2 = toBinary();
-    ba2.prepend( m_signedDelta.delta().version().hash );
-
-    QByteArray hashBuffer( 32, 0 );
-    SHA256( (const unsigned char*)ba2.constData(), ba2.length(), (unsigned char*)hashBuffer.data() );
-    // Copy over the first 20 bytes
-    ((AppliedWaveletDelta*)this)->m_resultingVersion.hash.resize(20);
-    for( int i = 0; i < 20; ++i )
-        ((AppliedWaveletDelta*)this)->m_resultingVersion.hash.data()[i] = hashBuffer.data()[i];
-    ((AppliedWaveletDelta*)this)->m_resultingVersion.version = m_signedDelta.delta().version().version + m_operationsApplied;
-    return m_resultingVersion;
+    m_appliedAt.hash = hash;
+    m_appliedAt.version = version;
 }

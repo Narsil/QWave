@@ -10,6 +10,7 @@
 #include "actor/recvpb.h"
 #include "actor/timeout.h"
 #include <QDateTime>
+#include <openssl/sha.h>
 
 Wavelet::Wavelet( Wave* wave, const QString& waveletDomain, const QString& waveletId )
     : ActorGroup( waveletDomain + "$" + waveletId, wave ), m_version(0), m_wave(wave), m_domain(waveletDomain), m_id(waveletId)
@@ -49,33 +50,42 @@ bool Wavelet::checkHashedVersion( const WaveletDelta& clientDelta, QString* erro
             errorMessage->append("Applying at invalid version number, i.e. version number is from the futur");
             return false;
         }
-        if ( m_deltas[clientVersion - 1].isNull() )
+        else if ( clientVersion == m_version )
+        {
+            if ( m_hash != clientDelta.version().hash )
+            {
+                errorMessage->append("History hash does not match");
+                return false;
+            }
+        }
+        else if ( m_deltas[clientVersion].isNull() )
         {
             errorMessage->append("Applying at invalid version number");
             return false;
         }
-        else if ( clientDelta.version().hash != m_deltas[clientVersion - 1].resultingVersion().hash )
+        else
         {
-            errorMessage->append("History hash does not match");
-            return false;
+            if ( m_deltas[clientVersion].appliedAt().isNull() )
+            {
+                if ( clientDelta.version().hash != m_deltas[clientVersion].signedDelta().delta().version().hash )
+                {
+                    errorMessage->append("History hash does not match");
+                    return false;
+                }
+            }
+            else
+            {
+                if ( clientDelta.version().hash != m_deltas[clientVersion].appliedAt().hash )
+                {
+                    errorMessage->append("History hash does not match");
+                    return false;
+                }
+            }
         }
     }
 
     return true;
 }
-
-//void Wavelet::subscribe( ClientConnection* connection )
-//{
-//    m_subscribers.insert( connection->groupId() );
-//
-//    // Send the history
-//    connection->sendWaveletUpdate( this, m_deltas );
-//}
-//
-//void Wavelet::unsubscribe( ClientConnection* connection )
-//{
-//    m_subscribers.remove( connection->groupId() );
-//}
 
 bool Wavelet::transform( WaveletDelta& clientDelta, QString* errorMessage, bool* ok )
 {
@@ -451,9 +461,19 @@ bool Wavelet::apply( const AppliedWaveletDelta& appliedDelta, QString* errorMess
     }
 
     int oldVersion = m_version;
+
+    // Build the bye stream over which the hash is computed
+    QByteArray ba2 = appliedDelta.toBinary();
+    ba2.prepend( m_hash );
+    // Compute the hash
+    QByteArray hashBuffer( 32, 0 );
+    SHA256( (const unsigned char*)ba2.constData(), ba2.length(), (unsigned char*)hashBuffer.data() );
+    // Copy over the first 20 bytes
+    m_hash.resize(20);
+    for( int i = 0; i < 20; ++i )
+        m_hash.data()[i] = hashBuffer.data()[i];
     // Update the hashed version
     m_version += appliedDelta.operationsApplied();
-    m_hash = appliedDelta.resultingVersion().hash;
 
     // For the intermediate versions (if any) there is no information.
     for( int v = oldVersion + 1; v < m_version; ++v )

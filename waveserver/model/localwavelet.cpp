@@ -154,8 +154,8 @@ void LocalWavelet::SubmitRequestActor::execute()
         PBMessage<messages::SubmitResponse>* response = new PBMessage<messages::SubmitResponse>( m_message.sender(), m_message.id() );
         response->set_operations_applied( m_appliedDelta.operationsApplied() );
         response->set_application_timestamp( m_appliedDelta.applicationTime() );
-        response->mutable_hashed_version_after_application()->set_history_hash( m_appliedDelta.resultingVersion().hash.constData(), m_appliedDelta.resultingVersion().hash.length() );
-        response->mutable_hashed_version_after_application()->set_version( m_appliedDelta.resultingVersion().version );
+        response->mutable_hashed_version_after_application()->set_history_hash( m_wavelet->hash().constData(), m_wavelet->hash().length() );
+        response->mutable_hashed_version_after_application()->set_version( m_wavelet->version() );
         bool ok = post( response );
         if ( !ok ) { LOG("Cout not send response to caller."); }
     }
