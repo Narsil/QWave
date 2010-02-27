@@ -95,7 +95,10 @@ bool Wavelet::transform( WaveletDelta& clientDelta, QString* errorMessage, bool*
     // These copies will be modified during OT
     QList<WaveletDelta> server;
     for( int v = clientDelta.version().version; v < m_deltas.count(); ++v )
-        server.append( m_deltas[v].signedDelta().delta() );
+        if ( m_deltas[v].hasTransformedDelta() )
+            server.append( m_deltas[v].transformedDelta() );
+        else
+            server.append( m_deltas[v].signedDelta().delta() );
 
     // Loop over all client operations and transform them
     for( int c = 0; c < clientDelta.operations().count(); ++c )
@@ -133,11 +136,13 @@ void Wavelet::broadcast( const AppliedWaveletDelta& delta )
         ActorId actorid( p );
         PBMessage<waveserver::ProtocolWaveletUpdate>* msg = new PBMessage<waveserver::ProtocolWaveletUpdate>( actorid );
         protocol::ProtocolWaveletDelta* pdelta = msg->add_applied_delta();
-        Converter::convert( pdelta, delta.signedDelta().delta() );
+        if ( delta.hasTransformedDelta() )
+            Converter::convert( pdelta, delta.transformedDelta() );
+        else
+            Converter::convert( pdelta, delta.signedDelta().delta() );
         msg->set_wavelet_name( url().toString().toStdString() );
-        msg->mutable_resulting_version()->set_version( delta.resultingVersion().version );
-        QByteArray ba =  delta.resultingVersion().hash;
-        msg->mutable_resulting_version()->set_history_hash( ba.constData(), ba.length() );
+        msg->mutable_resulting_version()->set_version( m_version );
+        msg->mutable_resulting_version()->set_history_hash( m_hash.constData(), m_hash.length() );
         post( msg );        
     }
 }
@@ -308,13 +313,16 @@ void Wavelet::toWaveletUpdate( waveserver::ProtocolWaveletUpdate* update )
     update->set_wavelet_name( url().toString().toStdString() );
     update->mutable_resulting_version()->set_version( m_version );
     update->mutable_resulting_version()->set_history_hash( m_hash.constData(), m_hash.length() );
+    if ( m_version == 0 )
+        return;
     protocol::ProtocolWaveletDelta* delta = update->add_applied_delta();
     delta->mutable_hashed_version()->set_version(0);
     delta->mutable_hashed_version()->set_history_hash( update->wavelet_name() );
+    delta->set_author( m_creator.toStdString() );
     int v = 0;
     foreach( QString p, m_participants )
     {
-        protocol::ProtocolWaveletOperation* op = delta->add_operation();
+        protocol::ProtocolWaveletOperation* op = delta->add_operation();        
         op->set_add_participant( p.toStdString() );
     }
     foreach( WaveletDocument* doc, m_documents.values() )
@@ -371,7 +379,7 @@ AppliedWaveletDelta Wavelet::process( const protocol::ProtocolSignedDelta* signe
         }
     }
 
-    // Construct a AppliedWaveletDelta
+    // Construct an AppliedWaveletDelta
     if ( applied_delta )
     {
         AppliedWaveletDelta appliedDelta( applied_delta, &ok );
@@ -381,7 +389,7 @@ AppliedWaveletDelta Wavelet::process( const protocol::ProtocolSignedDelta* signe
         return appliedDelta;
     }
 
-    // Construct a AppliedWaveletDelta
+    // Construct an AppliedWaveletDelta
     int operationsApplied = delta.operations().count();
     qint64 applicationTime = (qint64)(QDateTime::currentDateTime().toTime_t()) * 1000;
     AppliedWaveletDelta appliedDelta( signedDelta, applicationTime, operationsApplied );
@@ -395,6 +403,9 @@ AppliedWaveletDelta Wavelet::process( const protocol::ProtocolSignedDelta* signe
 
 bool Wavelet::apply( const AppliedWaveletDelta& appliedDelta, QString* errorMessage )
 {
+    if ( m_version == 0 )
+        m_creator = appliedDelta.signedDelta().delta().author();
+
     const WaveletDelta* delta = &appliedDelta.signedDelta().delta();
     if ( !appliedDelta.transformedDelta().isNull() )
         delta = &appliedDelta.transformedDelta();
@@ -441,7 +452,7 @@ bool Wavelet::apply( const AppliedWaveletDelta& appliedDelta, QString* errorMess
 
     int oldVersion = m_version;
     // Update the hashed version
-    m_version = appliedDelta.resultingVersion().version;
+    m_version += appliedDelta.operationsApplied();
     m_hash = appliedDelta.resultingVersion().hash;
 
     // For the intermediate versions (if any) there is no information.

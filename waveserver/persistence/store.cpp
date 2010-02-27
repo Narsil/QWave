@@ -17,8 +17,6 @@ Store::Store(const QString& id, StoreFolk* folk)
         messages::PersistWaveletUpdate update;
         update.ParseFromArray( ba.data(), ba.length() );
 
-        // update.PrintDebugString();
-
         if ( !writeToMemory( update ) )
         {
             qDebug("Failed to apply commit log");
@@ -166,13 +164,11 @@ bool Store::writeToMemory( const messages::PersistWaveletUpdate& update )
     m_wavelets[ name ] = w;
     for( int i = 0; i < update.add_user_size(); ++i )
     {
-        qDebug("ADDING user %s", update.add_user(i).data() );
         Participant* p = participant( update.add_user(i) );
         p->m_wavelets.insert( name );
     }
     for( int i = 0; i < update.remove_user_size(); ++i )
     {
-        qDebug("REMOVING user %s", update.add_user(i).data() );
         Participant* p = participant( update.remove_user(i) );
         p->m_wavelets.remove( name );
     }

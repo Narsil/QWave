@@ -45,6 +45,11 @@ public:
     virtual bool isRemote() const = 0;
     virtual bool isLocal() const = 0;
 
+    /**
+      * The JID of the user who sent the first delta for this wave.
+      */
+    QString creator() const { return m_creator; }
+
     Wave* wave() const { return m_wave; }
 
     QString firstRootBlipId() const;
@@ -194,7 +199,13 @@ private:
       */
     QByteArray m_hash;
     Wave* m_wave;
+    /**
+      * Wavelet domain.
+      */
     QString m_domain;
+    /**
+      * Wavelet ID.
+      */
     QString m_id;
     /**
       * A set of ClientConnection ActorIds.
@@ -210,7 +221,11 @@ private:
       * it is possible that some entries in this list are 0.
       */
     QList<AppliedWaveletDelta> m_deltas;
+    /**
+      * Used to synchronize actors. Only one is allowed to modify the wavelet at a time.
+      */
     CriticalSection m_criticalSection;
+    QString m_creator;
 };
 
 #endif // WAVELET_H
