@@ -29,6 +29,7 @@ public:
 
     const WaveletDelta::HashedVersion& appliedAt() const { return m_appliedAt; }
 
+    bool hasTransformedDelta() const { return !m_transformedDelta.isNull(); }
     /**
       * This is either the same as the signed delta or a transformation thereof.
       */
