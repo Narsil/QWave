@@ -4,9 +4,9 @@
 #include "xmppstanza.h"
 #include "app/settings.h"
 #include "actor/recvsignal.h"
-#include "model/wave.h"
-#include "model/wavelet.h"
-#include "model/appliedwaveletdelta.h"
+#include "actor/recvpb.h"
+#include "actor/timeout.h"
+#include "protocol/messages.pb.h"
 #include <QXmlStreamWriter>
 
 #define XMPPERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->xmppError(); TERMINATE(); }
@@ -20,6 +20,8 @@ XmppHistoryResponseActor::XmppHistoryResponseActor(XmppVirtualConnection* con, X
 void XmppHistoryResponseActor::execute()
 {
     qDebug("EXECUTE SignerResponse");
+
+    BEGIN_EXECUTE;
 
     // Analyze the request
     {
@@ -37,69 +39,77 @@ void XmppHistoryResponseActor::execute()
         if ( !ok || m_end < 0 ) { XMPPERROR("end-version missing"); }
 
         QString waveletName = history->attribute("wavelet-name");
-        WaveUrl url( waveletName );
-        if ( url.isNull() ) { XMPPERROR("Malformed wavelet-name"); }
-
-        Wave* wave = Wave::wave( url.waveDomain(), url.waveId() );
-        if ( !wave ) { XMPPERROR("Unknown wave"); }
-        m_wavelet = wave->wavelet( url.waveletDomain(), url.waveletId() );
-        if ( !m_wavelet ) { XMPPERROR("Unknown wavelet"); }
+        m_url = WaveUrl( waveletName );
+        if ( m_url.isNull() ) { XMPPERROR("Malformed wavelet-name"); }
     }
-
-    BEGIN_EXECUTE;
 
     // Wait until the connection is ready
     if ( !connection()->isReady() )
         yield( RecvSignal( connection(), SIGNAL(ready())) );
 
-    // Send the requestes certificate
+    // Send a query to the database asking for the deltas
     {
-        QString send;
-        QXmlStreamWriter writer( &send );
+        m_msgId = nextId();
+        PBMessage<messages::QueryWaveletUpdates>* query = new PBMessage<messages::QueryWaveletUpdates>( ActorId("store", m_url.toString() ), m_msgId );
+        query->setCreateOnDemand( true );
+        query->set_wavelet_name(m_url.toString().toStdString() );
+        query->set_start_version( m_start );
+        query->set_end_version( m_end );
+        bool ok = post( query );
+        if ( !ok ) { XMPPERROR("Internal server error. Could not talk to database."); }
+    }
 
-        writer.writeStartElement("iq");
-        writer.writeAttribute("type", "result" );
-        writer.writeAttribute("id", m_stanza.stanzaId() );
-        writer.writeAttribute("to", connection()->domain() );
-        writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
-        writer.writeStartElement("pubsub");
-        writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
-        writer.writeStartElement("items");
+    // Wait for a response from the database
+    yield( RecvPB<messages::QueryWaveletUpdatesResponse>(m_msgId) | Timeout(10000) );
+    if ( REASON(RecvPB<messages::QueryWaveletUpdatesResponse>) )
+    {
+        if ( !REASON->ok() ) { XMPPERROR("Data base reported an error:" + QString::fromStdString( REASON->error() )); }
 
-        m_end = qMin( m_wavelet->version(), m_end );
-        m_start = qMin( m_wavelet->version(), m_start );
-        for( qint64 v = m_start; v <= m_end; ++v )
+        // Send the requested deltas
         {
-            const AppliedWaveletDelta* delta = m_wavelet->delta(v);
-            if ( delta && !delta->isNull() )
+            QString send;
+            QXmlStreamWriter writer( &send );
+
+            writer.writeStartElement("iq");
+            writer.writeAttribute("type", "result" );
+            writer.writeAttribute("id", m_stanza.stanzaId() );
+            writer.writeAttribute("to", connection()->domain() );
+            writer.writeAttribute("from", Settings::settings()->xmppComponentName() );
+            writer.writeStartElement("pubsub");
+            writer.writeAttribute("xmlns", "http://jabber.org/protocol/pubsub" );
+            writer.writeStartElement("items");
+
+            for( i = 0; i < REASON->applied_delta_size(); ++i )
             {
-                QString str64 = delta->toBase64();
+                QByteArray ba = QByteArray::fromRawData( REASON->applied_delta(i).data(), REASON->applied_delta(i).length() );
+                QString str64 = QString::fromAscii( ba.toBase64() );
                 writer.writeStartElement("item");
                 writer.writeStartElement("applied-delta");
                 writer.writeCDATA( str64 );
                 writer.writeEndElement();
                 writer.writeEndElement();
             }
+
+            writer.writeStartElement("item");
+            writer.writeStartElement("commit-notice");
+            writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
+            writer.writeAttribute("version", QString::number(REASON->end_version()) );
+            writer.writeEndElement();
+            writer.writeEndElement();
+            writer.writeStartElement("item");
+            writer.writeStartElement("history-truncated");
+            writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
+            writer.writeAttribute("version", QString::number(REASON->end_version()) );
+            writer.writeEndElement();
+            writer.writeEndElement();
+            writer.writeEndElement();
+            writer.writeEndElement();
+            writer.writeEndElement();
+
+            connection()->send( send );
         }
-
-        writer.writeStartElement("item");
-        writer.writeStartElement("commit-notice");
-        writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
-        writer.writeAttribute("version", QString::number(m_wavelet->version()) );
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeStartElement("item");
-        writer.writeStartElement("history-truncated");
-        writer.writeAttribute("xmlns", "http://waveprotocol.org/protocol/0.2/waveserver" );
-        writer.writeAttribute("version", QString::number(m_end) );
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeEndElement();
-        writer.writeEndElement();
-
-        connection()->send( send );
     }
+    else { XMPPERROR("Timeout waiting for database"); }
 
     END_EXECUTE;
 }

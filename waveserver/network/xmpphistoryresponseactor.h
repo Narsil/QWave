@@ -1,10 +1,9 @@
 #ifndef XMPPHISTORYRESPONSEACTOR_H
 #define XMPPHISTORYRESPONSEACTOR_H
 
-#include "xmppstanza.h"
-#include "xmppactor.h"
-
-class Wavelet;
+#include "network/xmppstanza.h"
+#include "network/xmppactor.h"
+#include "model/waveurl.h"
 
 class XmppHistoryResponseActor : public XmppActor
 {
@@ -18,7 +17,9 @@ private:
     XmppStanza m_stanza;
     qint64 m_start;
     qint64 m_end;
-    Wavelet* m_wavelet;
+    WaveUrl m_url;
+    qint64 m_msgId;
+    int i;
 };
 
 #endif // XMPPHISTORYRESPONSEACTOR_H

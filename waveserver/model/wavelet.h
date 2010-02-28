@@ -71,7 +71,7 @@ public:
     const QByteArray& hash() const { return m_hash; }
 
     // TBR
-    const AppliedWaveletDelta* delta( int version ) { return &(m_deltas[version]); }
+    //const AppliedWaveletDelta* delta( int version ) { return &(m_deltas[version]); }
 
     /**
       * Checks that the version and history hash are ok. It does not do OT, i.e. the delta may still fail
@@ -171,6 +171,9 @@ private:
       * Transforms a delta such that it can be applied to the wavelet.
       */
     bool transform( WaveletDelta& clientDelta, QString* errorMessage, bool* ok );
+    void broadcast( const WaveletDelta& applied_delta );
+    void broadcastDigest(const WaveletDelta& digest );
+    void toWaveletUpdate( waveserver::ProtocolWaveletUpdate* update );
 
     /**
       * Subscribes or unsubscribes a client connection.
@@ -185,10 +188,6 @@ private:
 
         PBMessage<messages::SubscribeWavelet> m_message;
     };
-
-    void broadcast( const AppliedWaveletDelta& delta );
-    void broadcastDigest(const WaveletDelta& digest );
-    void toWaveletUpdate( waveserver::ProtocolWaveletUpdate* update );
 
     /**
       * The latest version.

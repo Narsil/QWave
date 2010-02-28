@@ -33,7 +33,7 @@ void ClientIndexWaveActor::execute()
     yield( RecvPB<messages::QueryParticipantWaveletsResponse>() | Timeout(10000) );
     if ( REASON( RecvPB<messages::QueryParticipantWaveletsResponse> ) )
     {
-        CLIENTLOG("Got submit response");
+        CLIENTLOG("Got query response");
         m_response.MergeFrom( *REASON );
     }
     else if ( REASON( Timeout ) ) { CLIENTERROR("Timeout waiting for response from store"); }
