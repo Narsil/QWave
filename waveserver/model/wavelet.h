@@ -219,7 +219,7 @@ private:
       * The position in this array reflects the version number. Since one delta can span multiple versions
       * it is possible that some entries in this list are 0.
       */
-    QList<AppliedWaveletDelta> m_deltas;
+    QList<WaveletDelta> m_deltas;
     /**
       * Used to synchronize actors. Only one is allowed to modify the wavelet at a time.
       */
