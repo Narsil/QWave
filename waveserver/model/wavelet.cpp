@@ -63,24 +63,10 @@ bool Wavelet::checkHashedVersion( const WaveletDelta& clientDelta, QString* erro
             errorMessage->append("Applying at invalid version number");
             return false;
         }
-        else
+        else if ( clientDelta.version().hash != m_deltas[clientVersion].version().hash )
         {
-            if ( m_deltas[clientVersion].appliedAt().isNull() )
-            {
-                if ( clientDelta.version().hash != m_deltas[clientVersion].signedDelta().delta().version().hash )
-                {
-                    errorMessage->append("History hash does not match");
-                    return false;
-                }
-            }
-            else
-            {
-                if ( clientDelta.version().hash != m_deltas[clientVersion].appliedAt().hash )
-                {
-                    errorMessage->append("History hash does not match");
-                    return false;
-                }
-            }
+            errorMessage->append("History hash does not match");
+            return false;
         }
     }
 
@@ -105,10 +91,7 @@ bool Wavelet::transform( WaveletDelta& clientDelta, QString* errorMessage, bool*
     // These copies will be modified during OT
     QList<WaveletDelta> server;
     for( int v = clientDelta.version().version; v < m_deltas.count(); ++v )
-        if ( m_deltas[v].hasTransformedDelta() )
-            server.append( m_deltas[v].transformedDelta() );
-        else
-            server.append( m_deltas[v].signedDelta().delta() );
+        server.append( m_deltas[v] );
 
     // Loop over all client operations and transform them
     for( int c = 0; c < clientDelta.operations().count(); ++c )
@@ -474,12 +457,12 @@ bool Wavelet::apply( const AppliedWaveletDelta& appliedDelta, QString* errorMess
 
     // For the intermediate versions (if any) there is no information.
     for( int v = oldVersion + 1; v < m_version; ++v )
-        m_deltas.append( AppliedWaveletDelta() );
+        m_deltas.append( WaveletDelta() );
     // Add the new delta to the list
-    m_deltas.append(appliedDelta);
+    m_deltas.append(*delta);
 
-    broadcast( appliedDelta.signedDelta().delta() );
-    broadcastDigest( appliedDelta.signedDelta().delta() );
+    broadcast( *delta );
+    broadcastDigest( *delta );
 
     return true;
 }
