@@ -99,16 +99,16 @@ message PersistAck {
  */
 message QueryWaveletUpdates {
     required string wavelet_name = 1;
-    required int32 start_version = 2;
-    required int32 end_version = 3;
+    required int64 start_version = 2;
+    required int64 end_version = 3;
 }
 
 /**
  * Sent in response to QueryWaveletUpdates.
  */
 message QueryWaveletUpdatesResponse {
-    required int32 start_version = 1;
-    required int32 end_version = 2;
+    required int64 start_version = 1;
+    required int64 end_version = 2;
     repeated bytes applied_delta = 3;
     required bool ok = 5;
     optional string error = 4;

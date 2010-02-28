@@ -84,12 +84,12 @@ void Store::customEvent( QEvent* event )
 
         WaveletUpdate* root = w;
         WaveletUpdate* last = 0;
-        WaveletUpdate* first = w;
+        WaveletUpdate* first = 0;
         while( w )
         {
-            if ( !last && w->applied_at_version() < queryWaveletUpdate->end_version() )
+            if ( w->applied_at_version() >= queryWaveletUpdate->end_version() )
                 last = w;
-            else if ( w->applied_at_version() < queryWaveletUpdate->start_version() )
+            if ( w->applied_at_version() < queryWaveletUpdate->start_version() )
                 break;
             first = w;
             w = w->prev();
@@ -97,19 +97,19 @@ void Store::customEvent( QEvent* event )
 
         PBMessage<messages::QueryWaveletUpdatesResponse>* response = new PBMessage<messages::QueryWaveletUpdatesResponse>( queryWaveletUpdate->sender(), queryWaveletUpdate->id() );
         response->set_ok(true);
-        w = first;
-        while( w != last )
-        {
-            response->add_applied_delta( w->applied_delta() );
-            w = w->next();
-        }
-        if ( first == 0 )
+        if ( first == 0 || first == last )
         {
             response->set_start_version( queryWaveletUpdate->start_version() );
             response->set_end_version( queryWaveletUpdate->start_version() );
         }
         else
         {
+            w = first;
+            while( w && w != last )
+            {
+                response->add_applied_delta( w->applied_delta() );
+                w = w->next();
+            }
             response->set_start_version( first->applied_at_version() );
             if ( last == 0 )
                 response->set_end_version( root->applied_at_version() + root->operations_applied() );

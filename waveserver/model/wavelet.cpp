@@ -139,17 +139,14 @@ bool Wavelet::transform( WaveletDelta& clientDelta, QString* errorMessage, bool*
     return true;
 }
 
-void Wavelet::broadcast( const AppliedWaveletDelta& delta )
+void Wavelet::broadcast( const WaveletDelta& delta )
 {
     foreach( QString p, m_contentSubscribers )
     {
         ActorId actorid( p );
         PBMessage<waveserver::ProtocolWaveletUpdate>* msg = new PBMessage<waveserver::ProtocolWaveletUpdate>( actorid );
         protocol::ProtocolWaveletDelta* pdelta = msg->add_applied_delta();
-        if ( delta.hasTransformedDelta() )
-            Converter::convert( pdelta, delta.transformedDelta() );
-        else
-            Converter::convert( pdelta, delta.signedDelta().delta() );
+        Converter::convert( pdelta, delta );
         msg->set_wavelet_name( url().toString().toStdString() );
         msg->mutable_resulting_version()->set_version( m_version );
         msg->mutable_resulting_version()->set_history_hash( m_hash.constData(), m_hash.length() );
@@ -481,7 +478,7 @@ bool Wavelet::apply( const AppliedWaveletDelta& appliedDelta, QString* errorMess
     // Add the new delta to the list
     m_deltas.append(appliedDelta);
 
-    broadcast( appliedDelta );
+    broadcast( appliedDelta.signedDelta().delta() );
     broadcastDigest( appliedDelta.signedDelta().delta() );
 
     return true;
