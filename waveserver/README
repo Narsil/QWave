@@ -25,4 +25,25 @@ mentioned in waveserver.conf.
 PLEASE NOTE: Federation is work in progress and COMPLETELY BROKEN.
 Use this federation stuff only if you want to participate in development.
 
+FCGI
+----
+
+To enable FCGI in lighttpd add the following to your configuration:
+  
+server.modules   += ( "mod_fastcgi" )
+
+fastcgi.server  = ( "echo.fcgi" =>
+    ( "localhost" =>
+      ( "host" => "127.0.0.1"
+      , "port" => 9871
+      , "check-local" => "disable"
+      , "min-procs" => 1
+      , "max-procs" => 1
+      )
+    )
+  )
+
+The config sippet above assumes that the wave server and lighttpd are
+running on the same machine, which is of course not required.
+
 Torben
