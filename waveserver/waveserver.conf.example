@@ -7,3 +7,5 @@ xmppComponentPort=5275
 xmppServerName=wave.mycompany.com
 certificateFile=waveserver.crt
 privateKeyFile=waveserver.key
+fcgiEnabled=true
+fcgiPort=9871

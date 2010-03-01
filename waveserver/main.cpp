@@ -5,6 +5,7 @@
 #include "app/settings.h"
 #include "persistence/storefolk.h"
 #include "model/wavefolk.h"
+#include "fcgi/fcgiserver.h"
 
 int main(int argc, char *argv[])
 {
@@ -67,6 +68,9 @@ int main(int argc, char *argv[])
         // Connect to the XMPP component
         new XmppComponentConnection( &a );
     }
+
+    if ( Settings::settings()->fcgiEnabled() )
+        new FCGI::FCGIServer();
 
     // Listen to clients
     ServerSocket socket;

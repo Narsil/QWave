@@ -62,6 +62,15 @@ public:
     QString privateKeyFile() const;
     void setPrivateKeyFile( const QString& file );
 
+    bool fcgiEnabled() const;
+    void setFcgiEnabled( bool enabled );
+
+    void setFcgiPort( int port );
+    /**
+      * Usually "9871"
+      */
+    int fcgiPort() const;
+
 private:
     static Settings* s_settings;
 };

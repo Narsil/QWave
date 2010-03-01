@@ -62,7 +62,10 @@ SOURCES += main.cpp \
     persistence/store.cpp \
     actor/recvcriticalsection.cpp \
     network/clientindexwaveactor.cpp \
-    network/clientparticipant.cpp
+    network/clientparticipant.cpp \
+    fcgi/fcgirequest.cpp \
+    fcgi/fcgiprotocol.cpp \
+    fcgi/fcgiserver.cpp
 HEADERS += model/wavelet.h \
     persistence/storefolk.h \
     persistence/store.h \
@@ -116,7 +119,11 @@ HEADERS += model/wavelet.h \
     network/clientactorfolk.h \
     actor/pbmessage.h \
     actor/recvpb.h \
-    model/wavefolk.h
+    model/wavefolk.h \
+    fcgi/fcgirequest.h \
+    fcgi/fcgiprotocol.h \
+    fcgi/fcgi.h \
+    fcgi/fcgiserver.h
 unix:LIBS += -lprotobuf \
     -lcrypto \
     -lqwavecore \
