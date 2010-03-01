@@ -102,6 +102,26 @@ void Settings::setFederationEabled( bool enabled )
     setValue( "federationEnabled", QVariant( enabled ) );
 }
 
+bool Settings::fcgiEnabled() const
+{
+    return value("fcgiEnabled", QVariant(false) ).toBool();
+}
+
+void Settings::setFcgiEnabled( bool enabled )
+{
+    setValue( "fcgiEnabled", QVariant( enabled ) );
+}
+
+void Settings::setFcgiPort( int port )
+{
+    setValue( "fcgiPort", QVariant( port ) );
+}
+
+int Settings::fcgiPort() const
+{
+    return value("fcgiPort", QVariant((int)9871) ).toInt();
+}
+
 QString Settings::certificateFile() const
 {
     return value("certificateFile", QVariant("waveserver.crt") ).toString();
