@@ -63,7 +63,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
     cpp << "bool " << nspace << "::" << prefix << ident(descriptor->name()) << "_JSON::SerializeToArray(const " << prefix << ident(descriptor->name()) << "* msg, QByteArray& data)" << endl;
     cpp << "{" << endl;
     cpp << "\tdata.append( \"{\" );" << endl;
-
+    cpp << "\tint count = 0;" << endl;
     for( int i = 0; i < descriptor->field_count(); ++i )
     {        
         const FieldDescriptor* field = descriptor->field(i);
@@ -71,6 +71,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
         {
             if ( field->is_optional() )
                 cpp << "\tif ( msg->has_" << ident(field->name()) << "() ) {" << endl;
+            cpp << "\tif ( count++ > 0 ) data.append(\",\");" << endl;
             switch( field->cpp_type() )
             {
             case FieldDescriptor::CPPTYPE_INT32:
@@ -79,46 +80,24 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
             case FieldDescriptor::CPPTYPE_UINT64:
             case FieldDescriptor::CPPTYPE_DOUBLE:
             case FieldDescriptor::CPPTYPE_FLOAT:
-                if ( i == 0 )
-                    cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
-                else
-                    cpp << "\tdata.append( \",\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
                 cpp << "\tdata.append( QByteArray::number( msg->" << ident(field->name()) << "() );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_BOOL:
-                if ( i == 0 )
-                {
-                    cpp << "\tif( msg->" << ident(field->name()) << "() )" << endl;
-                    cpp << "\t\tdata.append( \"\\\"" << field->number() << "\\\":\\\"true\\\"\" );" << endl;
-                    cpp << "\telse" << endl;
-                    cpp << "\t\tdata.append( \"\\\"" << field->number() << "\\\":\\\"false\\\"\" );" << endl;
-                }
-                else
-                {
-                    cpp << "\tif( msg->" << ident(field->name()) << ")" << endl;
-                    cpp << "\t\tdata.append( \",\\\"" << field->number() << "\\\":\\\"true\\\"\" );" << endl;
-                    cpp << "\telse" << endl;
-                    cpp << "\t\tdata.append( \",\\\"" << field->number() << "\\\":\\\"false\\\"\" );" << endl;
-                }
+                cpp << "\tif( msg->" << ident(field->name()) << "() )" << endl;
+                cpp << "\t\tdata.append( \"\\\"" << field->number() << "\\\":\\\"true\\\"\" );" << endl;
+                cpp << "\telse" << endl;
+                cpp << "\t\tdata.append( \"\\\"" << field->number() << "\\\":\\\"false\\\"\" );" << endl;
             case FieldDescriptor::CPPTYPE_ENUM:
-                if ( i == 0 )
-                    cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
-                else
-                    cpp << "\tdata.append( \",\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
                 cpp << "\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "() );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_STRING:
-                if ( i == 0 )
-                    cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
-                else
-                    cpp << "\tdata.append( \",\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
                 cpp << "\tdata.append( toJSONString( msg->" << ident(field->name()) << "() ) );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
-                if ( i == 0 )
-                    cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
-                else
-                    cpp << "\tdata.append( \",\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
                 cpp << "\tif ( !" << absIdent(field->message_type()) << "_JSON::SerializeToArray( &msg->" << ident(field->name()) << "(), data ) ) return false;" << endl;
                 break;
             default:
@@ -130,7 +109,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
         }
     }
     cpp << "\tdata.append( \"}\" );" << endl;
-
+    cpp << "\treturn true;" << endl << endl;
     cpp << "}" << endl << endl;
 
     cpp << "bool " << nspace << "::" << prefix << ident(descriptor->name()) << "_JSON::ParseFromArray(" << prefix << ident(descriptor->name()) << "* msg, const QByteArray& data)" << endl;
