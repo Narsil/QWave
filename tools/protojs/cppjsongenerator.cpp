@@ -101,6 +101,12 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                     cpp << "\t\tdata.append( \",\\\"" << field->number() << "\\\":\\\"false\\\"\" );" << endl;
                 }
             case FieldDescriptor::CPPTYPE_ENUM:
+                if ( i == 0 )
+                    cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
+                else
+                    cpp << "\tdata.append( \",\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "() );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_STRING:
                 if ( i == 0 )
                     cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
