@@ -1,0 +1,76 @@
+<html>
+<head>
+<title>JavaScript OT</title>
+<script src="../../jsot.js" type="text/javascript"></script>
+</head>
+<body>
+	<h1>Hello world</h1>
+	<div id="out"></div>
+	<script type="text/javascript">
+var doc = new JSOT.Doc();
+doc.content.push("Hallo!");
+
+var ops = new JSOT.DocOp();
+ops.components.push( new JSOT.DocOp.RetainItemCount(5) );
+ops.components.push( new JSOT.DocOp.Characters(" ") );
+ops.components.push( new JSOT.DocOp.ElementStart("b") );
+ops.components.push( new JSOT.DocOp.Characters("Welt") );
+ops.components.push( new JSOT.DocOp.ElementEnd() );
+ops.components.push( new JSOT.DocOp.RetainItemCount(1) );
+ops.components.push( new JSOT.DocOp.Characters(" Bye.") );
+
+ops.applyTo(doc);
+
+var result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(result) );
+
+ops = new JSOT.DocOp();
+ops.components.push( new JSOT.DocOp.RetainItemCount(6) );
+ops.components.push( new JSOT.DocOp.ReplaceAttributes( { }, { foo : "bar", "remove" : "me" } ) );
+ops.components.push( new JSOT.DocOp.RetainItemCount(11) );
+
+ops.applyTo(doc);
+
+result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(result) );
+
+ops = new JSOT.DocOp();
+ops.components.push( new JSOT.DocOp.RetainItemCount(6) );
+ops.components.push( new JSOT.DocOp.UpdateAttributes( [ new JSOT.DocOp.KeyValueUpdate( "foo", "bar", "bar2" ), new JSOT.DocOp.KeyValueUpdate( "remove", "me", null ) ] ) );
+ops.components.push( new JSOT.DocOp.RetainItemCount(11) );
+
+ops.applyTo(doc);
+
+result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(result) );
+
+ops = new JSOT.DocOp();
+ops.components.push( new JSOT.DocOp.RetainItemCount(6) );
+ops.components.push( new JSOT.DocOp.ReplaceAttributes( { foo : "bar2" }, { xfoo : "Xbar", name : "Joe" } ) );
+ops.components.push( new JSOT.DocOp.RetainItemCount(11) );
+
+ops.applyTo(doc);
+
+result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(result) );
+
+ops = new JSOT.DocOp();
+ops.components.push( new JSOT.DocOp.RetainItemCount(2) );
+ops.components.push( new JSOT.DocOp.DeleteCharacters("ll") );
+ops.components.push( new JSOT.DocOp.RetainItemCount(2) );
+ops.components.push( new JSOT.DocOp.DeleteElementStart("b", { xfoo : "Xbar", name : "Joe" }) );
+ops.components.push( new JSOT.DocOp.DeleteCharacters("Welt") );
+ops.components.push( new JSOT.DocOp.DeleteElementEnd("b") );
+ops.components.push( new JSOT.DocOp.RetainItemCount(7) );
+
+ops.applyTo(doc);
+
+result = doc.toString();
+
+document.getElementById("out").appendChild( document.createTextNode(result) );
+
+document.getElementById("out").appendChild( document.createTextNode( doc.content.length.toString() ) );
+
+	</script>
+</body>
+</html>
