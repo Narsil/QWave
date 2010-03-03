@@ -100,8 +100,20 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                 cpp << "\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "() ) );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_STRING:
-                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
-                cpp << "\tdata.append( toJSONString( msg->" << ident(field->name()) << "() ) );" << endl;
+                if ( field->type() == FieldDescriptor::TYPE_BYTES )
+                {
+                    cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":[\" );" << endl;
+                    cpp << "\tfor( ::std::string::size_type b = 0; b < msg->" << ident(field->name()) << "().length(); ++b )" << endl << "\t{" << endl;
+                    cpp << "\t\tif ( b > 0 ) data.append( \",\" );" << endl;
+                    cpp << "\t\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "()[b] ) );" << endl;
+                    cpp << "\t}" << endl;
+                    cpp << "\tdata.append( \"]\" );" << endl;
+                }
+                else
+                {
+                    cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
+                    cpp << "\tdata.append( toJSONString( msg->" << ident(field->name()) << "() ) );" << endl;
+                }
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
                 cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
@@ -140,7 +152,17 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                 cpp << "\t\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "(i) ) );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_STRING:
-                cpp << "\t\tdata.append( toJSONString( msg->" << ident(field->name()) << "(i) ) );" << endl;
+                if ( field->type() == FieldDescriptor::TYPE_BYTES )
+                {
+                    cpp << "\tdata.append( \"[\" );" << endl;
+                    cpp << "\tfor( ::std::string::size_type b = 0; b < msg->" << ident(field->name()) << "(i).length(); ++b )" << endl << "\t{" << endl;
+                    cpp << "\t\tif ( b > 0 ) data.append( \",\" );" << endl;
+                    cpp << "\t\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "(i)[b] ) );" << endl;
+                    cpp << "\t}" << endl;
+                    cpp << "\tdata.append( \"]\" );" << endl;
+                }
+                else
+                    cpp << "\t\tdata.append( toJSONString( msg->" << ident(field->name()) << "(i) ) );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
                 cpp << "\t\tif ( !" << absIdent(field->message_type()) << "_JSON::SerializeToArray( &msg->" << ident(field->name()) << "(i), data ) ) return false;" << endl;
