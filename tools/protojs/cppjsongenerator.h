@@ -19,11 +19,10 @@ public:
     virtual bool Generate( const FileDescriptor* file, const std::string& parameter, OutputDirectory* output_directory, std::string* error) const;
 
 private:
-    bool GenerateMessageType( const Descriptor* descriptor, const string& nspace, const string& prefix, ostream& cpp, ostream& h, std::string* error) const;
+    bool GenerateMessageType( const Descriptor* descriptor, const string& nspace, ostream& cpp, ostream& h, std::string* error) const;
     string ident(const string& str ) const { return str; }
     string nspace(const string& str ) const { return str; }
-    string absIdent(const Descriptor* descriptor ) const;
-//    string escape(const string& str ) const;
+    string absIdent(const Descriptor* descriptor, bool with_namespace = false ) const;
 };
 
 #endif // CPPJSONGENERATOR_H
