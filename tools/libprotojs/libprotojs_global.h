@@ -1,0 +1,12 @@
+#ifndef LIBPROTOJS_GLOBAL_H
+#define LIBPROTOJS_GLOBAL_H
+
+#include <QtCore/qglobal.h>
+
+#if defined(LIBPROTOJS_LIBRARY)
+#  define LIBPROTOJSSHARED_EXPORT Q_DECL_EXPORT
+#else
+#  define LIBPROTOJSSHARED_EXPORT Q_DECL_IMPORT
+#endif
+
+#endif // LIBPROTOJS_GLOBAL_H
