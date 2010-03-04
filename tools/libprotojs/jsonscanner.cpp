@@ -6,6 +6,9 @@
 
 JSONScanner::Token JSONScanner::next()
 {
+    m_revertPtr = m_ptr;
+    m_revertLen = m_len;
+
     while( true )
     {
         if ( m_len == 0 )
@@ -237,4 +240,10 @@ QString JSONScanner::unescape( const QByteArray& ba, bool* ok )
     res += QString::fromUtf8( seg );
     *ok = true;
     return res;
+}
+
+void JSONScanner::revert()
+{
+    m_ptr = m_revertPtr;
+    m_len = m_revertLen;
 }
