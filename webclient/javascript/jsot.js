@@ -25,10 +25,25 @@ JSOT.Doc.prototype.toString = function()
 {
 	var result = [];
 	var stack = [];
+	var anno = null;
 	
 	for( var i = 0; i < this.content.length; ++i )
 	{
 		var c = this.content[i];
+		if( this.format[i] != anno )
+		{
+			var a = this.format[i];
+			if ( a != anno )
+			{
+				result.push("[");
+				for( var key in a )
+				{
+					result.push(key + "=\"" + a[key] + "\" ");
+				}
+				result.push("]");
+				anno = a;
+			}
+		}
 		if ( c.elementStart )
 		{
 			stack.push( c.type );
@@ -75,8 +90,10 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 	
 	// The annotation that applies to the left of the current document position
 	var docAnnotation = null;
-	// The annotation update that applies to the right of the current document position
-	var annotationUpdate = [ ];
+	var updatedAnnotation = null;
+	// The annotation update that applies to the right of the current document position	
+	var annotationUpdate = { };
+	var annotationUpdateCount = 0;
 	
 	var c = doc.content[contentIndex];
 	// Loop until all ops are processed
@@ -91,13 +108,13 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			if ( inContentIndex == 0 )
 			{
 				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.elementStart.type, op.elementStart.attributes ) );
-				doc.format.splice( contentIndex, 0, null );
+				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 			}
 			else
 			{
 				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.elementStart.type, op.elementStart.attributes ), c.substring(inContentIndex, c.length) );
-				doc.format.splice( contentIndex + 1, 0, null, null );
+				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
 				contentIndex += 2;
 				c = doc.content[contentIndex];
@@ -112,13 +129,15 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			if ( inContentIndex == 0 )
 			{
 				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementEnd() );
-				doc.format.splice( contentIndex, 0, null );
+				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 			}
 			else
 			{
+				if ( updatedAnnotation )
+					doc.format[contentIndex+1] = updatedAnnotation;
 				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementEnd(), c.substring(inContentIndex, c.length) );
-				doc.format.splice( contentIndex + 1, 0, null, null );
+				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
 				contentIndex += 2;
 				c = doc.content[contentIndex];
@@ -130,18 +149,38 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
 
-			if ( inContentIndex == 0 && contentIndex > 0 && typeof(doc.content[contentIndex-1]) == "string" )
-				doc.content[contentIndex-1] = doc.content[contentIndex-1] + op.characters;
-			else if ( typeof(c) == "string" )
+			// if ( inContentIndex == 0 && contentIndex > 0 && typeof(doc.content[contentIndex-1]) == "string" )
+			//	doc.content[contentIndex-1] = doc.content[contentIndex-1] + op.characters;
+			if ( typeof(c) == "string" )
 			{
-				c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
-				doc.content[contentIndex] = c;
-				inContentIndex += op.characters.length;
+				// If the annotation does not change here, simply insert some text
+				if ( docAnnotation == updatedAnnotation )
+				{
+					c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
+					doc.content[contentIndex] = c;
+					inContentIndex += op.characters.length;
+				}
+				else if ( inContentIndex == 0 )
+				{
+					doc.content.splice( contentIndex, 0, op.characters );
+					doc.format.splice( contentIndex, 0, updatedAnnotation );
+					contentIndex += 1;
+					c = doc.content[contentIndex];
+					inContentIndex = 0;
+				}
+				else
+				{
+					doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), op.characters, c.substring( inContentIndex, c.length ) );
+					doc.format.splice( contentIndex, 1, docAnnotation, updatedAnnotation, docAnnotation );
+					contentIndex += 2;
+					c = doc.content[contentIndex];
+					inContentIndex = 0;				
+				}
 			}
 			else
 			{
-				doc.content.splice( contentIndex + 1, 0, op.characters );
-				doc.format.splice( contentIndex + 1, 0, null );
+				doc.content.splice( contentIndex, 0, op.characters );
+				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 				inContentIndex = 0;
 			}			
@@ -164,7 +203,15 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				count -= i;
 				if ( c.length == 0 )
 				{
+					// If there is an annotation boundary change in the deleted characters,, this change must be applied
+					var anno = doc.format[contentIndex];
+					if ( anno != docAnnotation )
+					{
+						docAnnotation = anno;
+						updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+					}					
 					doc.content.splice( contentIndex, 1 );
+					doc.format.splice( contentIndex, 1 );
 					c = doc.content[contentIndex];
 					inContentIndex = 0;
 				}
@@ -182,24 +229,51 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			while( count > 0 )
 			{
 				if ( !c )
-					throw "document op is larger than doc";
+					throw "document op is larger than doc";				
+				// Check for annotation changes in the document
+				if ( inContentIndex == 0 )
+				{
+					var anno = doc.format[contentIndex];
+					// Something changed?
+					if ( anno != docAnnotation )
+					{
+						// Get the document annotation and update it
+						docAnnotation = anno;
+						updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+					}									
+					// Update the annotation
+					doc.format[contentIndex] = updatedAnnotation;
+				}
 				if ( c.elementStart || c.elementEnd )
 				{
+					// Skip the element
 					count--;
 					c = doc.content[++contentIndex];
 					inContentIndex = 0;
 				}
-				else
+				else  // Characters
 				{
+					// How many characters can be retained?
 					var m = Math.min( count, c.length - inContentIndex );
-					count -= m;
+					// Skip characters
+					count -= m;					
 					inContentIndex += m;
+					// Retained the entire string? -> Move to the next element
 					if ( inContentIndex == c.length )
-					{
+					{						
+						// Go to the next content entry
 						c = doc.content[++contentIndex];
 						inContentIndex = 0;
 						if ( !c )
 							break;
+					}
+					// There is an annotation update and we just re-annotated some characters in 'c' but not all -> split c in the treated part and the to-be-treated part
+					else if ( updatedAnnotation != docAnnotation )
+					{
+						doc.content.splice( contentIndex, 1, c.substr( 0, inContentIndex ), c.substring(inContentIndex, c.length) );
+						doc.format.splice( contentIndex + 1, 0, docAnnotation );
+						c = doc.content[++contentIndex];
+						inContentIndex = 0;
 					}
 				}
 			}
@@ -208,6 +282,14 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 		{
 			if ( !c )
 				break;
+			// If there is an annotation boundary change in the deleted characters,, this change must be applied
+			var anno = doc.format[contentIndex];
+			if ( anno != docAnnotation )
+			{
+				docAnnotation = anno;
+				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+			}
+			// Count how many opening elements have been deleted. The corresponding closing elements must be deleted, too.
 			deleteDepth++;
 			if ( !c.elementStart )
 				throw "Cannot delete element start at this position, because in the document there is none";
@@ -221,6 +303,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 					throw "Cannot delete element start because attribute values differ";
 			}
 			doc.content.splice( contentIndex, 1 );
+			doc.format.splice( contentIndex, 1 );
 			c = doc.content[contentIndex];
 			inContentIndex = 0;			
 		}
@@ -228,23 +311,23 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 		{
 			if ( !c )
 				break;
+			// If there is an annotation boundary change in the deleted characters, this change must be applied
+			var anno = doc.format[contentIndex];
+			if ( anno != docAnnotation )
+			{
+				docAnnotation = anno;
+				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+			}				
+			// Is there a matching openeing element?
 			if ( deleteDepth == 0 )
 				throw "Cannot delete element end, because matching delete element start is missing";
 			if ( !c.elementEnd )
 				throw "Cannot delete element end at this position, because in the document there is none";
 			doc.content.splice( contentIndex, 1 );
+			doc.format.splice( contentIndex, 1 );
 			c = doc.content[contentIndex];
 			inContentIndex = 0;
 			deleteDepth--;		
-
-			//if ( typeof(c) == "string" && contentIndex > 0 && typeof(doc.content[contentIndex-1]) == "string" )
-			//{
-			//	contentIndex--;				
-			//	inContentIndex = doc.content[contentIndex].length;
-			//	c = doc.content[contentIndex] + c;
-			//	doc.content[contentIndex] = c;		
-			//	doc.content.splice( contentIndex + 1, 1 );
-			//}
 		}
 		else if ( op.updateAttributes )
 		{		
@@ -252,6 +335,14 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				break;
 			if ( !c.elementStart )
 				throw "Cannot update attributes at this position, because in the document there is no start element";
+			// If there is an annotation boundary change in the deleted characters, this change must be applied
+			var anno = doc.format[contentIndex];
+			if ( anno != docAnnotation )
+			{
+				docAnnotation = anno;
+				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+			}								
+			doc.format[contentIndex] = updatedAnnotation;
 			for( var a in op.updateAttributes )
 			{
 				var update = op.updateAttributes[a];
@@ -291,6 +382,14 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				if ( c.attributes[a] != op.replaceAttributes.oldAttributes[a] )
 					throw "Cannot replace attributes because the value of the old attributes do not match";
 			}
+			// If there is an annotation boundary change in the deleted characters, this change must be applied
+			var anno = doc.format[contentIndex];
+			if ( anno != docAnnotation )
+			{
+				docAnnotation = anno;
+				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+			}											
+			doc.format[contentIndex] = updatedAnnotation;
 			c.attributes = { }
 			for( var a in op.replaceAttributes.newAttributes )
 				c.attributes[a] = op.replaceAttributes.newAttributes[a];
@@ -299,13 +398,31 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 		}
 		else if ( op.annotationBoundary )
 		{
-			if ( !c )
-				break;
 			for( var a in op.annotationBoundary.ends )
-			{
-				if ( annotationUpdate[a] == null )
+			{				
+				var key = op.annotationBoundary.ends[a];
+				if ( !annotationUpdate[key] )
 					throw "Cannot end annotation because the doc and op annotation do not match.";
-				delete annotationUpdate[a];
+				delete annotationUpdate[key];
+				annotationUpdateCount--;
+			}
+			for( var a in op.annotationBoundary.changes )
+			{
+				var change = op.annotationBoundary.changes[a];
+				if ( !annotationUpdate[change.key] )
+					annotationUpdateCount++;
+				annotationUpdate[change.key] = change;
+			}
+			updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+			
+			// If in the middle of a string -> break it because the annotation of the following characters is different
+			if ( inContentIndex > 0 )
+			{
+				doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), c.substring( inContentIndex, c.length ) );
+				doc.format.splice( contentIndex, 1, docAnnotation, docAnnotation );
+				contentIndex += 1;
+				c = doc.content[contentIndex];
+				inContentIndex = 0;								
 			}
 		}
 	}
@@ -317,6 +434,48 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 		throw "Not all delete element starts have been matched with a delete element end";
 	if ( contentIndex < doc.content.length )
 		throw "op is too small for document";
+};
+
+JSOT.DocOp.prototype.computeAnnotation = function(docAnnotation, annotationUpdate, annotationUpdateCount)
+{
+	if ( annotationUpdateCount == 0 )
+		return docAnnotation;
+		
+	var count = 0;
+	anno = { };
+	if ( docAnnotation )
+	{
+		// Copy the current annotation
+		for( var a in docAnnotation )
+		{
+			count++;
+			anno[a] = docAnnotation[a];
+		}
+	}
+	// Update
+	for( var a in annotationUpdate )
+	{
+		var change = annotationUpdate[a];		
+		if ( change.newValue == null )
+		{
+			count--;
+			delete anno[a];
+		}
+		else if ( change.oldValue == null )
+		{
+			count++;
+			anno[a] = change.newValue;
+		}
+		else
+		{
+			if ( !docAnnotation || docAnnotation[a] != change.oldValue )
+				throw "Annotation update and current annotation do not match";
+			anno[a] = change.newValue;
+		}
+	}
+	if ( count == 0 )
+		return null;
+	return anno;
 };
 
 JSOT.DocOp.ElementStart = function(type, attributes)
