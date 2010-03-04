@@ -73,6 +73,11 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 	// Increased by one whenever a deleteElementStart is encountered and decreased by 1 upon deleteElementEnd
 	var deleteDepth = 0;
 	
+	// The annotation that applies to the left of the current document position
+	var docAnnotation = null;
+	// The annotation update that applies to the right of the current document position
+	var annotationUpdate = [ ];
+	
 	var c = doc.content[contentIndex];
 	// Loop until all ops are processed
 	while( opIndex < this.components.length )
@@ -146,21 +151,26 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			if ( !c )
 				break;		
 			var count = op.deleteCharacters.length;
-			if ( typeof(c) != "string" )
-				throw "Cannot delete characters here, because at this position there are no characters";
-			if ( count > c.length - inContentIndex )
-				throw "Cannot delete characters, because at this position there are too few characters.";
-			if ( c.substr( inContentIndex, count ) != op.deleteCharacters )
-				throw "Cannot delete characters, because the characters in the document and operation differ.";
-			c = c.substring(0, inContentIndex).concat( c.substring(inContentIndex + count, c.length ) );
-			if ( c.length == 0 )
+			var done = 0;
+			while( count > 0 )
 			{
-				doc.content.splice( contentIndex, 1 );
-				c = doc.content[contentIndex];
-				inContentIndex = 0;
+				if ( typeof(c) != "string" )
+					throw "Cannot delete characters here, because at this position there are no characters";
+				var i = Math.min( count, c.length - inContentIndex );
+				if ( c.substr( inContentIndex, i ) != op.deleteCharacters.substr( done, i ) )
+					throw "Cannot delete characters, because the characters in the document and operation differ.";
+				c = c.substring(0, inContentIndex).concat( c.substring(inContentIndex + i, c.length ) );
+				done += i;
+				count -= i;
+				if ( c.length == 0 )
+				{
+					doc.content.splice( contentIndex, 1 );
+					c = doc.content[contentIndex];
+					inContentIndex = 0;
+				}
+				else
+					doc.content[contentIndex] = c;
 			}
-			else
-				doc.content[contentIndex] = c;
 		}
 		else if ( op.retainItemCount )
 		{
@@ -227,14 +237,14 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			inContentIndex = 0;
 			deleteDepth--;		
 
-			if ( typeof(c) == "string" && contentIndex > 0 && typeof(doc.content[contentIndex-1]) == "string" )
-			{
-				contentIndex--;				
-				inContentIndex = doc.content[contentIndex].length;
-				c = doc.content[contentIndex] + c;
-				doc.content[contentIndex] = c;		
-				doc.content.splice( contentIndex + 1, 1 );
-			}
+			//if ( typeof(c) == "string" && contentIndex > 0 && typeof(doc.content[contentIndex-1]) == "string" )
+			//{
+			//	contentIndex--;				
+			//	inContentIndex = doc.content[contentIndex].length;
+			//	c = doc.content[contentIndex] + c;
+			//	doc.content[contentIndex] = c;		
+			//	doc.content.splice( contentIndex + 1, 1 );
+			//}
 		}
 		else if ( op.updateAttributes )
 		{		
@@ -246,7 +256,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			{
 				var update = op.updateAttributes[a];
 				// Add a new attribute?
-				if ( !update.oldValue )
+				if ( update.oldValue == null )
 				{
 					if ( c.attributes[update.key] )
 						throw "Cannot update attributes because old attribute value is not mentioned in Op";
@@ -291,6 +301,12 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 		{
 			if ( !c )
 				break;
+			for( var a in op.annotationBoundary.ends )
+			{
+				if ( annotationUpdate[a] == null )
+					throw "Cannot end annotation because the doc and op annotation do not match.";
+				delete annotationUpdate[a];
+			}
 		}
 	}
 	
@@ -359,9 +375,9 @@ JSOT.DocOp.KeyValueUpdate = function( key, oldValue, newValue )
 	this.newValue = newValue;
 };
 
-JSOT.DocOp.AnnotationBoundary = function(ends, updates)
+JSOT.DocOp.AnnotationBoundary = function(ends, changes)
 {
-	this.annotationBoundary = { ends : ends, updates : updates };
+	this.annotationBoundary = { ends : ends, changes : changes };
 };
 
 JSOT.WaveletOp = function()
