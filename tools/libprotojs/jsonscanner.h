@@ -37,7 +37,8 @@ public:
     qint64 int64Value(bool *ok);
     quint64 uint64Value(bool *ok);
     int enumValue(bool *ok);
-    int tagValue(bool *ok);
+    int tagValue();
+    char byteValue(bool *ok);
 
 private:    
     bool ishexnstring(const QString& string);

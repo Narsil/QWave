@@ -23,6 +23,7 @@ private:
     string ident(const string& str ) const { return str; }
     string nspace(const string& str ) const { return str; }
     string absIdent(const Descriptor* descriptor, bool with_namespace = false ) const;
+    string absIdent(const EnumDescriptor* descriptor, bool with_namespace = false ) const;
 };
 
 #endif // CPPJSONGENERATOR_H

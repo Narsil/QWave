@@ -133,9 +133,21 @@ int JSONScanner::enumValue(bool *ok)
     return QByteArray::fromRawData( m_value, m_valueLen ).toInt(ok);
 }
 
-int JSONScanner::tagValue(bool *ok)
+char JSONScanner::byteValue(bool *ok)
 {
-    return QByteArray::fromRawData( m_value, m_valueLen ).toInt(ok);
+    int v = QByteArray::fromRawData( m_value, m_valueLen ).toInt(ok);
+    if ( v < -128 || v > 128 )
+        *ok = false;
+    return (char)v;
+}
+
+int JSONScanner::tagValue()
+{
+    bool ok;
+    int tag = QByteArray::fromRawData( m_value, m_valueLen ).toInt(&ok);
+    if ( !ok )
+        return -1;
+    return tag;
 }
 
 bool JSONScanner::ishexnstring(const QString& string)
