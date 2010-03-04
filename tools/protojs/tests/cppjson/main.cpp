@@ -1,6 +1,7 @@
 #include <QtCore/QCoreApplication>
 
 #include "common.pbjson.h"
+#include "jsonscanner.h"
 
 int main(int argc, char *argv[])
 {
@@ -15,6 +16,21 @@ int main(int argc, char *argv[])
     Q_ASSERT(ok);
 
     qDebug("JSON=%s", ba.constData() );
+
+    JSONScanner scanner( ba.constData(), ba.length() );
+    JSONScanner::Token token;
+    do
+    {
+        token = scanner.next();
+        qDebug("token %i", token );
+        if ( token == JSONScanner::StringValue )
+        {
+            bool ok;
+            qDebug("\tvalue %s", scanner.stringValue( &ok ).c_str() );
+            Q_ASSERT(ok);
+        }
+    }
+    while( token != JSONScanner::End && token != JSONScanner::Error );
 
     protocol::ProtocolSignature sig;
     sig.set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
