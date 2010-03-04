@@ -6,7 +6,7 @@ CppJSONGenerator::CppJSONGenerator()
 {
 }
 
-bool CppJSONGenerator::Generate( const FileDescriptor* file, const std::string& parameter, OutputDirectory* output_directory, std::string* error) const
+bool CppJSONGenerator::Generate( const FileDescriptor* file, const std::string&, OutputDirectory* output_directory, std::string* error) const
 {
     ZeroCopyOutputStream* cppOut;
     ZeroCopyOutputStream* hOut;
@@ -190,11 +190,14 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
 
     // How many fields are required?
     int minFields = 0;
+    int needsOkVariable = false;
     for( int i = 0; i < descriptor->field_count(); ++i )
     {
         const FieldDescriptor* field = descriptor->field(i);
         if ( field->is_required() )
             minFields++;
+        if ( field->cpp_type() != FieldDescriptor::CPPTYPE_MESSAGE && field->cpp_type() != FieldDescriptor::CPPTYPE_BOOL )
+            needsOkVariable = true;
     }
 
     cpp << "bool " << nspace << "::" << absIdent(descriptor) << "_JSON::ParseFromArray(" << absIdent(descriptor) << "* msg, JSONScanner& scanner)" << endl;
@@ -211,7 +214,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
     cpp << "\t\t{" << endl;
     cpp << "\t\t\tint tag = scanner.tagValue();" << endl;
     cpp << "\t\t\tif ( scanner.next() != JSONScanner::Colon ) return false;" << endl;
-    if ( descriptor->field_count() > 0 )
+    if ( needsOkVariable > 0 )
         cpp << "\t\t\tbool ok;" << endl;
     cpp << "\t\t\tswitch( tag )" << endl << "\t\t\t{" << endl;
 
@@ -220,9 +223,94 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
         const FieldDescriptor* field = descriptor->field(i);
         cpp << "\t\t\tcase " << field->number() << ":" << endl;
         cpp << "\t\t\t{" << endl;
+
         if ( field->is_repeated() )
         {
-            // TODO
+            cpp << "\t\t\t\tif ( scanner.next() != JSONScanner::BeginArray ) return false;" << endl;
+            cpp << "\t\t\t\ttoken = scanner.next();" << endl;
+            cpp << "\t\t\t\twhile( token != JSONScanner::EndArray )" << endl << "\t\t\t\t{" << endl;
+
+            switch( field->cpp_type() )
+            {
+            case FieldDescriptor::CPPTYPE_INT32:
+                cpp << "\t\t\t\t\tif ( token != JSONScanner::NumberValue ) return false;" << endl;
+                cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( scanner.int32Value( &ok ) );" << endl;
+                cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_INT64:
+                cpp << "\t\t\t\t\tif ( token != JSONScanner::NumberValue ) return false;" << endl;
+                cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( scanner.int64Value( &ok ) );" << endl;
+                cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_UINT32:
+                cpp << "\t\t\t\t\tif ( token != JSONScanner::NumberValue ) return false;" << endl;
+                cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( scanner.uint32Value( &ok ) );" << endl;
+                cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_UINT64:
+                cpp << "\t\t\t\t\tif ( token != JSONScanner::NumberValue ) return false;" << endl;
+                cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( scanner.uint64Value( &ok ) );" << endl;
+                cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_DOUBLE:
+                cpp << "\t\t\t\t\tif ( token != JSONScanner::NumberValue ) return false;" << endl;
+                cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( scanner.doubleValue( &ok ) );" << endl;
+                cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_FLOAT:
+                cpp << "\t\t\t\t\tif ( token != JSONScanner::NumberValue ) return false;" << endl;
+                cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( scanner.floatValue( &ok ) );" << endl;
+                cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_BOOL:
+                cpp << "\t\t\t\t\tif ( token == JSONScanner::TrueValue ) msg->add_" << ident(field->name()) << "(true);" << endl;
+                cpp << "\t\t\t\t\telse if ( token == JSONScanner::FalseValue ) msg->add_" << ident(field->name()) << "(false);" << endl;
+                cpp << "\t\t\t\t\telse return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_ENUM:
+                cpp << "\t\t\t\t\tif ( token != JSONScanner::NumberValue ) return false;" << endl;
+                cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( (" << absIdent(field->enum_type(), true) << ")scanner.enumValue( &ok ) );" << endl;
+                cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                break;
+            case FieldDescriptor::CPPTYPE_STRING:
+                if ( field->type() == FieldDescriptor::TYPE_BYTES )
+                {
+                    cpp << "\t\t\t\t\tstring v;" << endl;
+                    cpp << "\t\t\t\t\tif ( token != JSONScanner::BeginArray ) return false;" << endl;
+                    cpp << "\t\t\t\t\ttoken = scanner.next();" << endl;
+                    cpp << "\t\t\t\t\twhile( token == JSONScanner::NumberValue )" << endl << "\t\t\t\t{" << endl;
+                    cpp << "\t\t\t\t\t\tv += scanner.byteValue(&ok);" << endl;
+                    cpp << "\t\t\t\t\t\tif ( !ok ) return false;" << endl;
+                    cpp << "\t\t\t\t\t\ttoken = scanner.next();" << endl;
+                    cpp << "\t\t\t\t\t\tif ( token == JSONScanner::EndArray) break;" << endl;
+                    cpp << "\t\t\t\t\t\tif ( token != JSONScanner::Comma) return false;" << endl;
+                    cpp << "\t\t\t\t\t\ttoken = scanner.next();" << endl;
+                    cpp << "\t\t\t\t\t}" << endl;
+                    cpp << "\t\t\t\t\tif ( token != JSONScanner::EndArray ) return false;" << endl;
+                    cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "(v);" << endl;
+                }
+                else
+                {
+                    cpp << "\t\t\t\t\tif ( token != JSONScanner::StringValue ) return false;" << endl;
+                    cpp << "\t\t\t\t\tmsg->add_" << ident(field->name()) << "( scanner.stringValue( &ok ) );" << endl;
+                    cpp << "\t\t\t\t\tif ( !ok ) return false;" << endl;
+                }
+                break;
+            case FieldDescriptor::CPPTYPE_MESSAGE:
+                cpp << "\t\t\t\t\tscanner.revert();" << endl;
+                cpp << "\t\t\t\t\tif ( !" << absIdent(field->message_type(), true) << "_JSON::ParseFromArray(msg->add_" << ident(field->name()) << "(), scanner) ) return false;" << endl;
+                break;
+            default:
+                error->append("Unknown type");
+                return false;
+            }
+
+            cpp << "\t\t\t\t\ttoken = scanner.next();" << endl;
+            cpp << "\t\t\t\t\tif ( token == JSONScanner::EndArray) break;" << endl;
+            cpp << "\t\t\t\t\tif ( token != JSONScanner::Comma) return false;" << endl;
+            cpp << "\t\t\t\t\ttoken = scanner.next();" << endl;
+            cpp << "\t\t\t\t}" << endl;
+            cpp << "\t\t\t\tif ( token != JSONScanner::EndArray ) return false;" << endl;
         }
         else
         {
@@ -291,6 +379,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                     cpp << "\t\t\t\t\ttoken = scanner.next();" << endl;
                     cpp << "\t\t\t\t}" << endl;
                     cpp << "\t\t\t\tif ( token != JSONScanner::EndArray ) return false;" << endl;
+                    cpp << "\t\t\t\tmsg->set_" << ident(field->name()) << "(v);" << endl;
                 }
                 else
                 {

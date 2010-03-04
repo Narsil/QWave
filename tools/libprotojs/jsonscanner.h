@@ -28,6 +28,10 @@ public:
     JSONScanner(const char* ptr, int len) { m_ptr = ptr, m_len = len; }
 
     Token next();
+    /**
+      * Undos the previous next() call, but only once.
+      */
+    void revert();
 
     string stringValue(bool *ok);
     double doubleValue(bool *ok);
@@ -48,6 +52,8 @@ private:
     int m_len;
     const char* m_value;
     int m_valueLen;
+    const char* m_revertPtr;
+    int m_revertLen;
 };
 
 #endif // JSONSCANNER_H
