@@ -66,8 +66,15 @@ ops.components.push( new JSOT.DocOp.RetainItemCount(7) );
 ops.applyTo(doc);
 
 result = doc.toString();
-
 document.getElementById("out").appendChild( document.createTextNode(result) );
+
+ops = new JSOT.DocOp();
+ops.components.push( new JSOT.DocOp.DeleteCharacters("Hao ! Bye.") );
+
+ops.applyTo(doc);
+
+result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(">>" + result + "<<") );
 
 document.getElementById("out").appendChild( document.createTextNode( doc.content.length.toString() ) );
 
