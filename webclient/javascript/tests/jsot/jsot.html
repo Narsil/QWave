@@ -11,10 +11,14 @@ var doc = new JSOT.Doc();
 doc.content.push("Hallo!");
 
 var ops = new JSOT.DocOp();
+ops.components.push( new JSOT.DocOp.AnnotationBoundary( [], [ new JSOT.DocOp.KeyValueUpdate( "bold", null, "true" ) ] ) );
 ops.components.push( new JSOT.DocOp.RetainItemCount(5) );
+ops.components.push( new JSOT.DocOp.AnnotationBoundary( [ "bold" ], [ ] ) );
 ops.components.push( new JSOT.DocOp.Characters(" ") );
 ops.components.push( new JSOT.DocOp.ElementStart("b") );
+ops.components.push( new JSOT.DocOp.AnnotationBoundary( [], [ new JSOT.DocOp.KeyValueUpdate( "italic", null, "true" ) ] ) );
 ops.components.push( new JSOT.DocOp.Characters("Welt") );
+ops.components.push( new JSOT.DocOp.AnnotationBoundary( [ "italic" ], [ ] ) );
 ops.components.push( new JSOT.DocOp.ElementEnd() );
 ops.components.push( new JSOT.DocOp.RetainItemCount(1) );
 ops.components.push( new JSOT.DocOp.Characters(" Bye.") );
