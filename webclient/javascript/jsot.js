@@ -74,7 +74,7 @@ JSOT.Doc.prototype.toString = function()
 
 JSOT.DocOp = function()
 {
-	this.components = [ ];
+	this.component = [ ];
 };
 
 JSOT.DocOp.prototype.applyTo = function(doc)
@@ -85,7 +85,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 	var contentIndex = 0;
 	// Position in the text of variable 'c'
 	var inContentIndex = 0;
-	// Increased by one whenever a deleteElementStart is encountered and decreased by 1 upon deleteElementEnd
+	// Increased by one whenever a delete_element_start is encountered and decreased by 1 upon delete_element_end
 	var deleteDepth = 0;
 	
 	// The annotation that applies to the left of the current document position
@@ -97,9 +97,9 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 	
 	var c = doc.content[contentIndex];
 	// Loop until all ops are processed
-	while( opIndex < this.components.length )
+	while( opIndex < this.component.length )
 	{
-		var op = this.components[opIndex++];
+		var op = this.component[opIndex++];
 		if ( op.elementStart )
 		{
 			if ( deleteDepth > 0 )
@@ -107,13 +107,13 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 
 			if ( inContentIndex == 0 )
 			{
-				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.elementStart.type, op.elementStart.attributes ) );
+				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.elementStart.type, op.elementStart.attribute ) );
 				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 			}
 			else
 			{
-				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.elementStart.type, op.elementStart.attributes ), c.substring(inContentIndex, c.length) );
+				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.elementStart.type, op.elementStart.attribute ), c.substring(inContentIndex, c.length) );
 				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
 				contentIndex += 2;
@@ -185,18 +185,18 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				inContentIndex = 0;
 			}			
 		}
-		else if ( op.deleteCharacters )
+		else if ( op.delete_characters )
 		{
 			if ( !c )
 				break;		
-			var count = op.deleteCharacters.length;
+			var count = op.delete_characters.length;
 			var done = 0;
 			while( count > 0 )
 			{
 				if ( typeof(c) != "string" )
 					throw "Cannot delete characters here, because at this position there are no characters";
 				var i = Math.min( count, c.length - inContentIndex );
-				if ( c.substr( inContentIndex, i ) != op.deleteCharacters.substr( done, i ) )
+				if ( c.substr( inContentIndex, i ) != op.delete_characters.substr( done, i ) )
 					throw "Cannot delete characters, because the characters in the document and operation differ.";
 				c = c.substring(0, inContentIndex).concat( c.substring(inContentIndex + i, c.length ) );
 				done += i;
@@ -219,13 +219,13 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 					doc.content[contentIndex] = c;
 			}
 		}
-		else if ( op.retainItemCount )
+		else if ( op.retain_item_count )
 		{
 			if ( !c )
 				break;
 			if ( deleteDepth > 0 )
 				throw "Cannot retain inside a delete sequence";
-			var count = op.retainItemCount;
+			var count = op.retain_item_count;
 			while( count > 0 )
 			{
 				if ( !c )
@@ -278,7 +278,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				}
 			}
 		}
-		else if ( op.deleteElementStart )
+		else if ( op.delete_element_start )
 		{
 			if ( !c )
 				break;
@@ -293,13 +293,13 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			deleteDepth++;
 			if ( !c.elementStart )
 				throw "Cannot delete element start at this position, because in the document there is none";
-			if ( c.type != op.deleteElementStart.type )
+			if ( c.type != op.delete_element_start.type )
 				throw "Cannot delete element start because Op and Document have different element type";
-			if ( c.attributes.length != op.deleteElementStart.attributes.length )
+			if ( c.attributes.length != op.delete_element_start.attribute.length )
 				throw "Cannot delete element start because the attributes of Op and Doc differ";
 			for( var a in c.attributes )
 			{
-				if ( c.attributes[a] != op.deleteElementStart.attributes[a] )
+				if ( c.attributes[a] != op.delete_element_start.attribute[a] )
 					throw "Cannot delete element start because attribute values differ";
 			}
 			doc.content.splice( contentIndex, 1 );
@@ -307,7 +307,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			c = doc.content[contentIndex];
 			inContentIndex = 0;			
 		}
-		else if ( op.deleteElementEnd )
+		else if ( op.delete_element_end )
 		{
 			if ( !c )
 				break;
@@ -329,7 +329,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			inContentIndex = 0;
 			deleteDepth--;		
 		}
-		else if ( op.updateAttributes )
+		else if ( op.update_attributes )
 		{		
 			if ( !c )
 				break;
@@ -343,43 +343,43 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 			}								
 			doc.format[contentIndex] = updatedAnnotation;
-			for( var a in op.updateAttributes )
+			for( var a in op.update_attributes )
 			{
-				var update = op.updateAttributes[a];
+				var update = op.update_attributes[a];
 				// Add a new attribute?
-				if ( update.oldValue == null )
+				if ( update.old_value == null )
 				{
 					if ( c.attributes[update.key] )
 						throw "Cannot update attributes because old attribute value is not mentioned in Op";
-					if ( !update.newValue )
+					if ( !update.new_value )
 						throw "Cannot update attributes because new value is missing";
-					c.attributes[update.key] = update.newValue;
+					c.attributes[update.key] = update.new_value;
 				}
 				// Delete or change an attribute
 				else
 				{
-					if ( c.attributes[update.key] != update.oldValue )
+					if ( c.attributes[update.key] != update.old_value )
 						throw "Cannot update attributes because old attribute value does not match with Op";
-					if ( !update.newValue )
+					if ( !update.new_value )
 						delete c.attributes[update.key];
 					else
-						c.attributes[update.key] = update.newValue;
+						c.attributes[update.key] = update.new_value;
 				}
 			}
 			c = doc.content[++contentIndex];
 			inContentIndex = 0;							
 		}
-		else if ( op.replaceAttributes )
+		else if ( op.replace_attributes )
 		{
 			if ( !c )
 				break;
 			if ( !c.elementStart )
 				throw "Cannot replace attributes at this position, because in the document there is no start element";
-			if ( c.attributes.length != op.replaceAttributes.oldAttributes.length )
+			if ( c.attributes.length != op.replace_attributes.oldAttributes.length )
 				throw "Cannot replace attributes because the old attributes do not match";
 			for( var a in c.attributes )
 			{
-				if ( c.attributes[a] != op.replaceAttributes.oldAttributes[a] )
+				if ( c.attributes[a] != op.replace_attributes.oldAttributes[a] )
 					throw "Cannot replace attributes because the value of the old attributes do not match";
 			}
 			// If there is an annotation boundary change in the deleted characters, this change must be applied
@@ -391,24 +391,24 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			}											
 			doc.format[contentIndex] = updatedAnnotation;
 			c.attributes = { }
-			for( var a in op.replaceAttributes.newAttributes )
-				c.attributes[a] = op.replaceAttributes.newAttributes[a];
+			for( var a in op.replace_attributes.newAttributes )
+				c.attributes[a] = op.replace_attributes.newAttributes[a];
 			c = doc.content[++contentIndex];
 			inContentIndex = 0;							
 		}
-		else if ( op.annotationBoundary )
+		else if ( op.annotation_boundary )
 		{
-			for( var a in op.annotationBoundary.ends )
+			for( var a in op.annotation_boundary.end )
 			{				
-				var key = op.annotationBoundary.ends[a];
+				var key = op.annotation_boundary.end[a];
 				if ( !annotationUpdate[key] )
 					throw "Cannot end annotation because the doc and op annotation do not match.";
 				delete annotationUpdate[key];
 				annotationUpdateCount--;
 			}
-			for( var a in op.annotationBoundary.changes )
+			for( var a in op.annotation_boundary.change )
 			{
-				var change = op.annotationBoundary.changes[a];
+				var change = op.annotation_boundary.change[a];
 				if ( !annotationUpdate[change.key] )
 					annotationUpdateCount++;
 				annotationUpdate[change.key] = change;
@@ -427,7 +427,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 		}
 	}
 	
-	if ( opIndex < this.components.length )
+	if ( opIndex < this.component.length )
 		throw "Document is too small for op"
 	// Should be impossible if the document is well formed ... Paranoia
 	if ( deleteDepth != 0 )
@@ -456,21 +456,21 @@ JSOT.DocOp.prototype.computeAnnotation = function(docAnnotation, annotationUpdat
 	for( var a in annotationUpdate )
 	{
 		var change = annotationUpdate[a];		
-		if ( change.newValue == null )
+		if ( change.new_value == null )
 		{
 			count--;
 			delete anno[a];
 		}
-		else if ( change.oldValue == null )
+		else if ( change.old_value == null )
 		{
 			count++;
-			anno[a] = change.newValue;
+			anno[a] = change.new_value;
 		}
 		else
 		{
-			if ( !docAnnotation || docAnnotation[a] != change.oldValue )
+			if ( !docAnnotation || docAnnotation[a] != change.old_value )
 				throw "Annotation update and current annotation do not match";
-			anno[a] = change.newValue;
+			anno[a] = change.new_value;
 		}
 	}
 	if ( count == 0 )
@@ -478,73 +478,73 @@ JSOT.DocOp.prototype.computeAnnotation = function(docAnnotation, annotationUpdat
 	return anno;
 };
 
-JSOT.DocOp.ElementStart = function(type, attributes)
+JSOT.DocOp.newElementStart = function(type, attributes)
 {
 	if ( !attributes )
 		attributes = { };
-	this.elementStart = { type : type, attributes : attributes };
+	this.elementStart = { type : type, attribute : attributes };
 };
 
-JSOT.DocOp.ElementEnd = function()
+JSOT.DocOp.newElementEnd = function()
 {
 	this.elementEnd = true;
 };
 
-JSOT.DocOp.Characters = function(characters)
+JSOT.DocOp.newCharacters = function(characters)
 {
 	this.characters = characters;
 };
 
-JSOT.DocOp.DeleteCharacters = function(deleteCharacters)
+JSOT.DocOp.newDeleteCharacters = function(delete_characters)
 {
-	this.deleteCharacters = deleteCharacters;
+	this.delete_characters = delete_characters;
 };
 
-JSOT.DocOp.RetainItemCount = function(retainItemCount)
+JSOT.DocOp.newRetainItemCount = function(retain_item_count)
 {
-	this.retainItemCount = retainItemCount;
+	this.retain_item_count = retain_item_count;
 };
  
-JSOT.DocOp.DeleteElementStart = function(type, attributes)
+JSOT.DocOp.newDeleteElementStart = function(type, attributes)
 {
 	if ( !attributes )
 		attributes = { };
-	this.deleteElementStart = { type : type, attributes : attributes };
+	this.delete_element_start = { type : type, attribute : attributes };
 };
 
-JSOT.DocOp.DeleteElementEnd = function()
+JSOT.DocOp.newDeleteElementEnd = function()
 {
-	this.deleteElementEnd = true;
+	this.delete_element_end = true;
 };
 
-JSOT.DocOp.ReplaceAttributes = function(oldAttributes, newAttributes)
+JSOT.DocOp.newReplaceAttributes = function(oldAttributes, newAttributes)
 {
-	this.replaceAttributes = { oldAttributes : oldAttributes, newAttributes : newAttributes };
+	this.replace_attributes = { oldAttributes : oldAttributes, newAttributes : newAttributes };
 };
 
-JSOT.DocOp.UpdateAttributes = function(attributeUpdates)
+JSOT.DocOp.newUpdateAttributes = function(attributeUpdates)
 {
-	this.updateAttributes = attributeUpdates;
+	this.update_attributes = attributeUpdates;
 };
 
-JSOT.DocOp.KeyValueUpdate = function( key, oldValue, newValue )
+JSOT.DocOp.newKeyValueUpdate = function( key, old_value, new_value )
 {
 	this.key = key;
-	this.oldValue = oldValue;
-	this.newValue = newValue;
+	this.old_value = old_value;
+	this.new_value = new_value;
 };
 
-JSOT.DocOp.AnnotationBoundary = function(ends, changes)
+JSOT.DocOp.newAnnotationBoundary = function(end, change)
 {
-	this.annotationBoundary = { ends : ends, changes : changes };
+	this.annotation_boundary = { end : end, change : change };
 };
 
-JSOT.WaveletOp = function()
+JSOT.ProtocolWaveletOperation = function()
 {
 };
 
-JSOT.WaveletOp.MutateDocument = function(documentId, documentOperation)
+JSOT.ProtocolWaveletOperation.MutateDocument = function(documentId, documentOperation)
 {
-	this.documentId = documentId;
-	this.documentOperation = documentOperation;
+	this.document_id = documentId;
+	this.document_operation = documentOperation;
 };
