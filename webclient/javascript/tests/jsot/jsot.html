@@ -11,17 +11,17 @@ var doc = new JSOT.Doc();
 doc.content.push("Hallo!");
 
 var ops = new JSOT.DocOp();
-ops.components.push( new JSOT.DocOp.AnnotationBoundary( [], [ new JSOT.DocOp.KeyValueUpdate( "bold", null, "true" ) ] ) );
-ops.components.push( new JSOT.DocOp.RetainItemCount(5) );
-ops.components.push( new JSOT.DocOp.AnnotationBoundary( [ "bold" ], [ ] ) );
-ops.components.push( new JSOT.DocOp.Characters(" ") );
-ops.components.push( new JSOT.DocOp.ElementStart("b") );
-ops.components.push( new JSOT.DocOp.AnnotationBoundary( [], [ new JSOT.DocOp.KeyValueUpdate( "italic", null, "true" ) ] ) );
-ops.components.push( new JSOT.DocOp.Characters("Welt") );
-ops.components.push( new JSOT.DocOp.AnnotationBoundary( [ "italic" ], [ ] ) );
-ops.components.push( new JSOT.DocOp.ElementEnd() );
-ops.components.push( new JSOT.DocOp.RetainItemCount(1) );
-ops.components.push( new JSOT.DocOp.Characters(" Bye.") );
+ops.component.push( new JSOT.DocOp.newAnnotationBoundary( [], [ new JSOT.DocOp.newKeyValueUpdate( "bold", null, "true" ) ] ) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(5) );
+ops.component.push( new JSOT.DocOp.newAnnotationBoundary( [ "bold" ], [ ] ) );
+ops.component.push( new JSOT.DocOp.newCharacters(" ") );
+ops.component.push( new JSOT.DocOp.newElementStart("b") );
+ops.component.push( new JSOT.DocOp.newAnnotationBoundary( [], [ new JSOT.DocOp.newKeyValueUpdate( "italic", null, "true" ) ] ) );
+ops.component.push( new JSOT.DocOp.newCharacters("Welt") );
+ops.component.push( new JSOT.DocOp.newAnnotationBoundary( [ "italic" ], [ ] ) );
+ops.component.push( new JSOT.DocOp.newElementEnd() );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(1) );
+ops.component.push( new JSOT.DocOp.newCharacters(" Bye.") );
 
 ops.applyTo(doc);
 
@@ -29,9 +29,9 @@ var result = doc.toString();
 document.getElementById("out").appendChild( document.createTextNode(result) );
 
 ops = new JSOT.DocOp();
-ops.components.push( new JSOT.DocOp.RetainItemCount(6) );
-ops.components.push( new JSOT.DocOp.ReplaceAttributes( { }, { foo : "bar", "remove" : "me" } ) );
-ops.components.push( new JSOT.DocOp.RetainItemCount(11) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(6) );
+ops.component.push( new JSOT.DocOp.newReplaceAttributes( { }, { foo : "bar", "remove" : "me" } ) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(11) );
 
 ops.applyTo(doc);
 
@@ -39,9 +39,9 @@ result = doc.toString();
 document.getElementById("out").appendChild( document.createTextNode(result) );
 
 ops = new JSOT.DocOp();
-ops.components.push( new JSOT.DocOp.RetainItemCount(6) );
-ops.components.push( new JSOT.DocOp.UpdateAttributes( [ new JSOT.DocOp.KeyValueUpdate( "foo", "bar", "bar2" ), new JSOT.DocOp.KeyValueUpdate( "remove", "me", null ) ] ) );
-ops.components.push( new JSOT.DocOp.RetainItemCount(11) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(6) );
+ops.component.push( new JSOT.DocOp.newUpdateAttributes( [ new JSOT.DocOp.newKeyValueUpdate( "foo", "bar", "bar2" ), new JSOT.DocOp.newKeyValueUpdate( "remove", "me", null ) ] ) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(11) );
 
 ops.applyTo(doc);
 
@@ -49,9 +49,9 @@ result = doc.toString();
 document.getElementById("out").appendChild( document.createTextNode(result) );
 
 ops = new JSOT.DocOp();
-ops.components.push( new JSOT.DocOp.RetainItemCount(6) );
-ops.components.push( new JSOT.DocOp.ReplaceAttributes( { foo : "bar2" }, { xfoo : "Xbar", name : "Joe" } ) );
-ops.components.push( new JSOT.DocOp.RetainItemCount(11) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(6) );
+ops.component.push( new JSOT.DocOp.newReplaceAttributes( { foo : "bar2" }, { xfoo : "Xbar", name : "Joe" } ) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(11) );
 
 ops.applyTo(doc);
 
@@ -59,13 +59,13 @@ result = doc.toString();
 document.getElementById("out").appendChild( document.createTextNode(result) );
 
 ops = new JSOT.DocOp();
-ops.components.push( new JSOT.DocOp.RetainItemCount(2) );
-ops.components.push( new JSOT.DocOp.DeleteCharacters("ll") );
-ops.components.push( new JSOT.DocOp.RetainItemCount(2) );
-ops.components.push( new JSOT.DocOp.DeleteElementStart("b", { xfoo : "Xbar", name : "Joe" }) );
-ops.components.push( new JSOT.DocOp.DeleteCharacters("Welt") );
-ops.components.push( new JSOT.DocOp.DeleteElementEnd("b") );
-ops.components.push( new JSOT.DocOp.RetainItemCount(7) );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(2) );
+ops.component.push( new JSOT.DocOp.newDeleteCharacters("ll") );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(2) );
+ops.component.push( new JSOT.DocOp.newDeleteElementStart("b", { xfoo : "Xbar", name : "Joe" }) );
+ops.component.push( new JSOT.DocOp.newDeleteCharacters("Welt") );
+ops.component.push( new JSOT.DocOp.newDeleteElementEnd("b") );
+ops.component.push( new JSOT.DocOp.newRetainItemCount(7) );
 
 ops.applyTo(doc);
 
@@ -73,7 +73,7 @@ result = doc.toString();
 document.getElementById("out").appendChild( document.createTextNode(result) );
 
 ops = new JSOT.DocOp();
-ops.components.push( new JSOT.DocOp.DeleteCharacters("Hao ! Bye.") );
+ops.component.push( new JSOT.DocOp.newDeleteCharacters("Hao ! Bye.") );
 
 ops.applyTo(doc);
 
