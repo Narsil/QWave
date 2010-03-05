@@ -1,0 +1,21 @@
+Running the dummy web client
+============================
+
+Configure you web server to serve "your.domain.org/wave.fcgi" via FCGI.
+Therefore you need to tell the web server an IP address and port number.
+This has to match the entries in your "waveserver.conf".
+
+Restart your web server and start ./waveserver
+
+Copy the *.html and *.js files in any directory of your web server.
+deploy.sh copies it in ~/public_html for you.
+
+Open the index.html page, enter a JID that matches your wave domain, e.g. joe@your.domain.org.
+Then click on Login. You will see the JSON messages exchange between the browser and the web server.
+
+Now use another web client (QWaveClient, FedOne console client) to create a wave.
+Add joe@your.domain.org to the wave and start typing.
+Now you should see that messages are arriving in the browser. These are the wavelet updates in JSON encoding.
+
+That's it for now
+Torben
