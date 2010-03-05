@@ -26,6 +26,7 @@ message Request
   required int64 client_sequence_number = 3;
   optional LoginRequest login = 10;
   optional waveserver.ProtocolOpenRequest open = 11;
+  optional waveserver.ProtocolSubmitRequest submit = 12;
 }
 
 message Response
@@ -40,6 +41,7 @@ message Response
   required int64 server_sequence_number = 3;
   optional LoginResponse login = 10;
   optional waveserver.ProtocolWaveletUpdate update = 11;
+  optional waveserver.ProtocolSubmitResponse submit = 12;
 }
   
 message LoginRequest

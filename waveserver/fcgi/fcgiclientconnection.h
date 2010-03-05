@@ -12,8 +12,13 @@ class ClientActorFolk;
 namespace waveserver
 {
     class ProtocolOpenRequest;
+    class ProtocolSubmitRequest;
 }
 
+/**
+  * For each connected web browser (i.e. for each session) there is
+  * a FCGIClientConnection which handles the session.
+  */
 class FCGIClientConnection : public ActorGroup
 {
 public:
@@ -23,12 +28,26 @@ public:
     QString participant() const { return m_participant; }
     QString sessionId() const { return m_sessionId; }
 
+    /**
+      * @internal
+      *
+      * Called from ClientSubmitRequestActor.
+      */
+    void sendSubmitResponse( const waveserver::ProtocolSubmitResponse& response );
+    /**
+      * @internal
+      *
+      * Called from ClientSubmitRequestActor.
+      */
+    void sendFailedSubmitResponse( const QString& errorMessage );
+
 protected:
     virtual void customEvent( QEvent* event );
 
 private:
     void handleRequest( const PBMessage<webclient::Request>* request );
     void openRequest( const waveserver::ProtocolOpenRequest* msg );
+    void submitRequest( const waveserver::ProtocolSubmitRequest* msg );
     void reply( PBMessage<webclient::Response>* response );
     void errorReply( const std::string& msg );
 

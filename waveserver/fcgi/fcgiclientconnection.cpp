@@ -5,6 +5,7 @@
 #include "model/waveurl.h"
 #include "model/wavefolk.h"
 #include "network/clientindexwaveactor.h"
+#include "network/clientsubmitrequestactor.h"
 
 FCGIClientConnection::FCGIClientConnection(const QString& sessionId, const QString& participant, ClientActorFolk* parent)
     : ActorGroup( sessionId, parent ), m_participant( participant ), m_sessionId( sessionId ), m_waveletsOpened( false ), m_clientSequenceNumber(1), m_serverSequenceNumber(0), m_ackedSequenceNumber(0)
@@ -72,6 +73,10 @@ void FCGIClientConnection::handleRequest( const PBMessage<webclient::Request>* r
     {
         openRequest( &request->open() );
     }
+    if ( request->has_submit() )
+    {
+        submitRequest( &request->submit() );
+    }
 
     // Is a message pending? If not then keep the HTTP connection open
     if ( m_outQueue.isEmpty() )
@@ -93,7 +98,7 @@ void FCGIClientConnection::handleRequest( const PBMessage<webclient::Request>* r
 
 void FCGIClientConnection::openRequest( const waveserver::ProtocolOpenRequest* msg )
 {
-    qDebug("msg<< %s", msg->DebugString().data());
+    qDebug("FCGImsg<< %s", msg->DebugString().data());
 
     // This is a chance of getting the client participant ID. A bit strange place, but well ...
     QString participantId = QString::fromStdString( msg->participant_id() );
@@ -157,6 +162,33 @@ void FCGIClientConnection::openRequest( const waveserver::ProtocolOpenRequest* m
             return;
         }
     }
+}
+
+void FCGIClientConnection::submitRequest( const waveserver::ProtocolSubmitRequest* msg )
+{
+    qDebug("FCGImsg<< %s", msg->DebugString().data());
+    new ClientSubmitRequestActor( this, *msg );
+}
+
+void FCGIClientConnection::sendFailedSubmitResponse( const QString& errorMessage )
+{
+    PBMessage<webclient::Response>* response = new PBMessage<webclient::Response>();
+    response->mutable_submit()->set_error_message( errorMessage.toStdString() );
+    response->mutable_submit()->set_operations_applied(0);
+
+    qDebug("FCGI SubmitResponse>> %s", response->DebugString().data());
+
+    reply( response );
+}
+
+void FCGIClientConnection::sendSubmitResponse( const waveserver::ProtocolSubmitResponse& response )
+{
+    PBMessage<webclient::Response>* r = new PBMessage<webclient::Response>();
+    r->mutable_submit()->MergeFrom( response );
+
+    qDebug("FCGI SubmitResponse>> %s", r->DebugString().data());
+
+    reply( r );
 }
 
 void FCGIClientConnection::reply( PBMessage<webclient::Response>* response )
