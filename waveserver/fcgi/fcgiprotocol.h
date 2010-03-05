@@ -14,6 +14,11 @@ namespace FCGI
     class FCGIRequest;
     class FCGIServer;
 
+    /**
+      * Represents one TCP connection between web server and wave server.
+      * A FCGIProtocol object can multiplex requests. For each request it
+      * creates a FCGIRequest object.
+      */
     class FCGIProtocol : public ActorGroup
     {
         Q_OBJECT
@@ -69,7 +74,6 @@ namespace FCGI
         typedef std::map<quint16,FCGIRequest*> ReqMap;
 
         ReqMap m_reqMap;
-//        std::queue<quint16> m_newRequestQueue;
         std::vector<quint8> m_inputBuffer;
         QTcpSocket* m_socket;
 

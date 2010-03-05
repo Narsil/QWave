@@ -8,6 +8,11 @@ class QTcpServer;
 
 namespace FCGI
 {
+    /**
+      * The root object for FCGI support.
+      * It listens on the FCGI port and creates new FCGIProtocol
+      * objects for every incoming TCP connection.
+      */
     class FCGIServer : public ActorFolk
     {
         Q_OBJECT
