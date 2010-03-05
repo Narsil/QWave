@@ -2,6 +2,7 @@
 syntax = "proto2";
 
 import "common.proto";
+import "webclient.proto";
 
 package messages;
 
@@ -145,34 +146,3 @@ message StoreWaveletUpdate {
     required int64 applies_to_version = 3;
     required int32 operations_applied = 4;
 }
-
-/**
- * Sent to a participant to tell him that he has been added or removed from a wavelet.
- */
-/*
-message ParticipantAddRemoveWavelet {
-    required string wavelet_name = 1;
-    required bool add = 2;
-}
-*/
-
-/**
- * Response to ParticipantAddRemoveWavelet
- */
-/*
-message ParticipantAck {
-    required bool ok = 1;
-    optional string error = 2;
-}
-*/
-
-/*
-message ParticipantQueryWavelets {
-}
-
-message ParticipantQueryWaveletsResponse {
-    repeated string wavelet_name = 1;
-    required bool ok = 2;
-    optional string error = 3;
-}
-*/

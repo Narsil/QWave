@@ -25,7 +25,6 @@ SOURCES += main.cpp \
     network/xmppstanza.cpp \
     persistence/commitlog.cpp \
     app/settings.cpp \
-    protocol/commitlog.pb.cc \
     protocol/messages.pb.cc \
     model/jid.cpp \
     network/servercertificate.cpp \
@@ -67,7 +66,10 @@ SOURCES += main.cpp \
     fcgi/fcgiprotocol.cpp \
     fcgi/fcgiserver.cpp \
     ../core/protocol/common.pbjson.cpp \
-    ../core/protocol/waveclient-rpc.pbjson.cpp
+    ../core/protocol/waveclient-rpc.pbjson.cpp \
+    fcgi/fcgiclientconnection.cpp \
+    protocol/webclient.pb.cc \
+    protocol/webclient.pbjson.cpp
 HEADERS += model/wavelet.h \
     persistence/storefolk.h \
     persistence/store.h \
@@ -82,7 +84,6 @@ HEADERS += model/wavelet.h \
     network/xmppstanza.h \
     persistence/commitlog.h \
     app/settings.h \
-    protocol/commitlog.pb.h \
     protocol/messages.pb.h \
     model/jid.h \
     network/servercertificate.h \
@@ -127,13 +128,17 @@ HEADERS += model/wavelet.h \
     fcgi/fcgi.h \
     fcgi/fcgiserver.h \
     ../core/protocol/common.pbjson.h \
-    ../core/protocol/waveclient-rpc.pbjson.h
+    ../core/protocol/waveclient-rpc.pbjson.h \
+    fcgi/fcgiclientconnection.h \
+    protocol/webclient.pb.h \
+    protocol/webclient.pbjson.h
 unix:LIBS += -lprotobuf \
     -lcrypto \
     -lqwavecore \
     -lprotojs \
     -L../core \
-    -L ../tools/libprotojs
+    -L \
+    ../tools/libprotojs
 INCLUDEPATH += ./ \
     ../ \
     ../core/ \

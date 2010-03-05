@@ -2,12 +2,13 @@
 #define FCGISERVER_H
 
 #include <QObject>
+#include "actor/actorfolk.h"
 
 class QTcpServer;
 
 namespace FCGI
 {
-    class FCGIServer : public QObject
+    class FCGIServer : public ActorFolk
     {
         Q_OBJECT
     public:

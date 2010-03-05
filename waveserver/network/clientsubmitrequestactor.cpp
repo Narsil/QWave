@@ -14,7 +14,7 @@
 #include "protocol/messages.pb.h"
 #include <QByteArray>
 
-#define CLIENTERROR(msg) { logErr(msg, __FILE__, __LINE__); connection()->sendFailedSubmitResponse(msg); TERMINATE(); }
+#define CLIENTERROR(msg) { logErr(msg, __FILE__, __LINE__); pbConnection()->sendFailedSubmitResponse(msg); TERMINATE(); }
 #define CLIENTLOG(msg) { log(msg, __FILE__, __LINE__); }
 
 ClientSubmitRequestActor::ClientSubmitRequestActor( ClientConnection* con, const QByteArray& data )
@@ -39,11 +39,11 @@ void ClientSubmitRequestActor::execute()
         if ( m_url.isNull() ) { CLIENTERROR("Malformed wave url"); }
 
         // Find the wave
-        Wave* wave = Wave::wave( m_url.waveDomain(), m_url.waveId(), (m_url.waveDomain() == connection()->domain()) );
+        Wave* wave = Wave::wave( m_url.waveDomain(), m_url.waveId(), (m_url.waveDomain() == pbConnection()->domain()) );
         if ( !wave ) { CLIENTERROR("Could not create wave"); }
 
         // If the wavelet does not exist -> create it (but only if it is a local wavelet)
-        m_wavelet = wave->wavelet( m_url.waveletDomain(), m_url.waveletId(), (m_url.waveletDomain() == connection()->domain()) );
+        m_wavelet = wave->wavelet( m_url.waveletDomain(), m_url.waveletId(), (m_url.waveletDomain() == pbConnection()->domain()) );
         if ( !m_wavelet ) { CLIENTERROR("Could not create wavelet"); }
     }
 
@@ -68,7 +68,7 @@ void ClientSubmitRequestActor::execute()
         {
             CLIENTLOG("Got submit response");
             // Send a response
-            connection()->sendSubmitResponse( *REASON );
+            pbConnection()->sendSubmitResponse( *REASON );
         }
         else if ( REASON( Timeout ) ) { CLIENTERROR("Timeout"); }    
 
@@ -103,7 +103,7 @@ void ClientSubmitRequestActor::execute()
             protocol::ProtocolHashedVersion* version = response.mutable_hashed_version_after_application();
             version->MergeFrom( REASON->hashed_version_after_application() );
 
-            connection()->sendSubmitResponse( response );
+            pbConnection()->sendSubmitResponse( response );
         }
         else if ( REASON( Timeout ) ) { CLIENTERROR("Timeout waiting for response"); }
     }
@@ -118,7 +118,7 @@ void ClientSubmitRequestActor::execute()
 //    const AppliedWaveletDelta* applied = m_wavelet->delta(version - 1);
 //    Q_ASSERT(applied);
 //    // Send a response
-//    connection()->sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
+//    pbConnection()->sendSubmitResponse( applied->operationsApplied(), &applied->resultingVersion(), QString::null );
 
     END_EXECUTE;
 }

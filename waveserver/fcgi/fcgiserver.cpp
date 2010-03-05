@@ -8,7 +8,10 @@
 using namespace FCGI;
 
 FCGIServer::FCGIServer()
+    : ActorFolk("fcgi")
 {
+    setHierarchical(true);
+
     m_socket = new QTcpServer(this);
 
     bool check = connect( m_socket, SIGNAL(newConnection()), SLOT(newConnection()));

@@ -1,0 +1,53 @@
+
+syntax = "proto2";
+
+import "common.proto";
+import "waveclient-rpc.proto";
+
+package webclient;
+
+/**
+ * Communication between client and server is always achieved by sending
+ * a Request message via HTTP POST and receiving a Response message
+ * from the web server. The web server treats each HTTP Post as a long call.
+ */
+message Request
+{
+  required string session_id = 1;
+  /**
+   * The last sequence number received by the client.
+   */
+  required int64 client_ack = 2;
+  /**
+   * The sequence number of this client-request.
+   * A zero sequence number means that the request does not carry information itself.
+   * In this case it is simply a pull.
+   */
+  required int64 client_sequence_number = 3;
+  optional LoginRequest login = 10;
+  optional waveserver.ProtocolOpenRequest open = 11;
+}
+
+message Response
+{  
+  optional string error_message = 1;
+  required int64 server_ack = 2;
+  /**
+   * The sequence number of this server response.
+   * A zero sequence number means that the response does not carry information itself.
+   * In this case it can be ignored.
+   */
+  required int64 server_sequence_number = 3;
+  optional LoginResponse login = 10;
+  optional waveserver.ProtocolWaveletUpdate update = 11;
+}
+  
+message LoginRequest
+{
+  required string jid = 1;
+}
+
+message LoginResponse
+{
+  required string session_id = 1;  
+}
