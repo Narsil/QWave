@@ -1,0 +1,62 @@
+<html>
+<head>
+<title>Web Client Dummy</title>
+<script src="rpc.js" type="text/javascript"></script>
+</head>
+<body>
+	<h1>Log-In</h1>
+	
+	<form>
+	  <p>User JID: <input type="text" id="jid" value="tux@wave1.vs.uni-due.de"></input></p>
+	  <input type="button" value="Login" onclick="login()"></input>
+	</form>
+
+	<h3>Session ID</h3>
+	<p id="sessionId">No session ID yet</p>
+
+	<h3>Protocol</h3>
+	<div id="out"></div>
+
+	<script type="text/javascript">
+	
+var sessionId = "";
+var clientSequenceNr = 0;
+var serverSequenceNr = 0;
+var serverAck = 0;
+
+function login()
+{
+  // TODO: Escape the JID
+  callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"10":{"1":"' + document.getElementById('jid').value + '"}}', onMessage);
+}
+
+function onMessage(jsonData)
+{
+  // TODO: Evil!
+  response = eval( "(" + jsonData + ")" );
+  // Get the ack of the server
+  serverAck = Math.max(response["2"], serverAck);
+  // Get the latest server sequence number
+  if ( response[3] > 0 )
+    serverSequenceNr = response["3"]
+  if ( response["10"] )
+  {
+    var login = response["10"];    
+    sessionId = login["1"];
+    document.getElementById("sessionId").innerHTML = sessionId;
+    
+    // Open the indexwave	
+    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"11":{"1":"' + document.getElementById('jid').value + '","2":"!indexwave"}}', onMessage);    
+  }
+  else if (response["11"] )
+  {
+    var update = response["11"];
+    
+    // Pull
+    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":0}', onMessage);    
+  }
+}
+
+	</script>
+</body>
+</html>
