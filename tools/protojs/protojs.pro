@@ -7,6 +7,8 @@ CONFIG += console
 CONFIG -= app_bundle
 TEMPLATE = app
 SOURCES += main.cpp \
-    cppjsongenerator.cpp
-HEADERS += cppjsongenerator.h
+    cppjsongenerator.cpp \
+    jsjsongenerator.cpp
+HEADERS += cppjsongenerator.h \
+    jsjsongenerator.h
 LIBS += -lprotobuf -lprotoc
