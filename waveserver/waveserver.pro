@@ -65,7 +65,9 @@ SOURCES += main.cpp \
     network/clientparticipant.cpp \
     fcgi/fcgirequest.cpp \
     fcgi/fcgiprotocol.cpp \
-    fcgi/fcgiserver.cpp
+    fcgi/fcgiserver.cpp \
+    ../core/protocol/common.pbjson.cpp \
+    ../core/protocol/waveclient-rpc.pbjson.cpp
 HEADERS += model/wavelet.h \
     persistence/storefolk.h \
     persistence/store.h \
@@ -123,12 +125,17 @@ HEADERS += model/wavelet.h \
     fcgi/fcgirequest.h \
     fcgi/fcgiprotocol.h \
     fcgi/fcgi.h \
-    fcgi/fcgiserver.h
+    fcgi/fcgiserver.h \
+    ../core/protocol/common.pbjson.h \
+    ../core/protocol/waveclient-rpc.pbjson.h
 unix:LIBS += -lprotobuf \
     -lcrypto \
     -lqwavecore \
-    -L../core
+    -lprotojs \
+    -L../core \
+    -L ../tools/libprotojs
 INCLUDEPATH += ./ \
     ../ \
     ../core/ \
-    ../core/protocol
+    ../core/protocol \
+    ../tools/libprotojs
