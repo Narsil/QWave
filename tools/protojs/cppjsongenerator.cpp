@@ -113,6 +113,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                 cpp << "\t\tdata.append( \"\\\"" << field->number() << "\\\":\\\"true\\\"\" );" << endl;
                 cpp << "\telse" << endl;
                 cpp << "\t\tdata.append( \"\\\"" << field->number() << "\\\":\\\"false\\\"\" );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_ENUM:
                 cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
                 cpp << "\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "() ) );" << endl;
@@ -166,6 +167,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                 cpp << "\t\t\tdata.append( \"\\\"true\\\"\" );" << endl;
                 cpp << "\t\telse" << endl;
                 cpp << "\t\t\tdata.append( \"\\\"false\\\"\" );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_ENUM:
                 cpp << "\t\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "(i) ) );" << endl;
                 break;
