@@ -1,5 +1,7 @@
 #include "clientactorfolk.h"
 #include "clientparticipant.h"
+#include "fcgi/fcgiclientconnection.h"
+#include "network/clientconnection.h"
 #include "model/jid.h"
 
 ClientActorFolk* ClientActorFolk::s_folk = 0;
@@ -12,7 +14,12 @@ ClientActorFolk::ClientActorFolk(QObject* parent)
 ClientConnection* ClientActorFolk::newClientConnection( QTcpSocket* socket )
 {
     ClientConnection* con = new ClientConnection( socket, this );
-    // m_connections[con->groupId()] = con;
+    return con;
+}
+
+FCGIClientConnection* ClientActorFolk::newFCGIClientConnection( const QString& sessionId, const QString& jid )
+{
+    FCGIClientConnection* con = new FCGIClientConnection( sessionId, jid, this );
     return con;
 }
 
@@ -20,7 +27,6 @@ ActorGroup* ClientActorFolk::group( const QString& groupId, bool createOnDemand 
 {
     Q_UNUSED( createOnDemand )
 
-    // ActorGroup* g = m_connections[ groupId ];
     ActorGroup* g = this->ActorFolk::group( groupId, createOnDemand );
     if ( g )
         return g;

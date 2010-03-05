@@ -5,13 +5,20 @@
 #include "actor/actorid.h"
 
 class ClientConnection;
+class FCGIClientConnection;
 
 class ClientActor : public Actor
 {
 public:
     ClientActor( ClientConnection* con );
+    ClientActor( FCGIClientConnection* con );
 
-    inline ClientConnection* connection() { return m_connection; }
+    ActorGroup* connection();
+
+    inline ClientConnection* pbConnection() { return m_pbConnection; }
+    inline FCGIClientConnection* fcgiConnection() { return m_fcgiConnection; }
+
+    QString participant() const;
 
 protected:
     void log( const char* error, const char* file, int line );
@@ -20,7 +27,8 @@ protected:
     void logErr( const QString& error, const char* file, int line );
 
 private:
-    ClientConnection* m_connection;
+    ClientConnection* m_pbConnection;
+    FCGIClientConnection* m_fcgiConnection;
 
     static quint64 s_id;
 };

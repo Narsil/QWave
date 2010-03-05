@@ -1,12 +1,16 @@
 #include "fcgiprotocol.h"
 #include "fcgirequest.h"
 #include "fcgi.h"
+#include "fcgiserver.h"
 #include <QByteArray>
 
 using namespace FCGI;
 
-FCGIProtocol::FCGIProtocol(QTcpSocket* socket, QObject* parent)
-        : QObject(parent), m_socket( socket )
+qint64 FCGIProtocol::s_id = 0;
+
+
+FCGIProtocol::FCGIProtocol(QTcpSocket* socket, FCGIServer* parent)
+        : ActorGroup( QString::number(s_id++), parent), m_socket( socket )
 {
     connect( m_socket, SIGNAL(disconnected()), SLOT(stop()));
     connect( m_socket, SIGNAL(error(QAbstractSocket::SocketError)), SLOT(stopOnError(QAbstractSocket::SocketError)));
@@ -46,7 +50,7 @@ bool FCGIProtocol::process_begin_request(quint16 id, quint8 const * buf, quint16
     // get it after we've read all parameters.
 
     const BeginRequest* br = reinterpret_cast<const BeginRequest*>(buf);
-    m_reqMap[id] = new FCGIRequest(*this, id,
+    m_reqMap[id] = new FCGIRequest(this, id,
                                    FCGIRequest::Role((br->roleB1 << 8) + br->roleB0),
                                    (br->flags & FLAG_KEEP_CONN) == 1);
     return true;

@@ -4,12 +4,18 @@
 #include <QtGlobal>
 #include <string>
 #include <map>
+#include "actor/actorgroup.h"
+
+namespace webclient
+{
+    class Response;
+}
 
 namespace FCGI
 {
     class FCGIProtocol;
 
-    class FCGIRequest
+    class FCGIRequest : public ActorGroup
     {
     public:
         enum Role
@@ -27,8 +33,11 @@ namespace FCGI
             UNKNOWN_ROLE     = 3
         };
 
-        FCGIRequest(FCGIProtocol& driver, quint16 id, Role role, bool keepConnection);
+        FCGIRequest(FCGIProtocol* driver, quint16 id, Role role, bool keepConnection);
         ~FCGIRequest();
+
+    protected:
+        virtual void customEvent( QEvent* event );
 
     protected:
         enum OStreamType
@@ -53,6 +62,9 @@ namespace FCGI
         void process();
 
     private:
+        void errorReply(const std::string& str);
+        void reply(webclient::Response& response);
+
         quint16 const m_id;
         Role const m_role;
         bool const m_keepConnection;
@@ -60,7 +72,9 @@ namespace FCGI
         std::string m_stdinStream;
         bool m_stdinEOF;
         bool m_aborted;
-        FCGIProtocol& m_driver;
+        FCGIProtocol* m_driver;
+
+        static qint64 s_id;
     };
 }
 

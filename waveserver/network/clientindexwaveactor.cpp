@@ -1,4 +1,6 @@
 #include "clientindexwaveactor.h"
+#include "network/clientconnection.h"
+#include "fcgi/fcgiclientconnection.h"
 #include "actor/pbmessage.h"
 #include "actor/recvpb.h"
 #include "actor/timeout.h"
@@ -13,6 +15,11 @@ ClientIndexWaveActor::ClientIndexWaveActor(ClientConnection* con)
 {
 }
 
+ClientIndexWaveActor::ClientIndexWaveActor(FCGIClientConnection* con)
+        : ClientActor(con)
+{
+}
+
 void ClientIndexWaveActor::execute()
 {
     qDebug("EXECUTE ClientIndexWaveActor");
@@ -22,9 +29,9 @@ void ClientIndexWaveActor::execute()
     // Ask the store for all wavelets in which this user participates
     {
         m_msgId = nextId();
-        PBMessage<messages::QueryParticipantWavelets>* msg = new PBMessage<messages::QueryParticipantWavelets>( ActorId("store", connection()->participant()), m_msgId );
+        PBMessage<messages::QueryParticipantWavelets>* msg = new PBMessage<messages::QueryParticipantWavelets>( ActorId("store", participant()), m_msgId );
         msg->setCreateOnDemand( true );
-        msg->set_participant( connection()->participant().toStdString() );
+        msg->set_participant( participant().toStdString() );
         bool ok = post( msg );
         if ( !ok ) { CLIENTERROR("Could not talk to store"); }
     }

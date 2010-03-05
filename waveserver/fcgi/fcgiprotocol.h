@@ -4,27 +4,22 @@
 #include <QObject>
 #include <QTcpSocket>
 #include <vector>
-//#include <queue>
 #include <map>
+#include "actor/actorgroup.h"
 
 class QTcpSocket;
 
 namespace FCGI
 {
     class FCGIRequest;
+    class FCGIServer;
 
-    class FCGIProtocol : public QObject
+    class FCGIProtocol : public ActorGroup
     {
         Q_OBJECT
     public:
-        FCGIProtocol(QTcpSocket* socket, QObject* parent = 0);
+        FCGIProtocol(QTcpSocket* socket, FCGIServer* parent);
         ~FCGIProtocol();
-
-        /**
-          * @return the next pending request or 0.
-          */
-//        FCGIRequest* getRequest();
-//        bool hasActiveRequests() const;
 
     protected:
         friend class FCGIRequest;
@@ -50,8 +45,14 @@ namespace FCGI
           */
         void readBytes();
 
-    private:                        // don't copy me
+    private:
+        /**
+         * Don't copy me
+         */
         FCGIProtocol(const FCGIProtocol&);
+        /**
+         * Don't copy me
+         */
         FCGIProtocol& operator= (const FCGIProtocol &);
 
     private:
@@ -71,6 +72,8 @@ namespace FCGI
 //        std::queue<quint16> m_newRequestQueue;
         std::vector<quint8> m_inputBuffer;
         QTcpSocket* m_socket;
+
+        static qint64 s_id;
     };
 }
 
