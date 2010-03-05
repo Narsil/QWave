@@ -188,14 +188,10 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
     cpp << "\treturn ParseFromArray( msg, scanner );" << endl;
     cpp << "}" << endl << endl;
 
-    // How many fields are required?
-    int minFields = 0;
     int needsOkVariable = false;
     for( int i = 0; i < descriptor->field_count(); ++i )
     {
         const FieldDescriptor* field = descriptor->field(i);
-        if ( field->is_required() )
-            minFields++;
         if ( field->cpp_type() != FieldDescriptor::CPPTYPE_MESSAGE && field->cpp_type() != FieldDescriptor::CPPTYPE_BOOL )
             needsOkVariable = true;
     }
@@ -203,12 +199,26 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
     cpp << "bool " << nspace << "::" << absIdent(descriptor) << "_JSON::ParseFromArray(" << absIdent(descriptor) << "* msg, JSONScanner& scanner)" << endl;
     cpp << "{" << endl;
     cpp << "\tif ( scanner.next() != JSONScanner::BeginObject ) return false;" << endl;
-    cpp << "\tint count = 0;" << endl;
+    for( int i = 0; i < descriptor->field_count(); ++i )
+    {
+        const FieldDescriptor* field = descriptor->field(i);
+        if ( field->is_required() )
+            cpp << "\tbool has_" << ident(field->name()) << " = false;" << endl;
+    }
     cpp << "\twhile( true )" << endl;
     cpp << "\t{" << endl;
     cpp << "\t\tJSONScanner::Token token = scanner.next();" << endl;
     cpp << "\t\tswitch( token )" << endl << "\t\t{" << endl;
-    cpp << "\t\tcase JSONScanner::EndObject: return count >= " << minFields << ";" << endl;
+    cpp << "\t\tcase JSONScanner::EndObject:" << endl;
+    cpp << "\t\t{" << endl;
+    for( int i = 0; i < descriptor->field_count(); ++i )
+    {
+        const FieldDescriptor* field = descriptor->field(i);
+        if ( field->is_required() )
+            cpp << "\t\t\tif ( !has_" << ident(field->name()) << ") return false;" << endl;
+    }
+    cpp << "\t\t\treturn true;" << endl;
+    cpp << "\t\t}" << endl;
     cpp << "\t\tcase JSONScanner::Comma: continue;" << endl;
     cpp << "\t\tcase JSONScanner::StringValue:" << endl;
     cpp << "\t\t{" << endl;
@@ -314,6 +324,9 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
         }
         else
         {
+            if ( field->is_required() )
+                cpp << "\t\t\t\thas_" << ident(field->name()) << "= true;" << endl;
+
             switch( field->cpp_type() )
             {
             case FieldDescriptor::CPPTYPE_INT32:

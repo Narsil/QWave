@@ -17,20 +17,20 @@ int main(int argc, char *argv[])
 
     qDebug("JSON=%s", ba.constData() );
 
-    JSONScanner scanner( ba.constData(), ba.length() );
-    JSONScanner::Token token;
-    do
-    {
-        token = scanner.next();
-        qDebug("token %i", token );
-        if ( token == JSONScanner::StringValue )
-        {
-            bool ok;
-            qDebug("\tvalue %s", scanner.stringValue( &ok ).c_str() );
-            Q_ASSERT(ok);
-        }
-    }
-    while( token != JSONScanner::End && token != JSONScanner::Error );
+//    JSONScanner scanner( ba.constData(), ba.length() );
+//    JSONScanner::Token token;
+//    do
+//    {
+//        token = scanner.next();
+//        qDebug("token %i", token );
+//        if ( token == JSONScanner::StringValue )
+//        {
+//            bool ok;
+//            qDebug("\tvalue %s", scanner.stringValue( &ok ).c_str() );
+//            Q_ASSERT(ok);
+//        }
+//    }
+//    while( token != JSONScanner::End && token != JSONScanner::Error );
 
     protocol::ProtocolSignature sig;
     sig.set_signature_algorithm( protocol::ProtocolSignature_SignatureAlgorithm_SHA1_RSA );
@@ -54,5 +54,12 @@ int main(int argc, char *argv[])
     ok = protocol::ProtocolAppliedWaveletDelta_JSON::SerializeToArray( &delta, ba );
     Q_ASSERT(ok);
 
+    delta.PrintDebugString();
     qDebug("JSON=%s", ba.constData() );
+
+    protocol::ProtocolAppliedWaveletDelta delta2;
+    ok = protocol::ProtocolAppliedWaveletDelta_JSON::ParseFromArray( &delta2, ba );
+    Q_ASSERT(ok);
+
+    delta2.PrintDebugString();
 }
