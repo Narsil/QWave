@@ -2,6 +2,8 @@
 #include <google/protobuf/io/coded_stream.h>
 
 #include <sstream>
+#include <ctype.h>
+
 CppJSONGenerator::CppJSONGenerator()
 {
 }
@@ -21,10 +23,15 @@ bool CppJSONGenerator::Generate( const FileDescriptor* file, const std::string&,
 
     string label = ident(file->name());
     for( string::size_type i = 0; i < label.length(); ++i )
-        if ( label[i] == '.' )
+        if ( isalnum(label[i]) == 0 )
             label[i] = '_';
     h << "#ifndef " <<  label << endl;
     h << "#define " << label << endl << endl;
+    for( int i = 0; i < file->dependency_count(); ++i )
+    {
+        const FileDescriptor* f = file->dependency(i);
+        h << "#include \"" << f->name().substr(0, f->name().length() - 6) << ".pbjson.h\"" << endl;
+    }
     h << "#include <QByteArray>"  << endl;
     h << "#include \"jsonmessage.h\""  << endl;
     h << "#include \"" << file->name().substr(0, file->name().length() - 6) << ".pb.h\"" << endl << endl;
@@ -60,6 +67,10 @@ bool CppJSONGenerator::Generate( const FileDescriptor* file, const std::string&,
 
 bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const string& nspace, ostream& cpp, ostream& h, std::string* error) const
 {
+    /////////////////////////////////
+    // Class Header
+    /////////////////////////////////
+
     h << "class " << absIdent(descriptor) + "_JSON : public ::JSONMessage" << endl << "{" << endl;
     h << "public:" << endl;
     h << "\tstatic bool SerializeToArray(const " << absIdent(descriptor) << "* msg, QByteArray& data);" << endl;
@@ -68,6 +79,10 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
     h << "private:" << endl;
     h << "\t" << absIdent(descriptor) << "_JSON() { }" << endl;
     h << "};" << endl << endl;
+
+    /////////////////////////////////
+    // SerializaToArray
+    /////////////////////////////////
 
     cpp << "bool " << nspace << "::" << absIdent(descriptor) << "_JSON::SerializeToArray(const " << absIdent(descriptor) << "* msg, QByteArray& data)" << endl;
     cpp << "{" << endl;
@@ -120,7 +135,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
                 cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
-                cpp << "\tif ( !" << absIdent(field->message_type()) << "_JSON::SerializeToArray( &msg->" << ident(field->name()) << "(), data ) ) return false;" << endl;
+                cpp << "\tif ( !" << absIdent(field->message_type(), true) << "_JSON::SerializeToArray( &msg->" << ident(field->name()) << "(), data ) ) return false;" << endl;
                 break;
             default:
                 error->append("Unknown type");
@@ -168,7 +183,7 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
                     cpp << "\t\tdata.append( toJSONString( msg->" << ident(field->name()) << "(i) ) );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
-                cpp << "\t\tif ( !" << absIdent(field->message_type()) << "_JSON::SerializeToArray( &msg->" << ident(field->name()) << "(i), data ) ) return false;" << endl;
+                cpp << "\t\tif ( !" << absIdent(field->message_type(), true) << "_JSON::SerializeToArray( &msg->" << ident(field->name()) << "(i), data ) ) return false;" << endl;
                 break;
             default:
                 error->append("Unknown type");
@@ -181,6 +196,10 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
     cpp << "\tdata.append( \"}\" );" << endl;
     cpp << "\treturn true;" << endl << endl;
     cpp << "}" << endl << endl;
+
+    /////////////////////////////////
+    // ParseFromArray
+    /////////////////////////////////
 
     cpp << "bool " << nspace << "::" << absIdent(descriptor) << "_JSON::ParseFromArray(" << absIdent(descriptor) << "* msg, const QByteArray& data)" << endl;
     cpp << "{" << endl;
@@ -195,6 +214,10 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
         if ( field->cpp_type() != FieldDescriptor::CPPTYPE_MESSAGE && field->cpp_type() != FieldDescriptor::CPPTYPE_BOOL )
             needsOkVariable = true;
     }
+
+    /////////////////////////////////
+    // ParseFromArray
+    /////////////////////////////////
 
     cpp << "bool " << nspace << "::" << absIdent(descriptor) << "_JSON::ParseFromArray(" << absIdent(descriptor) << "* msg, JSONScanner& scanner)" << endl;
     cpp << "{" << endl;
