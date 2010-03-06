@@ -15,7 +15,7 @@ bool JsJSONGenerator::Generate( const FileDescriptor* file, const std::string&, 
 
     ostringstream js( ostringstream::out );
 
-    js << "if (!" << nspace(file->package()) << ") " << nspace(file->package()) << " = {};" << endl;
+    js << "if (!window." << nspace(file->package()) << ") " << nspace(file->package()) << " = {};" << endl;
 
     for( int i = 0; i < file->message_type_count(); ++i )
     {
@@ -70,7 +70,7 @@ bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const s
             const EnumValueDescriptor* ev = e->value(v);
             js << ident(ev->name()) << ":" << ev->number();
         }
-        js << endl << endl;
+        js << "};" << endl << endl;
     }
 
     /////////////////////////////////
