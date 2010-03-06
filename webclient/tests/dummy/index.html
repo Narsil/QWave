@@ -1,14 +1,18 @@
 <html>
 <head>
 <title>Web Client Dummy</title>
+<script src="json.js" type="text/javascript"></script>
 <script src="rpc.js" type="text/javascript"></script>
+<script src="common.pbjson.js" type="text/javascript"></script>
+<script src="waveclient-rpc.pbjson.js" type="text/javascript"></script>
+<script src="webclient.pbjson.js" type="text/javascript"></script>
 </head>
 <body>
 	<h1>Log-In</h1>
 	
 	<form>
-	  <p>User JID: <input type="text" id="jid" value="tux@wave1.vs.uni-due.de"></input></p>
-	  <input type="button" value="Login" onclick="login()"></input>
+	  <p>User JID: <input type="text" id="jid" value="tux@wave1.vs.uni-due.de" /></p>
+	  <input type="button" value="Login" onclick="login()" />
 	</form>
 
 	<h3>Session ID</h3>
@@ -26,35 +30,75 @@ var serverAck = 0;
 
 function login()
 {
+  var r = new webclient.Request();
+  r.session_id = sessionId;
+  r.client_ack = serverSequenceNr;
+  r.client_sequence_number = ++clientSequenceNr;
+  r.login = new webclient.LoginRequest();
+  r.login.jid = document.getElementById('jid').value;
+  var json = JSON.stringify(r.serialize());
+  callServer( json, onMessage );
   // TODO: Escape the JID
-  callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"10":{"1":"' + document.getElementById('jid').value + '"}}', onMessage);
+  // callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"10":{"1":"' + document.getElementById('jid').value + '"}}', onMessage);
 }
 
 function onMessage(jsonData)
 {
   // TODO: Evil!
-  response = eval( "(" + jsonData + ")" );
+  // var response = eval( "(" + jsonData + ")" );
+  var response = webclient.Response.parse( JSON.parse( jsonData ) );
   // Get the ack of the server
-  serverAck = Math.max(response["2"], serverAck);
+  // serverAck = Math.max(response["2"], serverAck);
+  serverAck = Math.max(response.server_ack, serverAck);
   // Get the latest server sequence number
-  if ( response[3] > 0 )
-    serverSequenceNr = response["3"]
-  if ( response["10"] )
+//  if ( response["3"] > 0 )
+//    serverSequenceNr = response["3"]
+//  if ( response["10"] )
+//  {
+//    var login = response["10"];    
+//    sessionId = login["1"];
+//    document.getElementById("sessionId").innerHTML = sessionId;
+//    
+//    // Open the indexwave	
+//    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"11":{"1":"' + document.getElementById('jid').value + '","2":"!indexwave"}}', onMessage);    
+//  }
+//  else if (response["11"] )
+//  {
+//    var update = response["11"];
+//    
+//    // Pull
+//    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":0}', onMessage);    
+//  }
+  
+  if ( response.server_sequence_number > 0 )
+    serverSequenceNr = response.server_sequence_number;
+  if ( response.has_login() )
   {
-    var login = response["10"];    
-    sessionId = login["1"];
+    var login = response.login;    
+    sessionId = login.session_id;
     document.getElementById("sessionId").innerHTML = sessionId;
-    
-    // Open the indexwave	
-    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"11":{"1":"' + document.getElementById('jid').value + '","2":"!indexwave"}}', onMessage);    
+
+    var r = new webclient.Request();
+    r.session_id = sessionId;
+    r.client_ack = serverSequenceNr;
+    r.client_sequence_number = ++clientSequenceNr;
+    r.open = new waveserver.ProtocolOpenRequest();
+    r.open.participant_id = document.getElementById('jid').value;
+    r.open.wave_id = "!indexwave";
+    var json = JSON.stringify(r.serialize());
+    callServer( json, onMessage );
   }
-  else if (response["11"] )
+  else if (response.has_update())
   {
-    var update = response["11"];
-    
-    // Pull
-    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":0}', onMessage);    
+    var update = response.update;
+    var r = new webclient.Request();
+    r.session_id = sessionId;
+    r.client_ack = serverSequenceNr;
+    r.client_sequence_number = 0;
+    var json = JSON.stringify(r.serialize());
+    callServer( json, onMessage );
   }
+
 }
 
 	</script>
