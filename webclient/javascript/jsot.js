@@ -72,12 +72,7 @@ JSOT.Doc.prototype.toString = function()
 	return result.join("");
 };
 
-JSOT.DocOp = function()
-{
-	this.component = [ ];
-};
-
-JSOT.DocOp.prototype.applyTo = function(doc)
+protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 {
 	// Position in this.components
 	var opIndex = 0;
@@ -105,21 +100,28 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
 
+			var attribs = { };
+			for( var a in op.element_start.attribute )
+			{
+				var v = op.element_start.attribute[a];
+				attribs[v.key] = v.value;
+			}
+			
 			if ( inContentIndex == 0 )
 			{
-				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.element_start.type, op.element_start.attribute ) );
+				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs ) );
 				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 			}
 			else
 			{
-				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.element_start.type, op.element_start.attribute ), c.substring(inContentIndex, c.length) );
+				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs ), c.substring(inContentIndex, c.length) );
 				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
 				contentIndex += 2;
 				c = doc.content[contentIndex];
 				inContentIndex = 0;
-			}			
+			}
 		}
 		else if ( op.element_end )
 		{
@@ -142,7 +144,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				contentIndex += 2;
 				c = doc.content[contentIndex];
 				inContentIndex = 0;
-			}			
+			}
 		}
 		else if ( op.characters )
 		{
@@ -295,11 +297,21 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				throw "Cannot delete element start at this position, because in the document there is none";
 			if ( c.type != op.delete_element_start.type )
 				throw "Cannot delete element start because Op and Document have different element type";
-			if ( c.attributes.length != op.delete_element_start.attribute.length )
+			var acount = 0;
+			for( var a in c.attributes )
+				++acount;			
+			if ( acount != op.delete_element_start.attribute.length )
 				throw "Cannot delete element start because the attributes of Op and Doc differ";
+			
+			var attribs = { };
+			for( var a in op.delete_element_start.attribute )
+			{
+				var v = op.delete_element_start.attribute[a];
+				attribs[v.key] = v.value;
+			}
 			for( var a in c.attributes )
 			{
-				if ( c.attributes[a] != op.delete_element_start.attribute[a] )
+				if ( c.attributes[a] != attribs[a] )
 					throw "Cannot delete element start because attribute values differ";
 			}
 			doc.content.splice( contentIndex, 1 );
@@ -343,9 +355,9 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 			}								
 			doc.format[contentIndex] = updatedAnnotation;
-			for( var a in op.update_attributes )
+			for( var a in op.update_attributes.attribute_update )
 			{
-				var update = op.update_attributes[a];
+				var update = op.update_attributes.attribute_update[a];
 				// Add a new attribute?
 				if ( update.old_value == null )
 				{
@@ -375,13 +387,17 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 				break;
 			if ( !c.element_start )
 				throw "Cannot replace attributes at this position, because in the document there is no start element";
-			if ( c.attributes.length != op.replace_attributes.oldAttributes.length )
-				throw "Cannot replace attributes because the old attributes do not match";
+			var acount = 0;
 			for( var a in c.attributes )
+				++acount;
+			for( var a in op.replace_attributes.old_attribute )
 			{
-				if ( c.attributes[a] != op.replace_attributes.oldAttributes[a] )
+			   var keyvalue = op.replace_attributes.old_attribute[a];
+				if ( c.attributes[keyvalue.key] != keyvalue.value )
 					throw "Cannot replace attributes because the value of the old attributes do not match";
 			}
+			if ( acount != op.replace_attributes.old_attribute.length )
+				throw "Cannot replace attributes because the old attributes do not match";
 			// If there is an annotation boundary change in the deleted characters, this change must be applied
 			var anno = doc.format[contentIndex];
 			if ( anno != docAnnotation )
@@ -391,8 +407,11 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 			}											
 			doc.format[contentIndex] = updatedAnnotation;
 			c.attributes = { }
-			for( var a in op.replace_attributes.newAttributes )
-				c.attributes[a] = op.replace_attributes.newAttributes[a];
+			for( var a in op.replace_attributes.new_attribute )
+			{
+			   var keyvalue = op.replace_attributes.new_attribute[a];
+				c.attributes[keyvalue.key] = keyvalue.value;
+			}
 			c = doc.content[++contentIndex];
 			inContentIndex = 0;							
 		}
@@ -436,7 +455,7 @@ JSOT.DocOp.prototype.applyTo = function(doc)
 		throw "op is too small for document";
 };
 
-JSOT.DocOp.prototype.computeAnnotation = function(docAnnotation, annotationUpdate, annotationUpdateCount)
+protocol.ProtocolDocumentOperation.prototype.computeAnnotation = function(docAnnotation, annotationUpdate, annotationUpdateCount)
 {
 	if ( annotationUpdateCount == 0 )
 		return docAnnotation;
@@ -478,115 +497,104 @@ JSOT.DocOp.prototype.computeAnnotation = function(docAnnotation, annotationUpdat
 	return anno;
 };
 
-JSOT.DocOp.prototype.has_element_start = function()
+protocol.ProtocolDocumentOperation.newElementStart = function(type, attributes)
 {
-	return this.element_start != null;
-};
-
-JSOT.DocOp.prototype.has_element_end = function()
-{
-	return this.element_end == true;
-};
-
-JSOT.DocOp.prototype.has_delete_element_start = function()
-{
-	return this.delete_element_start != null;
-};
-
-JSOT.DocOp.prototype.has_delete_element_end = function()
-{
-	return this.delete_element_end == true;
-};
-
-JSOT.DocOp.prototype.has_characters = function()
-{
-	return this.characters != null;
-};
-
-JSOT.DocOp.prototype.has_delete_characters = function()
-{
-	return this.delete_characters != null;
-};
-
-JSOT.DocOp.prototype.has_retain_item_count = function()
-{
-	return this.retain_item_count != null;
-};
-
-JSOT.DocOp.prototype.has_replace_attributes = function()
-{
-	return this.replace_attributes != null;
-};
-
-JSOT.DocOp.prototype.has_update_attributes = function()
-{
-	return this.update_attributes != null;
-};
-
-JSOT.DocOp.prototype.has_annotation_boundary = function()
-{
-	return this.annotation_boundary != null;
-};
-
-JSOT.DocOp.newElementStart = function(type, attributes)
-{
+	var c = new protocol.ProtocolDocumentOperation_Component();
 	if ( !attributes )
 		attributes = { };
-	this.element_start = { type : type, attribute : attributes };
+	c.element_start = new protocol.ProtocolDocumentOperation_Component_ElementStart();
+	c.element_start.type = type;
+	c.element_start.attribute = attributes;
+	return c;
 };
 
-JSOT.DocOp.newElementEnd = function()
+protocol.ProtocolDocumentOperation.newElementEnd = function()
 {
-	this.element_end = true;
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.element_end = true;
+	return c;
 };
 
-JSOT.DocOp.newCharacters = function(characters)
+protocol.ProtocolDocumentOperation.newCharacters = function(characters)
 {
-	this.characters = characters;
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.characters = characters;
+	return c;
 };
 
-JSOT.DocOp.newDeleteCharacters = function(delete_characters)
+protocol.ProtocolDocumentOperation.newDeleteCharacters = function(delete_characters)
 {
-	this.delete_characters = delete_characters;
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.delete_characters = delete_characters;
+	return c;
 };
 
-JSOT.DocOp.newRetainItemCount = function(retain_item_count)
+protocol.ProtocolDocumentOperation.newRetainItemCount = function(retain_item_count)
 {
-	this.retain_item_count = retain_item_count;
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.retain_item_count = retain_item_count;
+	return c;
 };
  
-JSOT.DocOp.newDeleteElementStart = function(type, attributes)
+protocol.ProtocolDocumentOperation.newDeleteElementStart = function(type, attributes)
 {
+	var c = new protocol.ProtocolDocumentOperation_Component();
 	if ( !attributes )
 		attributes = { };
-	this.delete_element_start = { type : type, attribute : attributes };
+	c.delete_element_start = new protocol.ProtocolDocumentOperation_Component_ElementStart();
+	c.delete_element_start.type = type;
+	c.delete_element_start.attribute = attributes;
+	return c;
 };
 
-JSOT.DocOp.newDeleteElementEnd = function()
+protocol.ProtocolDocumentOperation.newDeleteElementEnd = function()
 {
-	this.delete_element_end = true;
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.delete_element_end = true;
+	return c;
 };
 
-JSOT.DocOp.newReplaceAttributes = function(oldAttributes, newAttributes)
+protocol.ProtocolDocumentOperation.newReplaceAttributes = function(old_attribute, new_attribute)
 {
-	this.replace_attributes = { oldAttributes : oldAttributes, newAttributes : newAttributes };
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.replace_attributes = new protocol.ProtocolDocumentOperation_Component_ReplaceAttributes();
+	c.replace_attributes.old_attribute = old_attribute;
+	c.replace_attributes.new_attribute = new_attribute;
+	return c;
 };
 
-JSOT.DocOp.newUpdateAttributes = function(attributeUpdates)
+protocol.ProtocolDocumentOperation.newUpdateAttributes = function(attributeUpdates)
 {
-	this.update_attributes = attributeUpdates;
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.update_attributes = new protocol.ProtocolDocumentOperation_Component_ReplaceAttributes();
+	c.update_attributes.attribute_update = attributeUpdates;
+	return c;
 };
 
-JSOT.DocOp.newKeyValueUpdate = function( key, old_value, new_value )
+protocol.ProtocolDocumentOperation.newKeyValueUpdate = function( key, old_value, new_value )
 {
-	this.key = key;
-	this.old_value = old_value;
-	this.new_value = new_value;
+	var c = new protocol.ProtocolDocumentOperation_Component_KeyValueUpdate();
+	c.key = key;
+	c.old_value = old_value;
+	c.new_value = new_value;
+	return c;
 };
 
-JSOT.DocOp.newAnnotationBoundary = function(end, change)
+protocol.ProtocolDocumentOperation.newKeyValuePair = function( key, value )
 {
-	this.annotation_boundary = { end : end, change : change };
+	var c = new protocol.ProtocolDocumentOperation_Component_KeyValueUpdate();
+	c.key = key;
+	c.value = value;
+	return c;
+};
+
+protocol.ProtocolDocumentOperation.newAnnotationBoundary = function(end, change)
+{
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	c.annotation_boundary = new protocol.ProtocolDocumentOperation_Component_AnnotationBoundary();
+	c.annotation_boundary.end = end;
+	c.annotation_boundary.change = change;
+	return c;
 };
 
 JSOT.ProtocolWaveletOperation = function()
@@ -605,7 +613,7 @@ JSOT.ProtocolWaveletOperation.MutateDocument = function(documentId, documentOper
 //
 /////////////////////////////////////////////////
 
-JSOT.DocOp.xform = function( m1, m2 )
+protocol.ProtocolDocumentOperation.xform = function( m1, m2 )
 {
     if ( m1.component.length == 0 || m2.component.length == 0 )
         return;
@@ -620,43 +628,43 @@ JSOT.DocOp.xform = function( m1, m2 )
     {
         if ( item1.has_element_start() )
         {           
-			JSOT.DocOp.xformInsertElementStart( r1, r2, item1, item2, next, anno1, anno2 );
+			protocol.ProtocolDocumentOperation.xformInsertElementStart( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_element_end() )
 		{
-			JSOT.DocOp.xformInsertElementEnd( r1, r2, item1, item2, next, anno1, anno2 );
+			protocol.ProtocolDocumentOperation.xformInsertElementEnd( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_characters() )
 		{
-			JSOT.DocOp.xformInsertChars( r1, r2, item1, item2, next, anno1, anno2 );
+			protocol.ProtocolDocumentOperation.xformInsertChars( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_retain_item_count() )
 		{
-			JSOT.DocOp.xformRetain( r1, r2, item1, item2, next, anno1, anno2 );
+			protocol.ProtocolDocumentOperation.xformRetain( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_delete_element_start() )
 		{
-			JSOT.DocOp.xformDeleteElementStart( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformDeleteElementStart( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
 		}
 		else if ( item1.has_delete_element_end() )
 		{
-			JSOT.DocOp.xformDeleteElementEnd( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformDeleteElementEnd( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
 		}
 		else if ( item1.has_delete_characters() )
 		{
-			JSOT.DocOp.xformDeleteChars( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformDeleteChars( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
 		}
 		else if ( item1.has_update_attributes() )
 		{
-			JSOT.DocOp.xformUpdateAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformUpdateAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
 		}
 		else if ( item1.has_replace_attributes() )
 		{
-			JSOT.DocOp.xformReplaceAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformReplaceAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
 		}
 		else if ( item1.has_annotation_boundary() )
 		{
-			JSOT.DocOp.xformAnnotationBoundary( r1, r2, item1, item2, next1, next2, anno1, anno2, false, ok );
+			protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r1, r2, item1, item2, next1, next2, anno1, anno2, false, ok );
         }
 
         if ( next.next1 )
@@ -680,53 +688,53 @@ JSOT.DocOp.xform = function( m1, m2 )
 	m2.component = r2.component;
 };
 
-JSOT.DocOp.xformInsertElementStart = function( r1, r2, item1, item2, next, anno1, anno2 )
+protocol.ProtocolDocumentOperation.xformInsertElementStart = function( r1, r2, item1, item2, next, anno1, anno2 )
 {
 	r1.component.push( item1 );
-	r2.component.push( JSOT.DocOp.newRetainItemCount( 1 ) );
+	r2.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 1 ) );
     next.next1 = true;
     next.next2 = false;
 };
 
-JSOT.DocOp.xformInsertElementEnd = function( r1, r2, item1, item2, next, anno1, anno2 )
+protocol.ProtocolDocumentOperation.xformInsertElementEnd = function( r1, r2, item1, item2, next, anno1, anno2 )
 {
 	r1.component.push( item1 );
-	r2.component.push( JSOT.DocOp.newRetainItemCount( 1 ) );
+	r2.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 1 ) );
     next.next1 = true;
     next.next2 = false;
 };
 
-JSOT.DocOp.xformInsertChars = function( r1, r2, item1, item2, next, anno1, anno2 )
+protocol.ProtocolDocumentOperation.xformInsertChars = function( r1, r2, item1, item2, next, anno1, anno2 )
 {
 	r1.component.push( item1 );
-	r2.component.push( JSOT.DocOp.newRetainItemCount( item1.characters.length ) );
+	r2.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( item1.characters.length ) );
     next.next1 = true;
     next.next2 = false;
 };
 
-JSOT.DocOp.xformRetain = function( r1, r2, item1, item2, next, anno1, anno2 )
+protocol.ProtocolDocumentOperation.xformRetain = function( r1, r2, item1, item2, next, anno1, anno2 )
 {
 	if ( item2.has_element_start() )
 	{
-		JSOT.DocOp.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
 	}
 	else if ( item2.has_element_end() )
 	{
-		JSOT.DocOp.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
 	}
 	else if ( item2.has_characters() )
 	{
-		JSOT.DocOp.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
 	}
 	else if ( item2.has_annotation_boundary() )
 	{
-		JSOT.DocOp.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
 	}
 	else if ( item2.has_retain_item_count() )
 	{
 		var len = Math.min(item1.retain_item_count, item2.retain_item_count);
-		r1.component.push( JSOT.DocOp.newRetainItemCount( len ) );
-		r2.component.push( JSOT.DocOp.newRetainItemCount( len ) );
+		r1.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( len ) );
+		r2.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( len ) );
 		if ( len < item1.retain_item_count )
 			item1.retain_item_count -= len;
 		else
@@ -752,7 +760,7 @@ JSOT.DocOp.xformRetain = function( r1, r2, item1, item2, next, anno1, anno2 )
 			item1.retain_item_count -= len;
 		else
 			next.next1 = true;
-		r2.component.push( JSOT.DocOp.newDeleteCharacters( item2.delete_characters.substr(0, len ) ) );
+		r2.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( item2.delete_characters.substr(0, len ) ) );
 		if ( len < item2.delete_characters.length )
 			item2.delete_characters = item2.delete_characters.substring( len, item2.delete_characters.length );
 		else
@@ -760,7 +768,7 @@ JSOT.DocOp.xformRetain = function( r1, r2, item1, item2, next, anno1, anno2 )
 	}
 	else if ( item2.has_replace_attributes() || item2.has_update_attribute() )
 	{
-		r1.components.push( JSOT.DocOp.newRetainItemCount(1) );
+		r1.components.push( protocol.ProtocolDocumentOperation.newRetainItemCount(1) );
 		if ( item1.retain_item_count > 1 )
 			item1.retain_item_count -= 1;
 		else
@@ -772,23 +780,23 @@ JSOT.DocOp.xformRetain = function( r1, r2, item1, item2, next, anno1, anno2 )
 		throw "Unexpected case";
 };
 
-JSOT.DocOp.xformDeleteElementStart = function( r1, r2, item1, item2, next, anno1, anno2 )
+protocol.ProtocolDocumentOperation.xformDeleteElementStart = function( r1, r2, item1, item2, next, anno1, anno2 )
 {
 	if ( item2.has_element_start() )
 	{
-		JSOT.DocOp.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
 	}
 	else if ( item2.has_element_end() )
 	{
-		JSOT.DocOp.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
 	}
 	else if ( item2.has_characters() )
 	{
-		JSOT.DocOp.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
 	}
 	else if ( item2.has_annotation_boundary() )
 	{
-		JSOT.DocOp.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
 	}
 	else if ( item2.has_retain_item_count() )
 	{
