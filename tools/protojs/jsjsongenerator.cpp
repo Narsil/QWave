@@ -35,10 +35,17 @@ bool JsJSONGenerator::Generate( const FileDescriptor* file, const std::string&, 
 bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const string& nspace, ostream& js, std::string* error) const
 {
     /////////////////////////////////
-    // Class
+    // Class & Constructor
     /////////////////////////////////
 
-    js << absIdent(descriptor, true) << " = function() { };" << endl << endl;
+    js << absIdent(descriptor, true) << " = function() { ";
+    for( int i = 0; i < descriptor->field_count(); ++i )
+    {
+        const FieldDescriptor* field = descriptor->field(i);
+        if ( field->is_repeated() )
+            js << "this." << ident(field->name()) << " = []; ";
+    }
+    js << " };" << endl << endl;
 
     /////////////////////////////////
     // has_xxxx()
@@ -100,7 +107,7 @@ bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const s
                 js << "\tdata[\"" << field->number() << "\"] = this." << ident(field->name()) << endl;
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
-                js << "\tdata[\"" << field->number() << "\"] = this." << ident(field->name()) << ".serializa();" << endl;
+                js << "\tdata[\"" << field->number() << "\"] = this." << ident(field->name()) << ".serialize();" << endl;
                 break;
             default:
                 error->append("Unknown type");
@@ -139,7 +146,7 @@ bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const s
         }
     }
     js << "\treturn data;" << endl;
-    js << "}" << endl << endl;
+    js << "};" << endl << endl;
 
     /////////////////////////////////
     // parse()
@@ -210,11 +217,11 @@ bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const s
     {
         const FieldDescriptor* field = descriptor->field(i);
         if ( field->is_required() )
-            js << "\tif ( !obj.has_" << ident(field->name()) << "() ) throw \"Missing field " << ident(field->name()) << "\";" << endl;
+            js << "\tif ( !obj." << ident(field->name()) << " == null ) throw \"Missing field " << ident(field->name()) << "\";" << endl;
     }
 
     js << "\treturn obj;" << endl;
-    js << "}" << endl << endl;
+    js << "};" << endl << endl;
 
     for( int i = 0; i < descriptor->nested_type_count(); ++i )
     {
