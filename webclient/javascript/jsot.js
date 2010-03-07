@@ -49,12 +49,12 @@ JSOT.WaveUrl.prototype.toString = function()
 {
 	if ( this.isNull() )
 		return null;
-	var str = "wave://" + escape( this.waveletDomain ) + "/";
+	var str = "wave://" + this.waveletDomain + "/";
 	if ( this.waveDomain == this.waveletDomain )
-		str += escape(this.waveId);
+		str += this.waveId;
 	else
-		str += escape(this.waveDomain) + "$" + escape(this.waveId);
-	str += "/" + escape( this.waveletId );
+		str += this.waveDomain + "$" + this.waveId;
+	str += "/" + this.waveletId;
 	return str;
 };
 
