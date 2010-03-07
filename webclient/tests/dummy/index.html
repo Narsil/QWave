@@ -1,11 +1,11 @@
 <html>
 <head>
 <title>Web Client Dummy</title>
-<script src="json.js" type="text/javascript"></script>
 <script src="rpc.js" type="text/javascript"></script>
 <script src="common.pbjson.js" type="text/javascript"></script>
 <script src="waveclient-rpc.pbjson.js" type="text/javascript"></script>
 <script src="webclient.pbjson.js" type="text/javascript"></script>
+<script src="jsot.js" type="text/javascript"></script>
 </head>
 <body>
 	<h1>Log-In</h1>
@@ -91,6 +91,20 @@ function onMessage(jsonData)
   else if (response.has_update())
   {
     var update = response.update;
+	
+	JSOT.Wave.process( update );
+	
+	// Print the indexwave
+	var wave = JSOT.Wave.getWave( "!indexwave", "wave1.vs.uni-due.de" );
+	for( var a in wave.wavelets )
+	{
+		var wavelet = wave.wavelets[a];
+		var c = document.createElement("pre");
+		c.appendChild( document.createTextNode( wavelet.toString() ) );
+		document.getElementById("out").appendChild(c);
+	}
+	
+	// Ask for more
     var r = new webclient.Request();
     r.session_id = sessionId;
     r.client_ack = serverSequenceNr;

@@ -83,6 +83,9 @@ document.getElementById("out").appendChild( document.createTextNode(">>" + resul
 
 document.getElementById("out").appendChild( document.createTextNode( doc.content.length.toString() ) );
 
+var url = new JSOT.WaveUrl( "wave://wave1.vs.uni-due.de/foo$w+abc/conv+root" );
+document.getElementById("out").appendChild( document.createTextNode( url.toString() ) );
+
 	</script>
 </body>
 </html>
