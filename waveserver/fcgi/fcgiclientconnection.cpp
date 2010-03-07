@@ -43,7 +43,10 @@ void FCGIClientConnection::customEvent( QEvent* event )
         qDebug("FCGI: GOT DIGEST");
         PBMessage<webclient::Response>* r = new PBMessage<webclient::Response>();
         r->mutable_update()->add_applied_delta()->MergeFrom( digest->digest_delta() );
-        r->mutable_update()->set_wavelet_name( digest->wavelet_name() );
+        WaveUrl url( QString::fromStdString( digest->wavelet_name() ) );
+        url.setWaveDomain( url.waveletDomain() );
+        url.setWaveId( "!indexwave" );
+        r->mutable_update()->set_wavelet_name( url.toString().toStdString() );
         reply(r);
         return;
     }

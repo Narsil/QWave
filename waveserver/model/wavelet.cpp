@@ -179,6 +179,7 @@ WaveletDelta Wavelet::initialDigest() const
     DocumentMutation m;
     m.insertChars( m_lastDigest );
     WaveletDeltaOperation op;
+    op.setDocumentId("digest");
     op.setMutation(m);
 
     WaveletDelta indexDelta;
@@ -237,9 +238,10 @@ void Wavelet::broadcastDigest(const WaveletDelta& delta )
     if ( !m_lastDigest.isEmpty() )
         m.deleteChars( m_lastDigest );
     m_lastDigest = digestText();
-    m.insertChars( m_lastDigest );
+    m.insertChars( m_lastDigest );    
     WaveletDeltaOperation op;
     op.setMutation(m);
+    op.setDocumentId( "digest" );
     digest.addOperation(op);
 
     foreach( QString p, m_indexSubscribers )
