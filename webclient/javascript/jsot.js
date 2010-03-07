@@ -1,7 +1,214 @@
 var JSOT = { };
 
-JSOT.Doc = function()
+/////////////////////////////////////////////////
+//
+// WaveURL
+//
+/////////////////////////////////////////////////
+
+JSOT.WaveUrl = function(url)
 {
+	if ( url )
+	{
+		var uriParts = new RegExp("^(?:([^:/?#.]+):)?(?://)?(([^:/?#]*)(?::(\\d*))?)?((/(?:[^?#](?![^?#/]*\\.[^?#/.]+(?:[\\?#]|$)))*/?)?([^?#/]*))?(?:\\?([^#]*))?(?:#(.*))?").exec(url);
+		var decoded = {};
+		var uriPartNames = ["source","protocol","authority","domain","port","path","directoryPath","fileName","query","anchor"];    
+		for(var i = 0; i < 10; i++)
+		{
+			decoded[uriPartNames[i]] = (uriParts[i] ? uriParts[i] : "");
+		}	
+		if ( decoded.protocol != "wave" )
+			return;
+		this.waveletDomain = decoded.domain;
+		var wave = decoded.path.substring(1,decoded.path.length);
+		var i = wave.indexOf('/');
+		if ( i == -1 )
+			return;
+		this.waveletId = wave.substring( i + 1, wave.length );
+		wave = wave.substr(0,i);
+		var i = wave.indexOf('$');
+		if ( i == -1 )
+		{
+		  this.waveDomain = this.waveletDomain;
+		  this.waveId = wave;
+		}
+		else
+		{
+		  this.waveDomain = wave.substr(0,i);
+		  this.waveId = wave.substring(i+1,wave.length);
+		}
+	}	
+};
+
+JSOT.WaveUrl.prototype.isNull = function()
+{
+	return this.waveletId == null;
+};
+
+JSOT.WaveUrl.prototype.toString = function()
+{
+	if ( this.isNull() )
+		return null;
+	var str = "wave://" + escape( this.waveletDomain ) + "/";
+	if ( this.waveDomain == this.waveletDomain )
+		str += escape(this.waveId);
+	else
+		str += escape(this.waveDomain) + "$" + escape(this.waveId);
+	str += "/" + escape( this.waveletId );
+	return str;
+};
+
+/////////////////////////////////////////////////
+//
+// Wave
+//
+/////////////////////////////////////////////////
+
+JSOT.Wave = function(id, domain)
+{
+	JSOT.Wave.waves[ id + "$" + domain] = this;
+	this.id = id;
+	this.domain = domain;
+	this.wavelets = { };
+};
+
+JSOT.Wave.waves = { };
+
+JSOT.Wave.getWave = function(id, domain)
+{
+	var wname = id + "$" + domain;
+	var w = JSOT.Wave.waves[wname];
+	if ( w )
+		return w;
+	w = new JSOT.Wave( id, domain );
+	JSOT.Wave.waves[wname] = w;
+	return w;
+};
+
+JSOT.Wave.process = function( update )
+{
+	var url = new JSOT.WaveUrl( update.wavelet_name );
+	if ( url.isNull() ) throw "Malformed wave URL";
+	var wave = JSOT.Wave.getWave( url.waveId, url.waveDomain );
+	var wavelet = wave.getWavelet( url.waveletId, url.waveletDomain );
+	for( var i = 0; i < update.applied_delta.length; ++i )
+		wavelet.applyDelta( update.applied_delta[i] );
+};
+
+JSOT.Wave.prototype.getWavelet = function(id, domain)
+{
+	var wname = id + "$" + domain;
+	var w = this.wavelets[wname];
+	if ( w )
+		return w;
+	w = new JSOT.Wavelet(this, id, domain);
+	this.wavelets[wname] = w;
+	return w;
+};
+
+/////////////////////////////////////////////////
+//
+// Wavelet
+//
+/////////////////////////////////////////////////
+
+JSOT.Wavelet = function(wave, id, domain)
+{
+	this.id = id;
+	this.domain = domain;
+	this.wave = wave;
+	this.documents = { };
+	this.participants = [ ];
+};
+
+JSOT.Wavelet.prototype.getDoc = function(docname)
+{
+	var doc = this.documents[docname];
+	if ( doc )
+		return doc;
+	doc = new JSOT.Doc(docname);
+	this.documents[docname] = doc;
+	return doc;
+};
+
+JSOT.Wavelet.prototype.addParticipant = function( jid )
+{
+	var i = this.participants.indexOf(jid);
+	if ( i != -1 )
+		return;
+	this.participants.push( jid );
+};
+
+JSOT.Wavelet.prototype.removeParticipant = function( jid )
+{
+	var i = this.participants.indexOf(jid);
+	if ( i == -1 )
+		return;
+	delete this.participants[i];
+};
+
+/**
+ * @param delta is of type protocol.ProtocolWaveletDelta.
+ */
+JSOT.Wavelet.prototype.applyDelta = function( delta )
+{
+	for( var i = 0; i < delta.operation.length; ++i )
+	{
+		var op = delta.operation[i];
+		if ( op.has_add_participant() )
+		{
+			this.addParticipant( op.add_participant );
+		}
+		if ( op.has_remove_participant() )
+		{
+			this.removeParticipant( op.remove_participant );
+		}
+		if ( op.has_mutate_document() )
+		{
+			var doc = this.getDoc( op.mutate_document.document_id );
+			var docop = op.mutate_document.document_operation;
+			docop.applyTo( doc );
+		}		
+	}
+};
+
+JSOT.Wavelet.prototype.url = function()
+{
+	var url = new JSOT.WaveUrl();
+	url.waveletDomain = this.domain;
+	url.waveletId = this.id;
+	url.waveDomain = this.wave.domain;
+	url.waveId = this.wave.id;
+	return url;
+};
+
+JSOT.Wavelet.prototype.toString = function()
+{
+	var str = this.url().toString() + "\r\n\tParticipants:\r\n";	
+	
+	for( var a in this.participants )
+	{
+		str += "\t\t" + this.participants[a] + "\r\n";
+	}
+	
+	str += "\tDocuments:\r\n";
+	for( var a in this.documents )
+	{
+		str += "\t\t" + a + ":" + this.documents[a].toString() + "\r\n";
+	}
+	
+	return str;
+};
+
+/////////////////////////////////////////////////
+//
+// WaveletDocument
+//
+/////////////////////////////////////////////////
+
+JSOT.Doc = function(docId)
+{
+	this.docId = docId;
 	this.content = [ ];
 	this.format = [ ];
 };
@@ -71,6 +278,12 @@ JSOT.Doc.prototype.toString = function()
 	
 	return result.join("");
 };
+
+/////////////////////////////////////////////////
+//
+// DocumentOperation
+//
+/////////////////////////////////////////////////
 
 protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 {
@@ -597,15 +810,13 @@ protocol.ProtocolDocumentOperation.newAnnotationBoundary = function(end, change)
 	return c;
 };
 
-JSOT.ProtocolWaveletOperation = function()
-{
-};
+/////////////////////////////////////////////////
+//
+// WaveletOperation
+//
+/////////////////////////////////////////////////
 
-JSOT.ProtocolWaveletOperation.MutateDocument = function(documentId, documentOperation)
-{
-	this.document_id = documentId;
-	this.document_operation = documentOperation;
-};
+
 
 /////////////////////////////////////////////////
 //
