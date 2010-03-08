@@ -86,6 +86,19 @@ document.getElementById("out").appendChild( document.createTextNode( doc.content
 var url = new JSOT.WaveUrl( "wave://wave1.vs.uni-due.de/foo$w+abc/conv+root" );
 document.getElementById("out").appendChild( document.createTextNode( url.toString() ) );
 
+
+ops1 = new protocol.ProtocolDocumentOperation();
+ops1.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(2) );
+ops1.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters("12") );
+
+ops2 = new protocol.ProtocolDocumentOperation();
+ops2.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(1) );
+ops2.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters("b") );
+ops2.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(2) );
+
+protocol.ProtocolDocumentOperation.xform( ops1, ops2 );
+console.log(ops1);
+console.log(ops2);
 	</script>
 </body>
 </html>
