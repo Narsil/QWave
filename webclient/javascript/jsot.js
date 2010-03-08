@@ -816,7 +816,28 @@ protocol.ProtocolDocumentOperation.newAnnotationBoundary = function(end, change)
 //
 /////////////////////////////////////////////////
 
-
+protocol.ProtocolWaveletOperation.xform = function( m1, m2 )
+{
+	if ( m1.has_add_participant() )
+	{
+		if ( m2.has_add_participant() && m2.add_participant == m1.add_participant )
+			m2.clear_add_participant();
+		else if ( m2.has_remove_participant() && m2.remove_participant == m1.add_participant )
+			m1.clear_add_participant();
+	}
+	if ( m1.has_remove_participant() )
+	{
+		if ( m2.has_remove_participant() && m2.remove_participant == m1.remove_participant )
+			m2.clear_remove_participant();
+		else if ( m2.has_add_participant() && m2.add_participant == m1.remove_participant )
+			m1.clear_remove_participant();
+	}
+	if ( m1.has_mutate_document() && m2.has_mutate_document() )
+	{
+		if ( m1.mutate_document.document_id == m2.mutate_document.document_id )
+			protocol.ProtocolDocumentOperations.xform( m1.mutate_document, m2.mutate_document );
+	}
+};
 
 /////////////////////////////////////////////////
 //
@@ -829,7 +850,9 @@ protocol.ProtocolDocumentOperation.xform = function( m1, m2 )
     if ( m1.component.length == 0 || m2.component.length == 0 )
         return;
 
-	var r1, r2, anno1, anno2;
+	var r1 = new protocol.ProtocolDocumentOperation();
+	var r2 = new protocol.ProtocolDocumentOperation();
+	var anno1, anno2;
 	var c1 = 0;
 	var c2 = 0;
 	var item1 = m1.component[c1];
@@ -855,27 +878,27 @@ protocol.ProtocolDocumentOperation.xform = function( m1, m2 )
 		}
 		else if ( item1.has_delete_element_start() )
 		{
-			protocol.ProtocolDocumentOperation.xformDeleteElementStart( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformDeleteElementStart( r1, r2, item1, item2, next, anno1, anno2);
 		}
 		else if ( item1.has_delete_element_end() )
 		{
-			protocol.ProtocolDocumentOperation.xformDeleteElementEnd( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformDeleteElementEnd( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_delete_characters() )
 		{
-			protocol.ProtocolDocumentOperation.xformDeleteChars( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformDeleteChars( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_update_attributes() )
 		{
-			protocol.ProtocolDocumentOperation.xformUpdateAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformUpdateAttributes( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_replace_attributes() )
 		{
-			protocol.ProtocolDocumentOperation.xformReplaceAttributes( r1, r2, item1, item2, next1, next2, anno1, anno2, ok );
+			protocol.ProtocolDocumentOperation.xformReplaceAttributes( r1, r2, item1, item2, next, anno1, anno2 );
 		}
 		else if ( item1.has_annotation_boundary() )
 		{
-			protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r1, r2, item1, item2, next1, next2, anno1, anno2, false, ok );
+			protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r1, r2, item1, item2, nextanno1, anno2, false );
         }
 
         if ( next.next1 )
@@ -1018,7 +1041,7 @@ protocol.ProtocolDocumentOperation.xformDeleteElementStart = function( r1, r2, i
 		else
 			next.next2 = true;		
 	}
-	else if ( item2.has_delete_start() )
+	else if ( item2.has_delete_element_start() )
 	{
 		next.next1 = true;
 		next.next2 = true;
@@ -1032,3 +1055,193 @@ protocol.ProtocolDocumentOperation.xformDeleteElementStart = function( r1, r2, i
 	else
 		throw "Unexpected case";
 };
+
+protocol.ProtocolDocumentOperation.xformDeleteElementEnd = function( r1, r2, item1, item2, next, anno1, anno2 )
+{
+	if ( item2.has_element_start() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_element_end() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_characters() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_annotation_boundary() )
+	{
+		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+	}
+	else if ( item2.has_retain_item_count() )
+	{
+		r1.component.push( item1 );
+        next.next1 = true;
+		if ( item2.retain_item_count > 1 )
+			item2.retain_item_count -= 1;
+		else
+			next.next2 = true;					
+	}
+	else if ( item2.has_delete_element_end() )
+	{
+        next.next1 = true;
+        next.next2 = true;
+	}
+	else
+        throw "The two mutations are not compatible";
+};
+
+protocol.ProtocolDocumentOperation.xformDeleteChars = function( r1, r2, item1, item2, next, anno1, anno2 )
+{
+	if ( item2.has_element_start() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_element_end() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_characters() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_annotation_boundary() )
+	{
+		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+	}
+	else if ( item2.has_retain_item_count() )
+	{
+		var len = Math.min(item2.retain_item_count, item1.delete_characters.length);
+		r1.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( item1.delete_characters.substr(0, len ) ) );
+		if ( len < item1.delete_characters.length )
+			item1.delete_characters = item1.delete_characters.substring( len, item1.delete_characters.length );
+		else
+			next.next1 = true;
+		if ( len < item2.retain_item_count )
+			item2.retain_item_count -= len;
+		else
+			next.next2 = true;
+	}
+    else if ( item2.has_delete_characters() )
+	{
+		var len = Math.min(item1.delete_characters.length, item2.delete_characters.length);
+		if ( len < item1.delete_characters.length )
+			item1.delete_characters = item1.delete_characters.substring( len, item1.delete_characters.length );
+		else
+			next.next1 = true;
+		if ( len < item2.delete_characters.length )
+			item2.delete_characters = item2.delete_characters.substring( len, item2.delete_characters.length );
+		else
+			next.next2 = true;			
+	}
+	else
+		throw "The two mutations are not compatible";
+};
+
+protocol.ProtocolDocumentOperation.xformUpdateAttributes = function( r1, r2, item1, item2, next, anno1, anno2 )
+{
+	if ( item2.has_element_start() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_element_end() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_characters() )
+	{
+		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+	}
+	else if ( item2.has_annotation_boundary() )
+	{
+		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+	}
+	else if ( item2.has_retain_item_count() )
+	{
+		r1.component.push( item1 );
+		next.next1 = true;
+		if ( len < item2.retain_item_count )
+			item2.retain_item_count -= 1;
+		else
+		{
+			r2.component.push( item2 );
+			next.next2 = true;
+		}
+	}
+	else if ( item2.has_delete_element_start() )
+	{
+		next.next1 = true;
+		r2.component.push( item2 );
+		next.next2 = true;
+	}
+	else if ( item2.has_update_attributes() )
+	{
+		var attribs1 = { }
+		for( var i = 0; i < item1.update_attributes.attribute_update.length; ++i )
+		{
+			var update = item1.update_attributes.attribute_update[i];
+			attribs1[update.key] = update;
+		}
+		var attribs2 = { }
+		for( var i = 0; i < item2.update_attributes.attribute_update.length; ++i )
+		{
+			var update = item2.update_attributes.attribute_update[i];
+			attribs2[update.key] = update;
+		}
+		
+		for( var i = 0; i < item2.update_attributes.attribute_update.length; ++i )
+		{
+			var update2 = item2.update_attributes.attribute_update[i];
+			var update1 = attribs1[update2.key];
+			if ( update1 )
+				update2.old_value = update1.new_value;
+		}
+		var updates1 = [];
+		for( var i = 0; i < item1.update_attributes.attribute_update.length; ++i )
+		{
+			var update1 = item1.update_attributes.attribute_update[i];
+			var update2 = attribs2[update1.key];
+			if ( update2 == null )
+				updates1.push( update1 );
+		}
+		item1.update_attributes.attribute_update = updates1;
+		r1.component.push(item1);
+		r2.component.push(item2);
+		next.next1 = true;
+		next.next2 = true;
+	}
+	else if ( item2.has_replace_attributes() )
+	{
+		r1.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(1) );
+		next.next1 = true;
+		
+		var attribs1 = { }
+		for( var i = 0; i < item1.update_attributes.attribute_update.length; ++i )
+		{
+			var update = item1.update_attributes.attribute_update[i];
+			attribs1[update.key] = update;
+		}
+		
+		var old_attribute = [];
+		for( var i = 0; i < item2.replace_attributes.old_attribute.length; ++i )
+		{
+			var update2 = item2.replace_attributes.old_attribute[i];
+			var update1 = attribs1[update2.key];
+			if ( update1 )				
+			{
+				if ( !update1.has_new_value() )
+					continue;
+				else
+					update2.value = update1.new_value;
+			}
+        }
+		item2.replace_attributes.old_attribute = old_attribute;
+		r2.component.push( item2 );
+		next.next2 = true;
+    }
+	else
+        throw "The two mutations are not compatible";
+};
+
+
