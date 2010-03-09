@@ -100,9 +100,21 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
             switch( field->cpp_type() )
             {
             case FieldDescriptor::CPPTYPE_INT32:
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "() ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_INT64:
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( QByteArray::number( (qlonglong)msg->" << ident(field->name()) << "() ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_UINT32:
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( QByteArray::number( (uint)msg->" << ident(field->name()) << "() ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_UINT64:
+                cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
+                cpp << "\tdata.append( QByteArray::number( (qulonglong)msg->" << ident(field->name()) << "() ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_DOUBLE:
             case FieldDescriptor::CPPTYPE_FLOAT:
                 cpp << "\tdata.append( \"\\\"" << field->number() << "\\\":\" );" << endl;
@@ -155,9 +167,17 @@ bool CppJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const 
             switch( field->cpp_type() )
             {
             case FieldDescriptor::CPPTYPE_INT32:
+                cpp << "\t\tdata.append( QByteArray::number( (int)msg->" << ident(field->name()) << "(i) ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_INT64:
+                cpp << "\t\tdata.append( QByteArray::number( (qlonglong)msg->" << ident(field->name()) << "(i) ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_UINT32:
+                cpp << "\t\tdata.append( QByteArray::number( (uint)msg->" << ident(field->name()) << "(i) ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_UINT64:
+                cpp << "\t\tdata.append( QByteArray::number( (qulonglong)msg->" << ident(field->name()) << "(i) ) );" << endl;
+                break;
             case FieldDescriptor::CPPTYPE_DOUBLE:
             case FieldDescriptor::CPPTYPE_FLOAT:
                 cpp << "\t\tdata.append( QByteArray::number( msg->" << ident(field->name()) << "(i) ) );" << endl;
