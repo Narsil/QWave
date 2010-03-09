@@ -71,7 +71,7 @@ void FCGIClientConnection::customEvent( QEvent* event )
 
 void FCGIClientConnection::handleRequest( const PBMessage<webclient::Request>* request )
 {
-    m_ackedSequenceNumber = qMax( request->client_ack(), m_ackedSequenceNumber );
+    m_ackedSequenceNumber = qMax( (qint64)request->client_ack(), m_ackedSequenceNumber );
     // TODO: If the client sequence number is not what we expected?
     m_clientSequenceNumber = request->client_sequence_number();
 
