@@ -14,6 +14,7 @@
 	  <p>User JID: <input type="text" id="jid" value="tux@wave1.vs.uni-due.de" /></p>
 	  <p><input type="button" value="Login" onclick="login()" /></p>
 	  <p><input type="button" value="NewWave" onclick="newWave()" /></p>
+	  <p><textarea id="comment"></textarea><br><input type="button" value="Submit" onclick="submitBlip()" /> Share your thoughts<p>
 	</form>
 
 	<h3>Session ID</h3>
@@ -53,7 +54,8 @@ function toArray(str)
 
 function newWave()
 {
-  var waveid = "w+" + Math.random().toString();
+  // var waveid = "w+" + Math.random().toString();
+  var waveid = "wall+" + document.getElementById('jid').value;
   var r = new webclient.Request();
   r.session_id = sessionId;
   r.client_ack = serverSequenceNr;
@@ -98,6 +100,51 @@ function newWave()
   callServer( json, onMessage );  
 }
 
+function submitBlip()
+{
+  var waveid = "wall+" + document.getElementById('jid').value;
+  var blipid = "b+" + Math.random();
+  
+  var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
+  var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+  
+  var r = new webclient.Request();
+  r.session_id = sessionId;
+  r.client_ack = serverSequenceNr;
+  r.client_sequence_number = ++clientSequenceNr;
+  r.submit = new waveserver.ProtocolSubmitRequest();
+  r.submit.wavelet_name = wavelet.url().toString();
+  r.submit.delta = new protocol.ProtocolWaveletDelta();
+  r.submit.delta.author = document.getElementById('jid').value;
+  r.submit.delta.hashed_version = new protocol.ProtocolHashedVersion();
+  r.submit.delta.hashed_version.version = wavelet.hashed_version.version;
+  r.submit.delta.hashed_version.history_hash = wavelet.hashed_version.history_hash;
+  var op2 = new protocol.ProtocolWaveletOperation();
+  op2.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
+  op2.mutate_document.document_id = "conversation";
+  op2.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = op2.mutate_document.document_operation;
+  docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(1) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "blip", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", blipid ) ] ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( wavelet.getDoc("conversation").itemCount() - 1 ) );
+  r.submit.delta.operation.push( op2 );
+  var op3 = new protocol.ProtocolWaveletOperation();
+  op3.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
+  op3.mutate_document.document_id = blipid;
+  op3.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = op3.mutate_document.document_operation;
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "body" ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "line" ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( document.getElementById('comment').value ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  r.submit.delta.operation.push( op3 );
+
+  var json = JSON.stringify(r.serialize());
+  callServer( json, onMessage );  
+}
+
 function onMessage(jsonData)
 {
   var response = webclient.Response.parse( JSON.parse( jsonData ) );
@@ -130,8 +177,9 @@ function onMessage(jsonData)
 	{
 	JSOT.Wave.process( update );
 	
-	// Print the indexwave
-	var wave = JSOT.Wave.getWave( "!indexwave", "wave1.vs.uni-due.de" );
+	// Print the wave1
+	var url = new JSOT.WaveUrl( update.wavelet_name );
+	var wave = JSOT.Wave.getWave( url.waveId, url.waveDomain );
 	for( var a in wave.wavelets )
 	{
 		var wavelet = wave.wavelets[a];

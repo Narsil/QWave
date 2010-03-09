@@ -93,6 +93,7 @@ JSOT.Wave.process = function( update )
 	var wavelet = wave.getWavelet( url.waveletId, url.waveletDomain );
 	for( var i = 0; i < update.applied_delta.length; ++i )
 		wavelet.applyDelta( update.applied_delta[i] );
+	wavelet.hashed_version = update.resulting_version;
 };
 
 JSOT.Wave.prototype.getWavelet = function(id, domain)
@@ -119,6 +120,19 @@ JSOT.Wavelet = function(wave, id, domain)
 	this.wave = wave;
 	this.documents = { };
 	this.participants = [ ];
+	this.hashed_version = new protocol.ProtocolHashedVersion();
+	this.hashed_version.version = 0;
+	
+	function toArray(str)
+	{
+		result = [];
+		for( var i = 0; i < str.length; ++i )
+		{
+			result.push( str.charCodeAt(i) );
+		}
+		return result;
+	}
+	this.hashed_version.history_hash = toArray( this.url().toString() );
 };
 
 JSOT.Wavelet.prototype.getDoc = function(docname)
@@ -226,6 +240,19 @@ JSOT.Doc.ElementStart = function(type, attributes)
 JSOT.Doc.ElementEnd = function()
 {
 	this.element_end = true;
+};
+
+JSOT.Doc.prototype.itemCount = function()
+{
+	var count = 0;
+	for( var i = 0; i < this.content.length; ++i )
+	{
+		if ( typeof(this.content[i]) == "string" )
+			count += this.content[i].length;
+		else
+			count++;
+	}
+	return count;
 };
 
 JSOT.Doc.prototype.toString = function()

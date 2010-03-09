@@ -44,7 +44,7 @@ JSONScanner::Token JSONScanner::next()
             m_valueLen = (m_ptr - m_value - 1);
             return StringValue;
         }
-        else if ( isdigit(ch) != 0 )
+        else if ( isdigit(ch) != 0 || ch == '-' || ch == '+' || ch == '.' )
         {
             m_value = m_ptr - 1;
             while( m_len > 0 )
