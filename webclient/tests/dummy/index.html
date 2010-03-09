@@ -12,9 +12,10 @@
 	
 	<form>
 	  <p>User JID: <input type="text" id="jid" value="tux@wave1.vs.uni-due.de" /></p>
-	  <p><input type="button" value="Login" onclick="login()" /></p>
+	  <p><input type="button" value="Login" onclick="JSOT.Rpc.login( document.getElementById('jid').value )" /></p>
 	  <p><input type="button" value="NewWave" onclick="newWave()" /></p>
 	  <p><textarea id="comment"></textarea><br><input type="button" value="Submit" onclick="submitBlip()" /> Share your thoughts<p>
+	  <p>Add a friend: <input type="text" id="friend" value="torben@wave1.vs.uni-due.de" /> <input type="button" value="Add" onclick="addFriend()" /></p>
 	</form>
 
 	<h3>Session ID</h3>
@@ -25,23 +26,19 @@
 
 	<script type="text/javascript">
 	
+/*	
 var sessionId = "";
 var clientSequenceNr = 0;
 var serverSequenceNr = 0;
 var serverAck = 0;
+*/
 
 function login()
 {
-  var r = new webclient.Request();
-  r.session_id = sessionId;
-  r.client_ack = serverSequenceNr;
-  r.client_sequence_number = ++clientSequenceNr;
-  r.login = new webclient.LoginRequest();
-  r.login.jid = document.getElementById('jid').value;
-  var json = JSON.stringify(r.serialize());
-  callServer( json, onMessage );
+	JSOT.Rpc.login( document.getElementById('jid').value );
 }
 
+/*
 function toArray(str)
 {
   result = [];
@@ -51,100 +48,86 @@ function toArray(str)
   }
   return result;
 }
+*/
 
 function newWave()
 {
-  // var waveid = "w+" + Math.random().toString();
-  var waveid = "wall+" + document.getElementById('jid').value;
-  var r = new webclient.Request();
-  r.session_id = sessionId;
-  r.client_ack = serverSequenceNr;
-  r.client_sequence_number = ++clientSequenceNr;
-  r.submit = new waveserver.ProtocolSubmitRequest();
-  r.submit.wavelet_name = "wave://wave1.vs.uni-due.de/" + waveid + "/conv+root";
-  r.submit.delta = new protocol.ProtocolWaveletDelta();
-  r.submit.delta.author = document.getElementById('jid').value;
-  r.submit.delta.hashed_version = new protocol.ProtocolHashedVersion();
-  r.submit.delta.hashed_version.version = 0;
-  r.submit.delta.hashed_version.history_hash = toArray( r.submit.wavelet_name );
-  var op1 = new protocol.ProtocolWaveletOperation();
-  op1.add_participant = document.getElementById('jid').value;
-  r.submit.delta.operation.push( op1 );
-  var op2 = new protocol.ProtocolWaveletOperation();
-  op2.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
-  op2.mutate_document.document_id = "conversation";
-  op2.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
-  var docop = op2.mutate_document.document_operation;
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "conversation" ) );
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "blip", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", "b+1" ) ] ) );
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-  r.submit.delta.operation.push( op2 );
-  var op3 = new protocol.ProtocolWaveletOperation();
-  op3.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
-  op3.mutate_document.document_id = "b+1";
-  op3.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
-  var docop = op3.mutate_document.document_operation;
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "body" ) );
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "line" ) );
-  docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( "Hallo" ) );
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-  r.submit.delta.operation.push( op3 );
+	// var waveid = "w+" + Math.random().toString();
+	var waveid = "wall+" + JSOT.Rpc.jid;
+  
+	var wave = new JSOT.Wave( waveid, "wave1.vs.uni-due.de" );
+	var wavelet = new JSOT.Wavelet( wave, "conv+root", "wave1.vs.uni-due.de" );
 
-  r.open = new waveserver.ProtocolOpenRequest();
-  r.open.participant_id = document.getElementById('jid').value;
-  r.open.wave_id = waveid;
-
-  var json = JSON.stringify(r.serialize());
-  callServer( json, onMessage );  
+	var mutations = [];
+	var m1 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m1.document_id = "conversation";
+	m1.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m1.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "conversation" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "blip", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", "b+1" ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	mutations.push( m1 );
+	
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = "b+1";
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "body" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "line" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( "Hallo" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	mutations.push( m2 );
+	
+	wavelet.submitMutations( mutations, JSOT.Rpc.jid, true );
 }
 
 function submitBlip()
 {
-  var waveid = "wall+" + document.getElementById('jid').value;
+  var waveid = "wall+" + JSOT.Rpc.jid;
   var blipid = "b+" + Math.random();
   
   var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
   var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
-  
-  var r = new webclient.Request();
-  r.session_id = sessionId;
-  r.client_ack = serverSequenceNr;
-  r.client_sequence_number = ++clientSequenceNr;
-  r.submit = new waveserver.ProtocolSubmitRequest();
-  r.submit.wavelet_name = wavelet.url().toString();
-  r.submit.delta = new protocol.ProtocolWaveletDelta();
-  r.submit.delta.author = document.getElementById('jid').value;
-  r.submit.delta.hashed_version = new protocol.ProtocolHashedVersion();
-  r.submit.delta.hashed_version.version = wavelet.hashed_version.version;
-  r.submit.delta.hashed_version.history_hash = wavelet.hashed_version.history_hash;
-  var op2 = new protocol.ProtocolWaveletOperation();
-  op2.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
-  op2.mutate_document.document_id = "conversation";
-  op2.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
-  var docop = op2.mutate_document.document_operation;
+
+  var mutations = [];
+  var m1 = new protocol.ProtocolWaveletOperation_MutateDocument();
+  m1.document_id = "conversation";
+  m1.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = m1.document_operation;
   docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(1) );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "blip", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", blipid ) ] ) );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
   docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( wavelet.getDoc("conversation").itemCount() - 1 ) );
-  r.submit.delta.operation.push( op2 );
-  var op3 = new protocol.ProtocolWaveletOperation();
-  op3.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
-  op3.mutate_document.document_id = blipid;
-  op3.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
-  var docop = op3.mutate_document.document_operation;
+  mutations.push(m1);
+  
+  var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+  m2.document_id = blipid;
+  m2.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = m2.document_operation;
   docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "body" ) );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "line" ) );
   docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( document.getElementById('comment').value ) );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-  r.submit.delta.operation.push( op3 );
-
-  var json = JSON.stringify(r.serialize());
-  callServer( json, onMessage );  
+  mutations.push(m2);
+  
+  wavelet.submitMutations( mutations );
 }
 
+function addFriend()
+{
+  var waveid = "wall+" + JSOT.Rpc.jid;
+  var friend = document.getElementById('friend').value;
+  
+  var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
+  var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+  
+  wavelet.submitAddParticipant( friend );
+}
+
+/*
 function onMessage(jsonData)
 {
   var response = webclient.Response.parse( JSON.parse( jsonData ) );
@@ -211,7 +194,7 @@ function onMessage(jsonData)
 	callServer( json, onMessage );
   }
 }
-
+*/
 	</script>
 </body>
 </html>
