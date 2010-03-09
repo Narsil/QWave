@@ -714,7 +714,7 @@ protocol.ProtocolDocumentOperation.newElementStart = function(type, attributes)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
 	if ( !attributes )
-		attributes = { };
+		attributes = [ ];
 	c.element_start = new protocol.ProtocolDocumentOperation_Component_ElementStart();
 	c.element_start.type = type;
 	c.element_start.attribute = attributes;
@@ -753,7 +753,7 @@ protocol.ProtocolDocumentOperation.newDeleteElementStart = function(type, attrib
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
 	if ( !attributes )
-		attributes = { };
+		attributes = [ ];
 	c.delete_element_start = new protocol.ProtocolDocumentOperation_Component_ElementStart();
 	c.delete_element_start.type = type;
 	c.delete_element_start.attribute = attributes;
@@ -795,7 +795,7 @@ protocol.ProtocolDocumentOperation.newKeyValueUpdate = function( key, old_value,
 
 protocol.ProtocolDocumentOperation.newKeyValuePair = function( key, value )
 {
-	var c = new protocol.ProtocolDocumentOperation_Component_KeyValueUpdate();
+	var c = new protocol.ProtocolDocumentOperation_Component_KeyValuePair();
 	c.key = key;
 	c.value = value;
 	return c;

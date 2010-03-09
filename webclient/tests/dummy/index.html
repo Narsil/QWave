@@ -12,7 +12,8 @@
 	
 	<form>
 	  <p>User JID: <input type="text" id="jid" value="tux@wave1.vs.uni-due.de" /></p>
-	  <input type="button" value="Login" onclick="login()" />
+	  <p><input type="button" value="Login" onclick="login()" /></p>
+	  <p><input type="button" value="NewWave" onclick="newWave()" /></p>
 	</form>
 
 	<h3>Session ID</h3>
@@ -38,38 +39,72 @@ function login()
   r.login.jid = document.getElementById('jid').value;
   var json = JSON.stringify(r.serialize());
   callServer( json, onMessage );
-  // TODO: Escape the JID
-  // callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"10":{"1":"' + document.getElementById('jid').value + '"}}', onMessage);
+}
+
+function toArray(str)
+{
+  result = [];
+  for( var i = 0; i < str.length; ++i )
+  {
+	result.push( str.charCodeAt(i) );
+  }
+  return result;
+}
+
+function newWave()
+{
+  var waveid = "w+" + Math.random().toString();
+  var r = new webclient.Request();
+  r.session_id = sessionId;
+  r.client_ack = serverSequenceNr;
+  r.client_sequence_number = ++clientSequenceNr;
+  r.submit = new waveserver.ProtocolSubmitRequest();
+  r.submit.wavelet_name = "wave://wave1.vs.uni-due.de/" + waveid + "/conv+root";
+  r.submit.delta = new protocol.ProtocolWaveletDelta();
+  r.submit.delta.author = document.getElementById('jid').value;
+  r.submit.delta.hashed_version = new protocol.ProtocolHashedVersion();
+  r.submit.delta.hashed_version.version = 0;
+  r.submit.delta.hashed_version.history_hash = toArray( r.submit.wavelet_name );
+  var op1 = new protocol.ProtocolWaveletOperation();
+  op1.add_participant = document.getElementById('jid').value;
+  r.submit.delta.operation.push( op1 );
+  var op2 = new protocol.ProtocolWaveletOperation();
+  op2.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
+  op2.mutate_document.document_id = "conversation";
+  op2.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = op2.mutate_document.document_operation;
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "conversation" ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "blip", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", "b+1" ) ] ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  r.submit.delta.operation.push( op2 );
+  var op3 = new protocol.ProtocolWaveletOperation();
+  op3.mutate_document = new protocol.ProtocolWaveletOperation_MutateDocument();
+  op3.mutate_document.document_id = "b+1";
+  op3.mutate_document.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = op3.mutate_document.document_operation;
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "body" ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "line" ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( "Hallo" ) );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  r.submit.delta.operation.push( op3 );
+
+  r.open = new waveserver.ProtocolOpenRequest();
+  r.open.participant_id = document.getElementById('jid').value;
+  r.open.wave_id = waveid;
+
+  var json = JSON.stringify(r.serialize());
+  console.log(r);
+  callServer( json, null );  
 }
 
 function onMessage(jsonData)
 {
-  // TODO: Evil!
-  // var response = eval( "(" + jsonData + ")" );
   var response = webclient.Response.parse( JSON.parse( jsonData ) );
   // Get the ack of the server
-  // serverAck = Math.max(response["2"], serverAck);
   serverAck = Math.max(response.server_ack, serverAck);
-  // Get the latest server sequence number
-//  if ( response["3"] > 0 )
-//    serverSequenceNr = response["3"]
-//  if ( response["10"] )
-//  {
-//    var login = response["10"];    
-//    sessionId = login["1"];
-//    document.getElementById("sessionId").innerHTML = sessionId;
-//    
-//    // Open the indexwave	
-//    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":' + (++clientSequenceNr).toString() + ',"11":{"1":"' + document.getElementById('jid').value + '","2":"!indexwave"}}', onMessage);    
-//  }
-//  else if (response["11"] )
-//  {
-//    var update = response["11"];
-//    
-//    // Pull
-//    callServer('{"1":"' + sessionId + '","2":' + serverSequenceNr.toString() + ',"3":0}', onMessage);    
-//  }
-  
+  // Get the latest server sequence number  
   if ( response.server_sequence_number > 0 )
     serverSequenceNr = response.server_sequence_number;
   if ( response.has_login() )
