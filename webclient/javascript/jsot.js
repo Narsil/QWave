@@ -1,4 +1,5 @@
-var JSOT = { };
+if ( !window.JSOT )
+	JSOT = { };
 
 /////////////////////////////////////////////////
 //
@@ -145,7 +146,7 @@ JSOT.Wavelet.prototype.getDoc = function(docname)
 	return doc;
 };
 
-JSOT.Wavelet.prototype.addParticipant = function( jid )
+JSOT.Wavelet.prototype.addParticipantIntern = function( jid )
 {
 	var i = this.participants.indexOf(jid);
 	if ( i != -1 )
@@ -153,7 +154,7 @@ JSOT.Wavelet.prototype.addParticipant = function( jid )
 	this.participants.push( jid );
 };
 
-JSOT.Wavelet.prototype.removeParticipant = function( jid )
+JSOT.Wavelet.prototype.removeParticipantIntern = function( jid )
 {
 	var i = this.participants.indexOf(jid);
 	if ( i == -1 )
@@ -171,11 +172,11 @@ JSOT.Wavelet.prototype.applyDelta = function( delta )
 		var op = delta.operation[i];
 		if ( op.has_add_participant() )
 		{
-			this.addParticipant( op.add_participant );
+			this.addParticipantIntern( op.add_participant );
 		}
 		if ( op.has_remove_participant() )
 		{
-			this.removeParticipant( op.remove_participant );
+			this.removeParticipantIntern( op.remove_participant );
 		}
 		if ( op.has_mutate_document() )
 		{
@@ -212,6 +213,53 @@ JSOT.Wavelet.prototype.toString = function()
 	}
 	
 	return str;
+};
+
+JSOT.Wavelet.prototype.submitAddParticipant = function(jid)
+{
+	var op1 = new protocol.ProtocolWaveletOperation();
+	op1.add_participant = jid;
+	JSOT.Rpc.submitOperation( this, op1 );
+};
+
+JSOT.Wavelet.prototype.submitRemoveParticipant = function(jid)
+{
+	var op1 = new protocol.ProtocolWaveletOperation();
+	op1.remove_participant = jid;
+	JSOT.Rpc.submitOperation( this, op1 );
+};
+
+/**
+ * @param add_participant is either null of a JID. This parameter is useful when sending the initial
+ * mutation for a document together with adding its initial participant.
+ */
+JSOT.Wavelet.prototype.submitMutation = function( mutation, add_participant, open_wavelet )
+{
+	this.submitMutations( this, [mutation], add_participant, open_wavelet );
+};
+
+/**
+ * @param add_participant is either null of a JID. This parameter is useful when sending the initial
+ * mutation for a document together with adding its initial participant.
+ */
+JSOT.Wavelet.prototype.submitMutations = function( mutations, add_participant, open_wavelet )
+{
+	var operations = [];
+	for( var i = 0; i < mutations.length; ++i )
+	{
+	  var op = new protocol.ProtocolWaveletOperation();
+	  op.mutate_document = mutations[i];
+	  operations.push( op );
+	}
+	
+	if ( add_participant )
+	{
+		var op = new protocol.ProtocolWaveletOperation();
+		op.add_participant = add_participant;
+		operations.push( op );
+	}
+	
+	JSOT.Rpc.submitOperations( this, operations, open_wavelet );
 };
 
 /////////////////////////////////////////////////
