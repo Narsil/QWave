@@ -6,6 +6,7 @@
 #include "model/wavefolk.h"
 #include "network/clientindexwaveactor.h"
 #include "network/clientsubmitrequestactor.h"
+#include <QUrl>
 
 FCGIClientConnection::FCGIClientConnection(const QString& sessionId, const QString& participant, ClientActorFolk* parent)
     : ActorGroup( sessionId, parent ), m_participant( participant ), m_sessionId( sessionId ), m_waveletsOpened( false ), m_clientSequenceNumber(1), m_serverSequenceNumber(0), m_ackedSequenceNumber(0)
@@ -44,9 +45,11 @@ void FCGIClientConnection::customEvent( QEvent* event )
         PBMessage<webclient::Response>* r = new PBMessage<webclient::Response>();
         r->mutable_update()->add_applied_delta()->MergeFrom( digest->digest_delta() );
         WaveUrl url( QString::fromStdString( digest->wavelet_name() ) );
-        url.setWaveDomain( url.waveletDomain() );
-        url.setWaveId( "!indexwave" );
-        r->mutable_update()->set_wavelet_name( url.toString().toStdString() );
+        QUrl indexUrl;
+        indexUrl.setScheme("wave");
+        indexUrl.setHost( url.waveDomain() );
+        indexUrl.setPath( "/!indexwave/" + url.waveId() );
+        r->mutable_update()->set_wavelet_name( indexUrl.toString().toStdString() );
         reply(r);
         return;
     }
@@ -72,13 +75,13 @@ void FCGIClientConnection::handleRequest( const PBMessage<webclient::Request>* r
     // TODO: If the client sequence number is not what we expected?
     m_clientSequenceNumber = request->client_sequence_number();
 
-    if ( request->has_open() )
-    {
-        openRequest( &request->open() );
-    }
     if ( request->has_submit() )
     {
         submitRequest( &request->submit() );
+    }
+    if ( request->has_open() )
+    {
+        openRequest( &request->open() );
     }
 
     // Is a message pending? If not then keep the HTTP connection open
