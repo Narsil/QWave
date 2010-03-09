@@ -95,8 +95,7 @@ function newWave()
   r.open.wave_id = waveid;
 
   var json = JSON.stringify(r.serialize());
-  console.log(r);
-  callServer( json, null );  
+  callServer( json, onMessage );  
 }
 
 function onMessage(jsonData)
@@ -127,6 +126,8 @@ function onMessage(jsonData)
   {
     var update = response.update;
 	
+	try
+	{
 	JSOT.Wave.process( update );
 	
 	// Print the indexwave
@@ -138,6 +139,10 @@ function onMessage(jsonData)
 		c.appendChild( document.createTextNode( wavelet.toString() ) );
 		document.getElementById("out").appendChild(c);
 	}
+	} catch( e )
+	{
+	  console.log(e);
+	}
 	
 	// Ask for more
     var r = new webclient.Request();
@@ -147,7 +152,16 @@ function onMessage(jsonData)
     var json = JSON.stringify(r.serialize());
     callServer( json, onMessage );
   }
-
+  else if ( response.has_submit() )
+  {
+	// Ask for more
+    var r = new webclient.Request();
+    r.session_id = sessionId;
+    r.client_ack = serverSequenceNr;
+    r.client_sequence_number = 0;
+    var json = JSON.stringify(r.serialize());
+	callServer( json, onMessage );
+  }
 }
 
 	</script>
