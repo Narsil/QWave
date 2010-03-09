@@ -66,13 +66,19 @@ JSONScanner::Token JSONScanner::next()
         else if ( ch == 't' || ch == 'T' )
         {
             if ( m_len > 3 && strncmp( m_ptr, "rue", 3 ) == 0 )
+            {
+                m_ptr += 3;
                 return TrueValue;
+            }
             return Error;
         }
         else if ( ch == 'f' || ch == 'F' )
         {
             if ( m_len > 4 && strncmp( m_ptr, "alse", 4 ) == 0 )
+            {
+                m_ptr += 4;
                 return FalseValue;
+            }
             return Error;
         }
         else if ( ch == '{' )

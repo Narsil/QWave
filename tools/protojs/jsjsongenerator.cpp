@@ -104,7 +104,7 @@ bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const s
             case FieldDescriptor::CPPTYPE_BOOL:
             case FieldDescriptor::CPPTYPE_ENUM:
             case FieldDescriptor::CPPTYPE_STRING:
-                js << "\tdata[\"" << field->number() << "\"] = this." << ident(field->name()) << endl;
+                js << "\tdata[\"" << field->number() << "\"] = this." << ident(field->name()) << ";" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
                 js << "\tdata[\"" << field->number() << "\"] = this." << ident(field->name()) << ".serialize();" << endl;
@@ -118,7 +118,7 @@ bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const s
         }
         else if ( field->is_repeated() )
         {
-            js << "\tarr = [];" << endl;
+            js << "\tvar arr_" << field->number() << " = [];" << endl;
             js << "\tfor( var i = 0; i < this." << ident(field->name()) << ".length; ++i )" << endl << "\t{" << endl;
 
             switch( field->cpp_type() )
@@ -132,17 +132,17 @@ bool JsJSONGenerator::GenerateMessageType( const Descriptor* descriptor, const s
             case FieldDescriptor::CPPTYPE_BOOL:
             case FieldDescriptor::CPPTYPE_ENUM:
             case FieldDescriptor::CPPTYPE_STRING:
-                js << "\t\tarr.push( this." << ident(field->name()) << "[i] );" << endl;
+                js << "\t\tarr_" << field->number() << ".push( this." << ident(field->name()) << "[i] );" << endl;
                 break;
             case FieldDescriptor::CPPTYPE_MESSAGE:
-                js << "\t\tarr.push( this." << ident(field->name()) << "[i].serialize() );" << endl;
+                js << "\t\tarr_" << field->number() << ".push( this." << ident(field->name()) << "[i].serialize() );" << endl;
                 break;
             default:
                 error->append("Unknown type");
                 return false;
             }
             js << "\t}" << endl;
-            js << "\tdata[\"" << field->number() << "\"] = arr;" << endl;
+            js << "\tdata[\"" << field->number() << "\"] = arr_" << field->number() << ";" << endl;
         }
     }
     js << "\treturn data;" << endl;
