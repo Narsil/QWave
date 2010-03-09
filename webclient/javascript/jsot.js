@@ -86,7 +86,7 @@ JSOT.Wave.getWave = function(id, domain)
 	return w;
 };
 
-JSOT.Wave.process = function( update )
+JSOT.Wave.processUpdate = function( update )
 {
 	var url = new JSOT.WaveUrl( update.wavelet_name );
 	if ( url.isNull() ) throw "Malformed wave URL";
@@ -95,6 +95,13 @@ JSOT.Wave.process = function( update )
 	for( var i = 0; i < update.applied_delta.length; ++i )
 		wavelet.applyDelta( update.applied_delta[i] );
 	wavelet.hashed_version = update.resulting_version;
+};
+
+JSOT.Wave.processSubmit = function( submitRequest )
+{
+	var wavelet = JSOT.Wavelet.getWavelet( submitRequest.wavelet_name );
+	wavelet.applyDelta( submitRequest.delta );
+	// wavelet.hashed_version = update.resulting_version;
 };
 
 JSOT.Wave.prototype.getWavelet = function(id, domain)
@@ -134,6 +141,14 @@ JSOT.Wavelet = function(wave, id, domain)
 		return result;
 	}
 	this.hashed_version.history_hash = toArray( this.url().toString() );
+	JSOT.Wavelet.wavelets[ this.url().toString() ] = this;
+};
+
+JSOT.Wavelet.wavelets = { };
+
+JSOT.Wavelet.getWavelet = function( wavelet_name )
+{
+	return JSOT.Wavelet.wavelets[ wavelet_name ];
 };
 
 JSOT.Wavelet.prototype.getDoc = function(docname)

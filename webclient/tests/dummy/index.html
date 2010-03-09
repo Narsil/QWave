@@ -16,6 +16,7 @@
 	  <p><input type="button" value="NewWave" onclick="newWave()" /></p>
 	  <p><textarea id="comment"></textarea><br><input type="button" value="Submit" onclick="submitBlip()" /> Share your thoughts<p>
 	  <p>Add a friend: <input type="text" id="friend" value="torben@wave1.vs.uni-due.de" /> <input type="button" value="Add" onclick="addFriend()" /></p>
+	  <p><input type="button" value="BruteForce" onclick="bruteForce()" /></p>
 	</form>
 
 	<h3>Session ID</h3>
@@ -55,8 +56,8 @@ function newWave()
 	// var waveid = "w+" + Math.random().toString();
 	var waveid = "wall+" + JSOT.Rpc.jid;
   
-	var wave = new JSOT.Wave( waveid, "wave1.vs.uni-due.de" );
-	var wavelet = new JSOT.Wavelet( wave, "conv+root", "wave1.vs.uni-due.de" );
+	var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
 
 	var mutations = [];
 	var m1 = new protocol.ProtocolWaveletOperation_MutateDocument();
@@ -108,8 +109,8 @@ function submitBlip()
   var docop = m2.document_operation;
   docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "body" ) );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "line" ) );
-  docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( document.getElementById('comment').value ) );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+  docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( document.getElementById('comment').value ) );
   docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
   mutations.push(m2);
   
@@ -127,74 +128,31 @@ function addFriend()
   wavelet.submitAddParticipant( friend );
 }
 
-/*
-function onMessage(jsonData)
+function bruteForce()
 {
-  var response = webclient.Response.parse( JSON.parse( jsonData ) );
-  // Get the ack of the server
-  serverAck = Math.max(response.server_ack, serverAck);
-  // Get the latest server sequence number  
-  if ( response.server_sequence_number > 0 )
-    serverSequenceNr = response.server_sequence_number;
-  if ( response.has_login() )
+  var waveid = "wall+" + JSOT.Rpc.jid;
+  
+  var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
+  var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+  var doc = wavelet.getDoc( "b+1");
+  
+  for( var i = 0; i < 100; ++i )
   {
-    var login = response.login;    
-    sessionId = login.session_id;
-    document.getElementById("sessionId").innerHTML = sessionId;
-
-    var r = new webclient.Request();
-    r.session_id = sessionId;
-    r.client_ack = serverSequenceNr;
-    r.client_sequence_number = ++clientSequenceNr;
-    r.open = new waveserver.ProtocolOpenRequest();
-    r.open.participant_id = document.getElementById('jid').value;
-    r.open.wave_id = "!indexwave";
-    var json = JSON.stringify(r.serialize());
-    callServer( json, onMessage );
-  }
-  else if (response.has_update())
-  {
-    var update = response.update;
-	
-	try
-	{
-	JSOT.Wave.process( update );
-	
-	// Print the wave1
-	var url = new JSOT.WaveUrl( update.wavelet_name );
-	var wave = JSOT.Wave.getWave( url.waveId, url.waveDomain );
-	for( var a in wave.wavelets )
-	{
-		var wavelet = wave.wavelets[a];
-		var c = document.createElement("pre");
-		c.appendChild( document.createTextNode( wavelet.toString() ) );
-		document.getElementById("out").appendChild(c);
-	}
-	} catch( e )
-	{
-	  console.log(e);
-	}
-	
-	// Ask for more
-    var r = new webclient.Request();
-    r.session_id = sessionId;
-    r.client_ack = serverSequenceNr;
-    r.client_sequence_number = 0;
-    var json = JSON.stringify(r.serialize());
-    callServer( json, onMessage );
-  }
-  else if ( response.has_submit() )
-  {
-	// Ask for more
-    var r = new webclient.Request();
-    r.session_id = sessionId;
-    r.client_ack = serverSequenceNr;
-    r.client_sequence_number = 0;
-    var json = JSON.stringify(r.serialize());
-	callServer( json, onMessage );
+	var mutations = [];
+  	
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = "b+1";
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 3 ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( i.toString() + "," ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - 3 ) );
+	mutations.push(m2);
+  
+	wavelet.submitMutations( mutations );
   }
 }
-*/
+
 	</script>
 </body>
-</html>
+</html>	
