@@ -69,9 +69,13 @@ JSOT.Rpc.submitOperations = function( wavelet, operations, openWavelet )
 */
 };
 
-JSOT.Rpc.openWavelet = function( urlString )
+JSOT.Rpc.openWavelet = function( wavelet_name )
 {
-	var url = new JSOT.WaveUrl( urlString );
+	var url = new JSOT.WaveUrl( wavelet_name );
+	
+	// Make sure that the wave and wavelet objects exist locally
+	var wave = JSOT.Wave.getWave( url.waveId, url.waveDomain );
+	var wavelet = wave.getWavelet( url.waveletId, url.waveletDomain );
 	
     var r = new webclient.Request();
     r.session_id = JSOT.Rpc.sessionId;
@@ -79,11 +83,8 @@ JSOT.Rpc.openWavelet = function( urlString )
     r.client_sequence_number = ++(JSOT.Rpc.clientSequenceNr);
     r.open = new waveserver.ProtocolOpenRequest();
     r.open.participant_id = JSOT.Rpc.jid;
-	if ( url.waveDomain != JSOT.Rpc.waveDomain )
-		r.open.wave_id = url.waveDomain + "!" + url.waveId;
-	else
-		r.open.wave_id = url.waveId;
-	r.open.wavelet_id_prefix.push( url.waveletId );
+	r.open.wave_id = url.waveDomain + "!" + url.waveId;
+	r.open.wavelet_id_prefix.push( url.waveletDomain + "!" + url.waveletId );
     var json = JSON.stringify(r.serialize());
     JSOT.Rpc.callServer( json, JSOT.Rpc.onMessage );
 };
@@ -114,8 +115,12 @@ JSOT.Rpc.processSubmitRequest = function( wavelet, submitRequest, openWavelet )
 	JSOT.Rpc.sendNextSubmitRequest();
 };
 
+window.qin = [];
+
 JSOT.Rpc.processUpdate = function( update )
 {
+	window.qin.push( update );
+	
 	// Is this the echo to our submit? TODO: This sucks like hell.
 	if ( JSOT.Rpc.pendingSubmitUrl == update.wavelet_name )
 	{
@@ -145,15 +150,30 @@ JSOT.Rpc.processUpdate = function( update )
 	
 	var q = JSOT.Rpc.queue[update.wavelet_name];
 	// No pending submits? -> No OT
-	if ( !q )
+	if ( q )
 	{
-		// Apply the deltas locally
-		JSOT.Rpc.applyUpdate( update );
+		// Transform the received delta and transform the operations which have not
+		// yet been acknowledged by the server
+		// Disabled because of a bug in the google code: Q_ASSERT( incoming.version().version == m_serverMsgCount );
+		for( var i = 0; i < q.outgoing.length; ++i )
+		{
+			var outgoing_submit = q.outgoing[i];
+			for( var c = 0; c < outgoing_submit.delta.operation.length; ++c )
+			{
+				for( var a = 0; a < update.applied_delta.length; ++a )
+				{
+					var incoming_delta = update.applied_delta[a];
+					for( var s = 0; s < incoming_delta.operation.length; ++s )
+					{
+						protocol.ProtocolWaveletOperation.xform( incoming_delta.operation[s], outgoing_submit.delta.operation[c] )
+					}
+				}
+            }
+        }
 	}
-	else
-	{
-		// TODO: OT
-	}
+		
+	// Apply the deltas locally
+	JSOT.Rpc.applyUpdate( update );
 };
 
 JSOT.Rpc.processSubmitResponse = function( submitResponse )
@@ -205,8 +225,8 @@ JSOT.Rpc.sendNextSubmitRequest = function()
 				delete q.openWavelet;
 				r.open = new waveserver.ProtocolOpenRequest();
 				r.open.participant_id = JSOT.Rpc.jid;
-				r.open.wave_id = url.waveId;
-				r.open.wavelet_id_prefix.push( url.waveletId );
+				r.open.wave_id = url.waveDomain + "!" + url.waveId;
+				r.open.wavelet_id_prefix.push( url.wavletDomain + "!" + url.waveletId );
 			}
 		
 			var json = JSON.stringify(r.serialize());

@@ -925,7 +925,7 @@ protocol.ProtocolWaveletOperation.xform = function( m1, m2 )
 	if ( m1.has_mutate_document() && m2.has_mutate_document() )
 	{
 		if ( m1.mutate_document.document_id == m2.mutate_document.document_id )
-			protocol.ProtocolDocumentOperations.xform( m1.mutate_document, m2.mutate_document );
+			protocol.ProtocolDocumentOperation.xform( m1.mutate_document.document_operation, m2.mutate_document.document_operation );
 	}
 };
 
@@ -1003,6 +1003,8 @@ protocol.ProtocolDocumentOperation.xform = function( m1, m2 )
             if ( c2 < m2.component.length )
                 item2 = m2.component[c2];
         }
+		next.next1 = false;
+		next.next2 = false;
     }
 
     if ( c1 != m1.component.length || c2 != m2.component.length )    
@@ -1041,18 +1043,30 @@ protocol.ProtocolDocumentOperation.xformRetain = function( r1, r2, item1, item2,
 	if ( item2.has_element_start() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_element_end() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_characters() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_annotation_boundary() )
 	{
 		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_retain_item_count() )
 	{
@@ -1109,18 +1123,30 @@ protocol.ProtocolDocumentOperation.xformDeleteElementStart = function( r1, r2, i
 	if ( item2.has_element_start() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_element_end() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_characters() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_annotation_boundary() )
 	{
 		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_retain_item_count() )
 	{
@@ -1151,18 +1177,30 @@ protocol.ProtocolDocumentOperation.xformDeleteElementEnd = function( r1, r2, ite
 	if ( item2.has_element_start() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_element_end() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_characters() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_annotation_boundary() )
 	{
 		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_retain_item_count() )
 	{
@@ -1187,18 +1225,30 @@ protocol.ProtocolDocumentOperation.xformDeleteChars = function( r1, r2, item1, i
 	if ( item2.has_element_start() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_element_end() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_characters() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_annotation_boundary() )
 	{
 		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_retain_item_count() )
 	{
@@ -1234,18 +1284,30 @@ protocol.ProtocolDocumentOperation.xformUpdateAttributes = function( r1, r2, ite
 	if ( item2.has_element_start() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementStart( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_element_end() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertElementEnd( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_characters() )
 	{
 		protocol.ProtocolDocumentOperation.xformInsertChars( r2, r1, item2, item1, next, anno2, anno1);
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_annotation_boundary() )
 	{
 		protocol.ProtocolDocumentOperation.xformAnnotationBoundary( r2, r1, item2, item1, next, anno2, anno1, true );
+		var tmp = next.next1;
+		next.next1 = next.next2;
+		next.next2 = tmp;
 	}
 	else if ( item2.has_retain_item_count() )
 	{

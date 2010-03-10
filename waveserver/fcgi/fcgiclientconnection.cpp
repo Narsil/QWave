@@ -33,6 +33,7 @@ void FCGIClientConnection::customEvent( QEvent* event )
     PBMessage<waveserver::ProtocolWaveletUpdate>* update = dynamic_cast<PBMessage<waveserver::ProtocolWaveletUpdate>*>(event);
     if ( update )
     {
+        qDebug("FCGI: GOT UPDATE");
         PBMessage<webclient::Response>* r = new PBMessage<webclient::Response>();
         r->mutable_update()->MergeFrom( *update );
         reply(r);
