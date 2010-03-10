@@ -22,8 +22,16 @@ a stand-alone wave server.
 Make sure to put your certificate and private key file in the files
 mentioned in waveserver.conf.
 
-PLEASE NOTE: Federation is work in progress and COMPLETELY BROKEN.
-Use this federation stuff only if you want to participate in development.
+Certificates
+------------
+
+You need a certificate for running the wave server.
+The easiest way is to create one yourself for free:
+
+http://code.google.com/p/wave-protocol/wiki/Certificates
+
+The only problem is that other wave servers (including those of Google) will not allow your server to connect
+with a self-signed certificate.
 
 FCGI
 ----
