@@ -16,7 +16,7 @@
 	  <p><input type="button" value="NewWave" onclick="newWave()" /></p>
 	  <p><textarea id="comment"></textarea><br><input type="button" value="Submit" onclick="submitBlip()" /> Share your thoughts<p>
 	  <p>Add a friend: <input type="text" id="friend" value="torben@wave1.vs.uni-due.de" /> <input type="button" value="Add" onclick="addFriend()" /></p>
-	  <p><input type="button" value="BruteForce" onclick="bruteForce()" /></p>
+	  <p><input type="button" value="BruteForce" onclick="bruteForce()" /> <input type="button" value="Open" onclick="openWave()" /></p>
 	</form>
 
 	<h3>Session ID</h3>
@@ -54,7 +54,8 @@ function toArray(str)
 function newWave()
 {
 	// var waveid = "w+" + Math.random().toString();
-	var waveid = "wall+" + JSOT.Rpc.jid;
+	// var waveid = "wall+" + JSOT.Rpc.jid;
+	var waveid = "wall+all";
   
 	var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
 	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
@@ -82,6 +83,11 @@ function newWave()
 	mutations.push( m2 );
 	
 	wavelet.submitMutations( mutations, JSOT.Rpc.jid, true );
+}
+
+function openWave()
+{
+	JSOT.Rpc.openWavelet( "wave://wave1.vs.uni-due.de/wall+all/conv+root" );
 }
 
 function submitBlip()
@@ -119,7 +125,8 @@ function submitBlip()
 
 function addFriend()
 {
-  var waveid = "wall+" + JSOT.Rpc.jid;
+  var waveid = "wall+all";
+//  var waveid = "wall+" + JSOT.Rpc.jid;
   var friend = document.getElementById('friend').value;
   
   var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
@@ -130,7 +137,8 @@ function addFriend()
 
 function bruteForce()
 {
-  var waveid = "wall+" + JSOT.Rpc.jid;
+//  var waveid = "wall+" + JSOT.Rpc.jid;
+  var waveid = "wall+all";
   
   var wave = JSOT.Wave.getWave( waveid, "wave1.vs.uni-due.de" );
   var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );

@@ -192,7 +192,6 @@ bool FCGIProtocol::processInput(const char* buf, size_t count)
         {
         case TYPE_BEGIN_REQUEST:
             {
-                qDebug("FCGIbegin");
                 ok = process_begin_request(msg_id, &m_inputBuffer[0]+sizeof(Header), msg_len);
             }
             break;
@@ -203,14 +202,12 @@ bool FCGIProtocol::processInput(const char* buf, size_t count)
             break;
         case TYPE_PARAMS:
             {
-                qDebug("FCGIparams");
                 ok = process_params(msg_id, &m_inputBuffer[0]+sizeof(Header), msg_len);
             }
             break;
 
         case TYPE_STDIN:
             {
-                qDebug("FCGIstdin");
                 ok = process_stdin(msg_id, &m_inputBuffer[0]+sizeof(Header), msg_len);
             }
             break;
