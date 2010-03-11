@@ -290,14 +290,67 @@ JSOT.Doc = function(docId)
 	this.format = [ ];
 };
 
-JSOT.Doc.ElementStart = function(type, attributes)
+JSOT.Doc.ElementStart = function(type, attributes, doc)
 {
+	this.doc = doc;
 	this.element_start = true;
 	this.type = type;
 	if ( !attributes )
 		this.attributes = { };
 	else
 		this.attributes = attributes;
+	this.start_index = -1;
+	this.end_index = -1;
+	this.parent_index = -1;
+};
+
+JSOT.Doc.ElementStart.prototype.parent = function()
+{
+	if ( this.parent_index == -1 )
+		return null;
+	return this.doc.content[this.parent_index];
+};
+
+JSOT.Doc.ElementStart.prototype.previousSibling = function()
+{
+	var depth = 0;
+	for( var i = this.start_index - 1; i >= 0; --i )
+	{
+		var item = this.doc.content[i];
+		if ( typeof(item) == "string" )
+			continue;
+		if ( item.element_start )
+		{
+			depth--;
+			if ( depth == 0 )
+				return item;
+		}
+		else if ( item.element_end )
+			depth++;
+	}
+
+	return null;
+};
+
+JSOT.Doc.ElementStart.prototype.nextSibling = function()
+{
+	var depth = 0;
+	for( var i = this.end_index + 1; i < this.doc.content.length; i++ )
+	{
+		var item = this.doc.content[i];
+		if ( typeof(item) == "string" )
+			continue;
+		if ( item.element_start )
+		{
+			if ( depth == 0 )
+				return item;
+			depth++;
+		}
+		else if ( item.element_end )
+			depth--;
+	}
+
+	return null;
 };
 
 JSOT.Doc.ElementEnd = function()
@@ -369,6 +422,34 @@ JSOT.Doc.prototype.toString = function()
 	return result.join("");
 };
 
+JSOT.Doc.prototype.postProcessing = function()
+{
+	var current = null;
+	var currentIndex = -1;
+	var stack = [];
+	for( var i = 0; i < this.content.length; ++i )
+	{
+		var item = this.content[i];
+		if ( typeof(item) == "string" )
+		{
+		}
+		else if ( item.element_start )
+		{
+			stack.push( currentIndex );
+			current = item;
+			current.start_index = i;
+			current.parent_index = currentIndex;
+			currentIndex = i;
+		}	
+		else if ( item.element_end )
+		{
+			current.end_index = i;
+			currentIndex = stack.pop();
+			current = this.content[ currentIndex ];
+		}
+	}
+};
+
 /////////////////////////////////////////////////
 //
 // DocumentOperation
@@ -412,13 +493,13 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			
 			if ( inContentIndex == 0 )
 			{
-				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs ) );
+				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs, doc ) );
 				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 			}
 			else
 			{
-				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs ), c.substring(inContentIndex, c.length) );
+				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs, doc ), c.substring(inContentIndex, c.length) );
 				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
 				contentIndex += 2;
@@ -756,6 +837,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		throw "Not all delete element starts have been matched with a delete element end";
 	if ( contentIndex < doc.content.length )
 		throw "op is too small for document";
+		
+	doc.postProcessing();
 };
 
 protocol.ProtocolDocumentOperation.prototype.computeAnnotation = function(docAnnotation, annotationUpdate, annotationUpdateCount)

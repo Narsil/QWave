@@ -1,0 +1,540 @@
+<html>
+<head>
+	<title>Wave Walls</title>
+		<script src="../dummy/rpc.js" type="text/javascript"></script>
+		<script src="../../javascript/common.pbjson.js" type="text/javascript"></script>
+		<script src="../../javascript/waveclient-rpc.pbjson.js" type="text/javascript"></script>
+		<script src="../../javascript/webclient.pbjson.js" type="text/javascript"></script>
+		<script src="../../javascript/jsot.js" type="text/javascript"></script>
+	<style type="text/css">
+body { font-family:aria,sans-serif; }
+#login { position:absolute; top:0px; left:0px; }
+#app { position:absolute; top:0px; left:0px;visibility:hidden;width:100% }
+#titlebar { }
+#appcontent { position:relative; width:100%; }
+#wall { position:absolute; top:0px; left:0px; width:100% }
+#messages { background-color:#E3E9F0; padding:6px 6px 10px 10px }
+.messageframe { background-color:#FFFFFF; padding:0px; font-size:80%; margin-bottom:10px }
+.frame1 { display:block; height:1px;border-left:5px solid #FFFFFF; border-right:5px solid #FFFFFF; border-color:#E3E9F0; }
+.frame1b { background:#BCBCBC none repeat scroll 0 0; border-left:1px solid #BCBCBC; border-right:1px solid #BCBCBC; height:1px; display:block; font-size:0; line-height:0; overflow:hidden; position:relative; z-index:1; }
+.frame2 { display:block; height:1px;border-left:3px solid #FFFFFF; border-right:3px solid #FFFFFF; border-color:#E3E9F0; }
+.frame2b { border-left:2px solid #BCBCBC; border-right:2px solid #BCBCBC; height:1px; display:block; font-size:0; line-height:0; overflow:hidden; position:relative; z-index:1; }
+.frame3 { display:block; height:2px;border-left:2px solid #FFFFFF; border-right:2px solid #FFFFFF; border-color:#E3E9F0; }
+.frame3b { border-left:1px solid #BCBCBC; border-right:1px solid #BCBCBC; height:2px; display:block; font-size:0; line-height:0; overflow:hidden; position:relative; z-index:1; }
+.messagemain { position:relative; background-color:#FFFFFF; border-color:#D7DDE3; border-left:1px solid #EFEFEF; border-right:1px solid #EFEFEF; }
+.messageinnerframe { border-left:1px solid #BCBCBC; border-right:1px solid #BCBCBC; padding:6px 6px 10px 10px; margin:0px }
+.messageactions { float:right; display:inline;  margin-right:-6px; margin-top:-10px; padding-left:6px; padding-right:6px; }
+.messageimage { float:left; }
+.userimage { width:45px;height:45px; }
+.messagedate { float:right; margin-right:4px; margin-top:-10px; color:#777777 }
+.messagebody { margin-left:55px }
+.username { text-decoration:none; color:#114170; font-weight:bold }
+.hline { background-color:#E2E2E2; font-size:0; height:1px; margin:13px 20px 3px 0; }
+.like { padding:10px 0px 3px 0px; max-width:50em }
+.liketext { color:#777777 }
+.likeusername { text-decoration:none; color:#114170 }
+.comment { padding:10px 0px 3px 0px; max-width:50em; margin-left:15px }
+.commentspan { margin-left:-15px }
+.commentdate { color:#777777 }
+.messagebottom { border-left:1px solid #BCBCBC; border-right:1px solid #BCBCBC; padding:0px; margin:0px; background-color:#E3E9F0 }
+.messagecontrolsbox { margin-left:65px }
+.frame4 { display:block; height:2px;border-left:2px solid #FFFFFF; border-right:2px solid #FFFFFF; border-color:#E3E9F0; background-color:#E3E9F0 }
+.frame4b { border-left:1px solid #BCBCBC; border-right:1px solid #BCBCBC; height:2px; display:block; font-size:0; line-height:0; overflow:hidden; position:relative; z-index:1; }
+.frame5 { display:block; height:1px;border-left:3px solid #FFFFFF; border-right:3px solid #FFFFFF; border-color:#E3E9F0; background-color:#E3E9F0 }
+.frame5b { border-left:2px solid #BCBCBC; border-right:2px solid #BCBCBC; height:1px; display:block; font-size:0; line-height:0; overflow:hidden; position:relative; z-index:1; }
+.frame6 { display:block; height:1px;border-left:5px solid #FFFFFF; border-right:5px solid #FFFFFF; border-color:#E3E9F0; }
+.frame6b { background:#BCBCBC none repeat scroll 0 0; border-left:1px solid #BCBCBC; border-right:1px solid #BCBCBC; height:1px; display:block; font-size:0; line-height:0; overflow:hidden; position:relative; z-index:1; }
+#newsfeed { position:absolute; top:0px; left:0px; }
+#friends { position:absolute; top:0px; left:0px; }
+.commentbox { padding-top:6px; padding-bottom:2px }
+.commentimage { float:left; margin-left:10px }
+.commentnamebox { margin-bottom:2px; margin-left:65px }
+.commentauthor { color:black; font-weight:bold; text-decoration:none }
+.commenttextbox { background-color:#FFFFFF; padding:2px; margin:0px; width:53em;  margin-left:65px }
+.commenttextarea { font-family:arial,sans-serif; font-size:inherit; background-color:#FFFFFF; outline-style:none; outline-width:0; border:none; width:53em }
+.commentbuttonbox { margin:0; margin-top:2px; margin-left:63px }
+
+	</style>	
+</head>
+<body>
+	<div id="login">
+		<form>
+			<p>User JID: <input type="text" id="jid" value="tux" />@wave1.vs.uni-due.de</p>
+			<p><input type="button" value="Login" onclick="login()" /></p>
+		</form>
+	</div>
+	<div id="app" style="visibility:hidden">
+		<div id="titlebar"><a href="javascript:showWall()" >Wall</a> <a href="javascript:showNewsfeed()" >Newsfeed</a> <a href="javascript:showFriends()" >Friends</a></div>
+		<div id="appcontent">
+			<div id="wall">
+				<h1>Wall</h1>
+				
+				<div id="input" style="background-color:#999999; padding:10px; font-size:80%">
+					<div style="float:left; margin-right:10px; margin-left:10px; margin-top:2px">
+						<img src="https://mail.google.com/mail/images/blue_ghost.jpg" class="userimage" />
+					</div>
+					<div style="float:left; ">
+						<div style="margin-bottom:2px"><a href="#" style="color:#E3E3E3">Torben Weis</a></div>
+						<div style="background-color:#FFFFFF; padding:10px; margin:0px">
+							<textarea id="inputtext" style="font-family:arial,sans-serif; font-size:inherit; background-color:#FFFFFF; outline-style:none; outline-width:0; width:52em; border:none"></textarea>
+						</div>
+						<div style="margin:0; margin-top:2px; margin-left:-2px">
+							<input type="button" value="Publish" onclick="publish()" />
+						</div>
+					</div>
+					<div style="clear:both"></div>
+				</div>
+				<div id="messages">
+				<!--
+					<div class="messageframe">
+						<b class="frame1" >
+							<b class="frame1b"></b>
+						</b>
+						<b class="frame2">
+							<b class="frame2b"></b>
+						</b>
+						<b class="frame3">
+							<b class="frame3b"></b>
+						</b>					
+						<div class="messagemain">
+							<div class="messageinnerframe">
+								<div class="messageactions" ><a href="#">Actions</a></div>
+								<span class="messageimage"><img src="foo.jpg" class="userimage" /></span>
+								<span class="messagedate">9. March</span>
+								<div class="messagebody">
+									<div class="author"><a href="#" class="username">Joe Doe</a></div>
+									<div class="content">Here we can say what we always wanted to tell</div>
+									<div class="hline"></div>
+									<div class="like"><span class="liketext">One person liked this. - </span><a href="#" class="likeusername">Torben</a></div>
+									<div class="comment"><span class="commentspan"><a href="#" class="username">Heinz Wurst</a> - This is some comment that is supposed to be longer than a single line to show what happens if it becomes too long and the text breaks around. <span class="commentdate">9. March</span></span></div>
+								</div>
+							</div>
+							<div class="messagebottom">
+								<div class="messagecontrolsbox"><a href="#">Comment<a> <a href="#">Like</a></div>
+								<div class="commentbox">
+								<span class="commentimage"><img src="https://mail.google.com/mail/images/blue_ghost.jpg" class="userimage" /></span>
+								<div style="display:inline;">
+									<div class="commentnamebox"><a href="#" class="commentauthor">Torben Weis</a></div>
+									<div class="commenttextbox">
+										<textarea class="commenttextarea"></textarea>
+									</div>
+								</div>
+								<div class="commentbuttonbox">
+									<input type="button" value="Publish" onclick="publish()" /> <input type="button" value="Cancel" onclick="" />
+								</div>								
+								<div style="clear:both"></div>
+								</div>
+							</div>
+						</div>
+						<b class="frame4">
+							<b class="frame4b"></b>
+						</b>					
+						<b class="frame5">
+							<b class="frame5b"></b>
+						</b>
+						<b class="frame6">
+							<b class="frame6b"></b>
+						</b>					
+					</div>
+				-->
+				</div>				
+			</div>
+			<div id="newsfeed" style="visibility:hidden">
+				<h1>Newsfeed</h1>
+			</div>
+			<div id="friends" style="visibility:hidden">
+				<h1>Friends</h1>
+			</div>
+		</div>
+	</div>
+	<script type="text/javascript">
+	
+function login()
+{
+	document.getElementById( 'login' ).style.visibility = "hidden";
+	document.getElementById( 'app' ).style.visibility = "visible";
+}
+
+function showWall()
+{
+	document.getElementById( 'newsfeed' ).style.visibility = "hidden";
+	document.getElementById( 'friends' ).style.visibility = "hidden";
+	document.getElementById( 'wall' ).style.visibility = "visible";
+}
+
+function showNewsfeed()
+{
+	document.getElementById( 'wall' ).style.visibility = "hidden";
+	document.getElementById( 'friends' ).style.visibility = "hidden";
+	document.getElementById( 'newsfeed' ).style.visibility = "visible";
+}
+
+function showFriends()
+{
+	document.getElementById( 'newsfeed' ).style.visibility = "hidden";
+	document.getElementById( 'wall' ).style.visibility = "hidden";
+	document.getElementById( 'friends' ).style.visibility = "visible";
+}
+
+var maindoc = new JSOT.Doc();
+maindoc.content.push( new JSOT.Doc.ElementStart( "message", { id : "m+1" }, maindoc ) );
+maindoc.content.push( new JSOT.Doc.ElementEnd() );
+maindoc.postProcessing();
+
+var doc = new JSOT.Doc("m+1");
+doc.content.push( new JSOT.Doc.ElementStart( "message", { author : "Joe Doe", date : "9. March" }, doc ) );
+doc.content.push( new JSOT.Doc.ElementStart( "content" , null, doc ) );
+doc.content.push( "Here we can say what we always wanted to tell" );
+doc.content.push( new JSOT.Doc.ElementEnd() );
+doc.content.push( new JSOT.Doc.ElementStart( "like", { author : "Torben" }, doc ) );
+doc.content.push( new JSOT.Doc.ElementEnd() );
+doc.content.push( new JSOT.Doc.ElementStart( "comment", { author : "Heinz Wurst", date : "9. March" }, doc ) );
+doc.content.push( new JSOT.Doc.ElementStart( "content", null, doc ) );
+doc.content.push( "This is some comment that is supposed to be longer than a single line to show what happens if it becomes too long and the text breaks around." );
+doc.content.push( new JSOT.Doc.ElementEnd() );
+doc.content.push( new JSOT.Doc.ElementEnd() );
+doc.content.push( new JSOT.Doc.ElementEnd() );
+doc.postProcessing();
+
+var docs = { };
+docs[ "m+1" ] = doc;
+
+function newMessage(doc)
+{
+	var dom = document.createElement( "div" );
+	dom.className = "messageframe";
+	var html = '<b class="frame1" ><b class="frame1b"></b></b><b class="frame2"><b class="frame2b"></b></b><b class="frame3"><b class="frame3b"></b></b>' +
+				'<div class="messagemain"><div class="messageinnerframe">' +
+				'<div class="messageactions" ><a href="#">Actions</a></div>' + 
+				'<span class="messageimage"><img src="https://mail.google.com/mail/images/blue_ghost.jpg" class="userimage" /></span>' +
+				'<span class="messagedate"></span><div class="messagebody">' +
+				'<div class="author"><a href="#" class="username"></a></div>' +
+				'<div class="content"></div>' +
+				'</div></div>' +
+				'<div class="messagebottom"><div class="messagecontrolsbox"><a href="#" class="controlcomment">Comment<a> <a href="#" class="controllike">Like</a></div></div></div>' +
+				'<b class="frame4"><b class="frame4b"></b></b><b class="frame5"><b class="frame5b"></b></b><b class="frame6"><b class="frame6b"></b></b>';
+	dom.innerHTML = html;
+	
+	var like = getElementByClass( dom, "controllike" );
+	like.href = 'javascript:like("' + doc.docId + '")';
+
+	var comment = getElementByClass( dom, "controlcomment" );
+	comment.href = 'javascript:createCommentBox("' + doc.docId + '")';
+
+	return dom;
+}
+
+function getElementByClass( root, className )
+{
+	for( var i = 0; i < root.childNodes.length; ++i )
+	{
+		var child = root.childNodes[i];
+		if ( child.className == className )
+			return child;
+		var result = getElementByClass( child, className );
+		if ( result )
+			return result;
+	}
+	return null;
+}
+
+function getElementsByClass( root, className, result )
+{
+	if ( !result )
+		result = [];
+	for( var i = 0; i < root.childNodes.length; ++i )
+	{
+		var child = root.childNodes[i];
+		if ( child.className == className )
+			result.push( child );
+		getElementsByClass( child, className, result );
+	}
+	return result;
+}
+
+function messageNewChild( selfIndex, childIndex )
+{
+	var self = this.content[selfIndex];
+	var child = this.content[childIndex];
+	if ( child.type == "content" )
+	{
+		var dom = getElementByClass( self.dom, "content" );
+		child.dom = dom;
+		var t = ""
+		for( var i = child.start_index + 1; i < child.end_index; ++i )
+			if ( typeof(this.content[i]) == "string" )
+				t += this.content[i];
+		var text = document.createTextNode( t );
+		dom.appendChild( text );
+	}
+	else if ( child.type == "like" )
+	{
+		var dom = getElementByClass( self.dom, "content" );
+		// Doe the hline exist already?
+		var hline = getElementByClass( self.dom, "hline" );
+		if ( !hline )
+		{
+			hline = document.createElement("div");
+			hline.className = "hline";
+			dom.parentNode.insertBefore( hline, dom.nextSibling );
+		}
+		var like = getElementByClass( self.dom, "like" );
+		var liketext = getElementByClass( self.dom, "liketext" );
+		if ( !like )
+		{
+			like = document.createElement("div");
+			like.className = "like";
+			liketext = document.createElement("span");
+			liketext.className = "liketext";
+			liketext.appendChild( document.createTextNode("") );
+			like.appendChild( liketext );
+			dom.parentNode.insertBefore( like, hline.nextSibling );
+		}		
+		var t = "likes this. - ";
+		var likes = 0;
+		var first = -1;
+		for( var i = self.start_index + 1; i < self.end_index; ++i )
+			if ( typeof(this.content[i]) != "string" && this.content[i].type == "like" )
+			{
+				if ( first == -1 ) first = i;
+				likes++;
+			}
+		if ( likes == 1 )
+			t = "One person " + t;
+		else if ( likes == 2 ) 
+			t = "Two persons " + t;
+		else if ( likes == 3 ) 
+			t = "Three persons " + t;
+		else
+			t = likes.toString() + " persons " + t;			
+		liketext.childNodes[0].data = t;
+		var a = document.createElement("a");
+		a.className = "likeusername";
+		a.href = "#";
+		t = child.attributes["author"];
+		if ( first != childIndex )
+			t = ", " + t;
+		a.appendChild( document.createTextNode( t ) );
+		like.insertBefore( a, null );
+	}
+	else if ( child.type == "comment" )
+	{
+		var dom = getElementByClass( self.dom, "content" );
+		// Doe the hline exist already?
+		var hline = getElementByClass( self.dom, "hline" );
+		if ( !hline )
+		{
+			hline = document.createElement("div");
+			hline.className = "hline";
+			dom.parentNode.insertBefore( hline, dom.nextSibling );
+		}
+		var comment = document.createElement("div");
+		comment.className = "comment";
+		var span = document.createElement("span");
+		span.className = "commentspan";
+		comment.appendChild( span );
+		var a = document.createElement("a");
+		a.className = "username";
+		a.href = "#";
+		a.appendChild( document.createTextNode( child.attributes["author"] ) );
+		span.appendChild( a );
+		
+		var t = " - "
+		for( var i = child.start_index + 1; i < child.end_index; ++i )
+			if ( typeof(this.content[i]) == "string" )
+				t += this.content[i];
+		t += " ";
+		var text = document.createTextNode( t );
+		span.appendChild( document.createTextNode( t ) );
+
+		var span2 = document.createElement("span");
+		span2.className = "commentdate";
+		span2.appendChild( document.createTextNode( child.attributes["date"] ) );
+		span.appendChild( span2 );
+		
+		dom.parentNode.insertBefore( comment, null );
+	}
+}
+
+myNewChild = function(selfIndex, childIndex)
+{
+	var child = this.content[childIndex];
+	if ( child.type == "message" )
+	{
+		child.newChild = messageNewChild;
+		var mdom = newMessage(this);
+		child.dom = mdom;
+		
+		var userName = getElementByClass( mdom, "username" );
+		var text = document.createTextNode( child.attributes[ "author" ] );
+		userName.appendChild( text );
+
+		var date = getElementByClass( mdom, "messagedate" );
+		var text = document.createTextNode( child.attributes[ "date" ] );
+		date.appendChild( text );
+		
+		return mdom;
+	}
+	return null;
+};
+
+JSOT.Doc.prototype.process = function()
+{
+	var result = []
+	var current = this;
+	var currentIndex = -1;
+	var stack = [];
+	for( var i = 0; i < this.content.length; ++i )
+	{
+		var item = this.content[i];
+		if ( typeof(item) == "string" )
+		{
+		}
+		else if ( item.element_start )
+		{
+			if ( !item.processed && current.newChild )
+			{
+				if ( currentIndex == -1 )
+					result.push( current.newChild.apply( this, [currentIndex, i] ) ); 
+				else
+				
+					current.newChild.apply( this, [currentIndex, i] )
+				item.processed = true;
+			}
+			stack.push( currentIndex );
+			current = item;
+			currentIndex = i;
+		}
+		else if ( item.element_end )
+		{
+			currentIndex = stack.pop();
+			if ( currentIndex == -1 )
+				current = this;
+			else
+				current = this.content[ currentIndex ];
+		}
+	}
+		
+	return result;
+};
+
+maindoc.newChild = function(selfIndex, childIndex)
+{
+	var child = this.content[childIndex];
+	if ( child.type == "message" )
+	{
+		var d = docs[ child.attributes[ "id" ] ];
+		d.newChild = myNewChild;
+		var result = d.process();
+		var dom = document.getElementById( "messages" );
+		var next = child.nextSibling();
+		// dom.appendChild(result[0]);
+		dom.insertBefore( result[0], next ? next.dom : null );
+		child.dom = result[0];
+	}
+	return null;
+};
+
+maindoc.process();
+
+function publish()
+{
+	var doc = new JSOT.Doc("m+2");
+	var docop = new protocol.ProtocolDocumentOperation();
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "message", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", "Torben Weis" ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "content" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( document.getElementById("inputtext").value ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.applyTo( doc );
+	docs[ "m+2" ] = doc;
+
+	var docop = new protocol.ProtocolDocumentOperation();
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "message", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", "m+2" ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( maindoc.itemCount() ) );
+	docop.applyTo( maindoc );
+
+	document.getElementById("inputtext").value = "";
+	
+	maindoc.process();
+}
+
+function like(m)
+{
+	var doc = docs[m];
+	var docop = new protocol.ProtocolDocumentOperation();
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - 1 ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "like", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", "Torben Weis" ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 1 ) );
+	docop.applyTo( doc );
+
+	doc.process();
+}
+
+function publishComment(m)
+{
+	var doc = docs[m];
+	var textarea = getElementByClass( doc.content[0].dom, "commenttextarea" );
+	
+	var docop = new protocol.ProtocolDocumentOperation();
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - 1 ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "comment", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", "Torben Weis" ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "content" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( textarea.value ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 1 ) );
+	docop.applyTo( doc );
+
+	deleteCommentBox(m);
+	
+	doc.process();
+}
+
+function createCommentBox(m)
+{
+	var doc = docs[m];
+	var dom = doc.content[0].dom;
+	if ( getElementByClass( dom, "commentbox" ) )
+		return;
+		
+	var before = getElementByClass( dom, "messagecontrolsbox" );
+	var div = document.createElement("div");
+	div.className = "commentbox";
+	var html = '<span class="commentimage"><img src="https://mail.google.com/mail/images/blue_ghost.jpg" class="userimage" /></span>' +
+			   '<div style="display:inline;">' +
+					'<div class="commentnamebox"><a href="#" class="commentauthor">Torben Weis</a></div>' +
+					'<div class="commenttextbox">' +
+						'<textarea class="commenttextarea"></textarea>' +
+					'</div>' +
+				'</div>' +
+					'<div class="commentbuttonbox">' +
+						'<input type="button" value="Publish" class="controlpubcomment" /> <input type="button" class="controldelcomment" value="Cancel" />' +
+					'</div>' +
+					'<div style="clear:both"></div>' +
+				'</div>';
+	div.innerHTML = html;
+	
+	var delcomment = getElementByClass( div, "controldelcomment" );
+	delcomment.onclick = function() { deleteCommentBox( doc.docId ) };
+
+	var pubcomment = getElementByClass( div, "controlpubcomment" );
+	pubcomment.onclick = function() { publishComment( doc.docId ) };
+
+	before.parentNode.insertBefore( div, before.nextSibling );
+}
+
+function deleteCommentBox(m)
+{
+	var doc = docs[m];
+	var dom = doc.content[0].dom;
+	var comment = getElementByClass( dom, "commentbox" );
+	if ( comment )
+	{
+		comment.parentNode.removeChild( comment );
+	}
+}
+	</script>
+</body>	
