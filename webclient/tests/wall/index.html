@@ -1,11 +1,11 @@
 <html>
 <head>
 	<title>Wave Walls</title>
-		<script src="../dummy/rpc.js" type="text/javascript"></script>
-		<script src="../../javascript/common.pbjson.js" type="text/javascript"></script>
-		<script src="../../javascript/waveclient-rpc.pbjson.js" type="text/javascript"></script>
-		<script src="../../javascript/webclient.pbjson.js" type="text/javascript"></script>
-		<script src="../../javascript/jsot.js" type="text/javascript"></script>
+		<script src="rpc.js" type="text/javascript"></script>
+		<script src="common.pbjson.js" type="text/javascript"></script>
+		<script src="waveclient-rpc.pbjson.js" type="text/javascript"></script>
+		<script src="webclient.pbjson.js" type="text/javascript"></script>
+		<script src="jsot.js" type="text/javascript"></script>
 	<style type="text/css">
 body { font-family:aria,sans-serif; }
 #login { position:absolute; top:0px; left:0px; }
@@ -61,6 +61,7 @@ body { font-family:aria,sans-serif; }
 		<form>
 			<p>User JID: <input type="text" id="jid" value="tux" />@wave1.vs.uni-due.de</p>
 			<p><input type="button" value="Login" onclick="login()" /></p>
+			<p id="logintext"></p>
 		</form>
 	</div>
 	<div id="app" style="visibility:hidden">
@@ -150,6 +151,12 @@ body { font-family:aria,sans-serif; }
 	<script type="text/javascript">
 	
 function login()
+{
+	document.getElementById('logintext').innerHTML = "Logging in ... please wait";
+	JSOT.Rpc.login( document.getElementById('jid').value + "@wave1.vs.uni-due.de", onLogin );
+}
+
+function onLogin()
 {
 	document.getElementById( 'login' ).style.visibility = "hidden";
 	document.getElementById( 'app' ).style.visibility = "visible";

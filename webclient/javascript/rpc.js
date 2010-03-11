@@ -9,12 +9,14 @@ JSOT.Rpc = {
 	jid : null,
 	waveDomain : "wave1.vs.uni-due.de",
 	queue : { },
-	pendingSubmitUrl : null
+	pendingSubmitUrl : null,
+	onLogin : null
 };
 
-JSOT.Rpc.login = function( jid )
+JSOT.Rpc.login = function( jid, callback )
 {
 	JSOT.Rpc.jid = jid;
+	JSOT.Rpc.onLogin = callback;
 	
     var r = new webclient.Request();
 	r.session_id = JSOT.Rpc.sessionId;
@@ -43,30 +45,6 @@ JSOT.Rpc.submitOperations = function( wavelet, operations, openWavelet )
 	submit.delta.operation = operations;
 
 	JSOT.Rpc.processSubmitRequest( wavelet, submit, openWavelet );
-/*
-
-	var r = new webclient.Request();
-	r.session_id = JSOT.Rpc.sessionId;
-	r.client_ack = JSOT.Rpc.serverSequenceNr;
-	r.client_sequence_number = ++(JSOT.Rpc.clientSequenceNr);
-	r.submit = new waveserver.ProtocolSubmitRequest();
-	r.submit.wavelet_name = wavelet.url().toString();
-	r.submit.delta = new protocol.ProtocolWaveletDelta();
-	r.submit.delta.author = JSOT.Rpc.jid;
-	r.submit.delta.hashed_version = wavelet.hashed_version;
-	r.submit.delta.operation = operations;
-
-	if ( openWavelet )
-	{
-		r.open = new waveserver.ProtocolOpenRequest();
-		r.open.participant_id = JSOT.Rpc.jid;
-		r.open.wave_id = wavelet.wave.id;
-		r.open.wavelet_id_prefix.push( wavelet.id );
-	}
-	  
-	var json = JSON.stringify(r.serialize());
-	JSOT.Rpc.callServer( json, JSOT.Rpc.onMessage );  
-*/
 };
 
 JSOT.Rpc.openWavelet = function( wavelet_name )
@@ -115,11 +93,11 @@ JSOT.Rpc.processSubmitRequest = function( wavelet, submitRequest, openWavelet )
 	JSOT.Rpc.sendNextSubmitRequest();
 };
 
-window.qin = [];
+// window.qin = [];
 
 JSOT.Rpc.processUpdate = function( update )
 {
-	window.qin.push( update );
+//	window.qin.push( update );
 	
 	// Is this the echo to our submit? TODO: This sucks like hell.
 	if ( JSOT.Rpc.pendingSubmitUrl == update.wavelet_name )
@@ -288,20 +266,24 @@ JSOT.Rpc.callServer = function(jsonData, callback)
 	}
 	if (xmlHttp)
 	{
-		var c = document.createElement("pre");
-		c.appendChild( document.createTextNode("OUT:") );
-		c.appendChild( document.createTextNode(jsonData) );
-		document.getElementById("out").appendChild(c);
+//		var c = document.createElement("pre");
+//		c.appendChild( document.createTextNode("OUT:") );
+//		c.appendChild( document.createTextNode(jsonData) );
+//		document.getElementById("out").appendChild(c);
+		if ( window.console )
+			window.console.log( "OUT: " + jsonData );
     
 		xmlHttp.open('POST', 'wave.fcgi', true);
 		xmlHttp.onreadystatechange = function ()
 		{
 			if (xmlHttp.readyState == 4)
 			{
-				var c = document.createElement("pre");
-				c.appendChild( document.createTextNode("IN:") );
-				c.appendChild( document.createTextNode(xmlHttp.responseText) );
-				document.getElementById("out").appendChild(c);
+//				var c = document.createElement("pre");
+//				c.appendChild( document.createTextNode("IN:") );
+//				c.appendChild( document.createTextNode(xmlHttp.responseText) );
+//				document.getElementById("out").appendChild(c);
+				if ( window.console )
+					window.console.log( "IN: " + xmlHttp.responseText );
 	  
 				if( callback )
 				{
@@ -311,7 +293,8 @@ JSOT.Rpc.callServer = function(jsonData, callback)
 					}
 					catch( e )
 					{
-						console.log(e);
+						if ( window.console )
+							window.console.log(e);
 					}
 				}
 			}
@@ -336,8 +319,11 @@ JSOT.Rpc.onMessage = function(jsonData)
 	{
 		var login = response.login;    
 		JSOT.Rpc.sessionId = login.session_id;
-		document.getElementById("sessionId").innerHTML = JSOT.Rpc.sessionId;
+//		document.getElementById("sessionId").innerHTML = JSOT.Rpc.sessionId;
 
+		if ( JSOT.Rpc.onLogin )
+			JSOT.Rpc.onLogin();
+		
 		// After login open the index wave
 		var r = new webclient.Request();
 		r.session_id = JSOT.Rpc.sessionId;
