@@ -156,7 +156,7 @@ JSOT.Wavelet.prototype.getDoc = function(docname)
 	var doc = this.documents[docname];
 	if ( doc )
 		return doc;
-	doc = new JSOT.Doc(docname);
+	doc = new JSOT.Doc(docname, this);
 	this.documents[docname] = doc;
 	return doc;
 };
@@ -283,8 +283,9 @@ JSOT.Wavelet.prototype.submitMutations = function( mutations, add_participant, o
 //
 /////////////////////////////////////////////////
 
-JSOT.Doc = function(docId)
+JSOT.Doc = function(docId, wavelet)
 {
+	this.wavelet = wavelet;
 	this.docId = docId;
 	this.content = [ ];
 	this.format = [ ];
@@ -422,6 +423,7 @@ JSOT.Doc.prototype.toString = function()
 	return result.join("");
 };
 
+/*
 JSOT.Doc.prototype.postProcessing = function()
 {
 	var current = null;
@@ -449,6 +451,7 @@ JSOT.Doc.prototype.postProcessing = function()
 		}
 	}
 };
+*/
 
 /////////////////////////////////////////////////
 //
@@ -474,6 +477,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 	var annotationUpdate = { };
 	var annotationUpdateCount = 0;
 	
+	var currentElement = doc;
+	var currentElementIndex = -1;
+	var stack = [];
+	
 	var c = doc.content[contentIndex];
 	// Loop until all ops are processed
 	while( opIndex < this.component.length )
@@ -490,16 +497,22 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				var v = op.element_start.attribute[a];
 				attribs[v.key] = v.value;
 			}
+
+			stack.push( currentElementIndex );
+			currentElement = new JSOT.Doc.ElementStart( op.element_start.type, attribs, doc );
+			currentElement.start_index = contentIndex;
+			currentElement.parent_index = currentElementIndex;
+			currentElementIndex = contentIndex;
 			
 			if ( inContentIndex == 0 )
 			{
-				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs, doc ) );
+				doc.content.splice( contentIndex, 0, currentElement );
 				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 			}
 			else
 			{
-				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementStart( op.element_start.type, attribs, doc ), c.substring(inContentIndex, c.length) );
+				doc.content.splice( contentIndex + 1, 0, currentElement, c.substring(inContentIndex, c.length) );
 				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
 				contentIndex += 2;
@@ -511,6 +524,14 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		{
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
+
+			var e = currentElement.start_index;
+			currentElement.end_index = contentIndex;
+			currentElementIndex = stack.pop();
+			if ( currentElementIndex == -1 )
+				currentElement = doc;
+			else
+				currentElement = doc.content[ currentElementIndex ];
 
 			if ( inContentIndex == 0 )
 			{
@@ -529,6 +550,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c = doc.content[contentIndex];
 				inContentIndex = 0;
 			}
+			
+//			if ( currentElement.newChild )
+//				currentElement.newChild.apply( doc, [currentElementIndex, e] );
 		}
 		else if ( op.characters )
 		{
@@ -615,7 +639,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			while( count > 0 )
 			{
 				if ( !c )
-					throw "document op is larger than doc";				
+					throw "document op is larger than doc";
 				// Check for annotation changes in the document
 				if ( inContentIndex == 0 )
 				{
@@ -626,12 +650,32 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 						// Get the document annotation and update it
 						docAnnotation = anno;
 						updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-					}									
+					}
 					// Update the annotation
 					doc.format[contentIndex] = updatedAnnotation;
 				}
-				if ( c.element_start || c.element_end )
+				if ( c.element_start )
 				{
+					stack.push( currentElementIndex );
+					currentElement = c;
+					currentElement.start_index = contentIndex;
+					currentElement.parent_index = currentElementIndex;
+					currentElementIndex = contentIndex;
+				  
+					// Skip the element
+					count--;
+					c = doc.content[++contentIndex];
+					inContentIndex = 0;
+				}
+				else if ( c.element_end )
+				{
+					currentElement.end_index = contentIndex;
+					currentElementIndex = stack.pop();
+					if ( currentElementIndex == -1 )
+						currentElement = doc;
+					else
+						currentElement = doc.content[ currentElementIndex ];
+
 					// Skip the element
 					count--;
 					c = doc.content[++contentIndex];
@@ -731,6 +775,13 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				break;
 			if ( !c.element_start )
 				throw "Cannot update attributes at this position, because in the document there is no start element";
+			
+			stack.push( currentElementIndex );
+			currentElement = c;
+			currentElement.start_index = contentIndex;
+			currentElement.parent_index = currentElementIndex;
+			currentElementIndex = contentIndex;
+
 			// If there is an annotation boundary change in the deleted characters, this change must be applied
 			var anno = doc.format[contentIndex];
 			if ( anno != docAnnotation )
@@ -771,6 +822,13 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				break;
 			if ( !c.element_start )
 				throw "Cannot replace attributes at this position, because in the document there is no start element";
+			
+			stack.push( currentElementIndex );
+			currentElement = c;
+			currentElement.start_index = contentIndex;
+			currentElement.parent_index = currentElementIndex;
+			currentElementIndex = contentIndex;
+
 			var acount = 0;
 			for( var a in c.attributes )
 				++acount;
@@ -838,7 +896,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 	if ( contentIndex < doc.content.length )
 		throw "op is too small for document";
 		
-	doc.postProcessing();
+	//doc.postProcessing();
 };
 
 protocol.ProtocolDocumentOperation.prototype.computeAnnotation = function(docAnnotation, annotationUpdate, annotationUpdateCount)
