@@ -94,6 +94,8 @@ void FCGIClientConnection::handleRequest( const PBMessage<webclient::Request>* r
     // Is a message pending? If not then keep the HTTP connection open
     if ( m_outQueue.isEmpty() )
     {
+        if ( !m_pendingRequest.isNull() )
+            emptyReply();
         m_pendingRequest = request->sender();
         return;
     }
@@ -208,6 +210,7 @@ void FCGIClientConnection::reply( PBMessage<webclient::Response>* response )
 {
     response->set_server_sequence_number( ++m_serverSequenceNumber );
 
+    // Is there a pending HTTP request? No -> queue. Yes -> send
     if ( m_pendingRequest.isNull() )
     {
         //qDebug("FCGI: Queueu");
@@ -234,4 +237,16 @@ void FCGIClientConnection::errorReply( const std::string& msg )
     response->set_error_message( msg );
     response->set_server_sequence_number( 0 );
     reply( response );
+}
+
+void FCGIClientConnection::emptyReply()
+{
+    if ( m_pendingRequest.isNull() )
+        return;
+    PBMessage<webclient::Response>* response = new PBMessage<webclient::Response>();
+    response->set_server_ack( m_clientSequenceNumber );
+    response->set_server_sequence_number( 0 );
+    response->setReceiver( m_pendingRequest );
+    m_pendingRequest = ActorId();
+    post( response );
 }
