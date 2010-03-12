@@ -7,6 +7,11 @@ if ( !window.JSOT )
 //
 /////////////////////////////////////////////////
 
+/**
+ * param url a string of the form wave://waveletId/waveDomain$waveId/waveletId or the
+ *           short format wave://waveletId/waveId/waveletId.
+ *			 Passing a null value results in a null url (see isNull)
+ */
 JSOT.WaveUrl = function(url)
 {
 	if ( url )
@@ -65,6 +70,9 @@ JSOT.WaveUrl.prototype.toString = function()
 //
 /////////////////////////////////////////////////
 
+/**
+ * Do not create waves directly. Use getWave instead.
+ */
 JSOT.Wave = function(id, domain)
 {
 	JSOT.Wave.waves[ id + "$" + domain] = this;
@@ -73,8 +81,17 @@ JSOT.Wave = function(id, domain)
 	this.wavelets = { };
 };
 
+/**
+ * Dictionary of all wave objects. This is NOT equal to all waves a user might have access to.
+ */
 JSOT.Wave.waves = { };
 
+/**
+ * Gets or creates a wave.
+ *
+ * @param id is the wave-id, such as "w+1234".
+ * @param domain is the domain of the wave such as "foobar.com".
+ */
 JSOT.Wave.getWave = function(id, domain)
 {
 	var wname = id + "$" + domain;
@@ -86,6 +103,11 @@ JSOT.Wave.getWave = function(id, domain)
 	return w;
 };
 
+/**
+ * Called when a new wavelet update is received from the server.
+ *
+ * @param update is an instance of waverserver.ProtocolWaveletUpdate.
+ */
 JSOT.Wave.processUpdate = function( update )
 {
 	var url = new JSOT.WaveUrl( update.wavelet_name );
@@ -97,6 +119,12 @@ JSOT.Wave.processUpdate = function( update )
 	wavelet.hashed_version = update.resulting_version;
 };
 
+/**
+ * Called when a submit has been generated. The submit ist first applied locally
+ * using this function. This function is called BEFORE the submit is sent to the server.
+ *
+ * @param submitRequest is an instance of waveserver.ProtocolSubmitRequest.
+ */
 JSOT.Wave.processSubmit = function( submitRequest )
 {
 	var wavelet = JSOT.Wavelet.getWavelet( submitRequest.wavelet_name );
@@ -104,6 +132,12 @@ JSOT.Wave.processSubmit = function( submitRequest )
 	// wavelet.hashed_version = update.resulting_version;
 };
 
+/**
+ * Gets or creates a wavelet of this wave.
+ *
+ * @param id is the wavelet-id, such as "conv+root".
+ * @param domain is the domain of the wavelet such as "foobar.com". 
+ */
 JSOT.Wave.prototype.getWavelet = function(id, domain)
 {
 	var wname = id + "$" + domain;
@@ -121,6 +155,13 @@ JSOT.Wave.prototype.getWavelet = function(id, domain)
 //
 /////////////////////////////////////////////////
 
+/**
+ * Do not use this function directly. Use Wave.getWavelet instead.
+ *
+ * @param wave is the wave containing the wavelet.
+ * @param id is the wavelet-id, such as "conv+root".
+ * @param domain is the domain of the wavelet such as "foobar.com".   
+ */
 JSOT.Wavelet = function(wave, id, domain)
 {
 	this.id = id;
@@ -144,13 +185,27 @@ JSOT.Wavelet = function(wave, id, domain)
 	JSOT.Wavelet.wavelets[ this.url().toString() ] = this;
 };
 
+/**
+ * A dictionary of all wavelet objects indexed by their URL.
+ */
 JSOT.Wavelet.wavelets = { };
 
+/**
+ * Gets a wavelet or returns false if it does not exist.
+ *
+ * @param wavelet_name is a URL of the form wave://waveletDomain/waveDomain$waveId/waveletId.
+ */
 JSOT.Wavelet.getWavelet = function( wavelet_name )
 {
 	return JSOT.Wavelet.wavelets[ wavelet_name ];
 };
 
+/**
+ * Gets or creates a wavelet document.
+ *
+ * @param docname is a document name such as "b+124".
+ * @param return an instance of JSOT.Doc.
+ */
 JSOT.Wavelet.prototype.getDoc = function(docname)
 {
 	var doc = this.documents[docname];
@@ -161,6 +216,10 @@ JSOT.Wavelet.prototype.getDoc = function(docname)
 	return doc;
 };
 
+/**
+ * @internal
+ * Updates the data structure.
+ */
 JSOT.Wavelet.prototype.addParticipantIntern = function( jid )
 {
 	var i = this.participants.indexOf(jid);
@@ -169,6 +228,10 @@ JSOT.Wavelet.prototype.addParticipantIntern = function( jid )
 	this.participants.push( jid );
 };
 
+/**
+ * @internal
+ * Updates the data structure.
+ */
 JSOT.Wavelet.prototype.removeParticipantIntern = function( jid )
 {
 	var i = this.participants.indexOf(jid);
@@ -178,6 +241,8 @@ JSOT.Wavelet.prototype.removeParticipantIntern = function( jid )
 };
 
 /**
+ * Applies a delta to this wavelet.
+ *
  * @param delta is of type protocol.ProtocolWaveletDelta.
  */
 JSOT.Wavelet.prototype.applyDelta = function( delta )
@@ -202,6 +267,9 @@ JSOT.Wavelet.prototype.applyDelta = function( delta )
 	}
 };
 
+/**
+ * @return the URL of this wavelet.
+ */
 JSOT.Wavelet.prototype.url = function()
 {
 	var url = new JSOT.WaveUrl();
@@ -212,6 +280,9 @@ JSOT.Wavelet.prototype.url = function()
 	return url;
 };
 
+/**
+ * @return the content and participant of a wavelet as a multi-line string.
+ */
 JSOT.Wavelet.prototype.toString = function()
 {
 	var str = this.url().toString() + "\r\n\tParticipants:\r\n";	
@@ -230,6 +301,10 @@ JSOT.Wavelet.prototype.toString = function()
 	return str;
 };
 
+/**
+ * Submits a request for adding a participant. The local wavelet is changed immediately
+ * and the request is being sent to the server.
+ */
 JSOT.Wavelet.prototype.submitAddParticipant = function(jid)
 {
 	var op1 = new protocol.ProtocolWaveletOperation();
@@ -237,6 +312,10 @@ JSOT.Wavelet.prototype.submitAddParticipant = function(jid)
 	JSOT.Rpc.submitOperation( this, op1 );
 };
 
+/**
+ * Submits a request for removing a participant. The local wavelet is changed immediately
+ * and the request is being sent to the server.
+ */
 JSOT.Wavelet.prototype.submitRemoveParticipant = function(jid)
 {
 	var op1 = new protocol.ProtocolWaveletOperation();
@@ -245,8 +324,13 @@ JSOT.Wavelet.prototype.submitRemoveParticipant = function(jid)
 };
 
 /**
- * @param add_participant is either null of a JID. This parameter is useful when sending the initial
- * mutation for a document together with adding its initial participant.
+ * Submits a request for mutating a wavelet document. The local wavelet is changed immediately
+ * and the request is being sent to the server.
+ *
+ * @param mutation is an instance of protocol.ProtocolWaveletOperation_MutateDocument.
+ * @param add_participant is either null or a JID. This parameter is useful when sending the initial
+ *                        mutation for a document together with adding its initial participant.
+ * @param open_wavelet can be used to open the wavelet right after submitting its initial mutation.
  */
 JSOT.Wavelet.prototype.submitMutation = function( mutation, add_participant, open_wavelet )
 {
@@ -254,8 +338,13 @@ JSOT.Wavelet.prototype.submitMutation = function( mutation, add_participant, ope
 };
 
 /**
+ * Submits a request for mutating a set of wavelet documents. The local wavelet is changed immediately
+ * and the request is being sent to the server.
+ *
+ * @param mutations is an array of instances of protocol.ProtocolWaveletOperation_MutateDocument.
  * @param add_participant is either null of a JID. This parameter is useful when sending the initial
- * mutation for a document together with adding its initial participant.
+ *                        mutation for a document together with adding its initial participant.
+ * @param open_wavelet can be used to open the wavelet right after submitting its initial mutation. 
  */
 JSOT.Wavelet.prototype.submitMutations = function( mutations, add_participant, open_wavelet )
 {
@@ -283,28 +372,73 @@ JSOT.Wavelet.prototype.submitMutations = function( mutations, add_participant, o
 //
 /////////////////////////////////////////////////
 
+/**
+ * Do not instantiate directly. Use Wavelet.getDoc instead.
+ *
+ * @param docId is the name of a wavelet document such as "b+124".
+ * @param wavelet is of type Wavelet.
+ */
 JSOT.Doc = function(docId, wavelet)
 {
+    /**
+	  * The Wavelet to which this document belongs.
+	  */
 	this.wavelet = wavelet;
+	/**
+	 * The name of a wavelet document such as "b+124".
+	 */
 	this.docId = docId;
+	/**
+	 * An array of objects which are either strings, JSOT.Doc.ElementStart or JSOT.Doc.ElementEnd.
+	 */
 	this.content = [ ];
+	/**
+	 * For each item in content this array can optionally contain a key-value dictionary with
+	 * the annotation of an element or string.
+	 */
 	this.format = [ ];
 };
 
+/**
+ * The beginning of an element is marked with an instance of this class.
+ *
+ * @param type is a string.
+ * @param attributes is null or a key/value dictionary.
+ * @param doc is an instance of JSOT.Doc. It is the document containing this element.
+ */
 JSOT.Doc.ElementStart = function(type, attributes, doc)
 {
+	/**
+	 * The document to which this element belongs. Type is JSOT.Doc.
+	 */
 	this.doc = doc;
+	/**
+	 * This flag can be used to tell what kind of object it is,
+	 * i.e. element_start or element_end.
+	 */
 	this.element_start = true;
 	this.type = type;
 	if ( !attributes )
 		this.attributes = { };
 	else
 		this.attributes = attributes;
+	/**
+	 * The index in doc.content where this element can be found.
+	 */
 	this.start_index = -1;
+	/**
+	 * The index in doc.content where the corresponding end element can be found.
+	 */
 	this.end_index = -1;
+	/**
+	 * The index in doc.content where the parent element can be found or -1.
+	 */
 	this.parent_index = -1;
 };
 
+/**
+ * @return the parent element or null. The return type is JSOT.Doc.ElementStart.
+ */
 JSOT.Doc.ElementStart.prototype.parent = function()
 {
 	if ( this.parent_index == -1 )
@@ -312,6 +446,11 @@ JSOT.Doc.ElementStart.prototype.parent = function()
 	return this.doc.content[this.parent_index];
 };
 
+/**
+ * @return the previous sibling element or null. The return type is JSOT.Doc.ElementStart.
+ *
+ * Please note that text strings are not treated as siblings.
+ */
 JSOT.Doc.ElementStart.prototype.previousSibling = function()
 {
 	var depth = 0;
@@ -333,6 +472,11 @@ JSOT.Doc.ElementStart.prototype.previousSibling = function()
 	return null;
 };
 
+/**
+ * @return the next sibling element or null. The return type is JSOT.Doc.ElementStart.
+ *
+ * Please note that text strings are not treated as siblings.
+ */
 JSOT.Doc.ElementStart.prototype.nextSibling = function()
 {
 	var depth = 0;
@@ -354,11 +498,21 @@ JSOT.Doc.ElementStart.prototype.nextSibling = function()
 	return null;
 };
 
+/**
+ * The end of an element is marked with an instance of this class.
+ */
 JSOT.Doc.ElementEnd = function()
 {
+	/**
+	 * This flag can be used to tell what kind of object it is,
+	 * i.e. element_start or element_end.
+	 */  
 	this.element_end = true;
 };
 
+/**
+ * @return the number of items. Each element counts as one and each single character counts as one.
+ */
 JSOT.Doc.prototype.itemCount = function()
 {
 	var count = 0;
@@ -372,6 +526,9 @@ JSOT.Doc.prototype.itemCount = function()
 	return count;
 };
 
+/**
+ * @return a simple string representation of the document.
+ */
 JSOT.Doc.prototype.toString = function()
 {
 	var result = [];
@@ -479,6 +636,11 @@ JSOT.Doc.prototype.createGUI = function()
 //
 /////////////////////////////////////////////////
 
+/**
+ * Applies the document operation to a wavelet document.
+ *
+ * @param doc is of type JSOT.Doc.
+ */
 protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 {
 	// Position in this.components
@@ -915,10 +1077,11 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		throw "Not all delete element starts have been matched with a delete element end";
 	if ( contentIndex < doc.content.length )
 		throw "op is too small for document";
-		
-	//doc.postProcessing();
 };
 
+/**
+ * @internal
+ */
 protocol.ProtocolDocumentOperation.prototype.computeAnnotation = function(docAnnotation, annotationUpdate, annotationUpdateCount)
 {
 	if ( annotationUpdateCount == 0 )
@@ -961,6 +1124,11 @@ protocol.ProtocolDocumentOperation.prototype.computeAnnotation = function(docAnn
 	return anno;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newElementStart = function(type, attributes)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -972,6 +1140,11 @@ protocol.ProtocolDocumentOperation.newElementStart = function(type, attributes)
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newElementEnd = function()
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -979,6 +1152,11 @@ protocol.ProtocolDocumentOperation.newElementEnd = function()
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newCharacters = function(characters)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -986,6 +1164,11 @@ protocol.ProtocolDocumentOperation.newCharacters = function(characters)
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newDeleteCharacters = function(delete_characters)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -993,6 +1176,11 @@ protocol.ProtocolDocumentOperation.newDeleteCharacters = function(delete_charact
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newRetainItemCount = function(retain_item_count)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -1000,6 +1188,11 @@ protocol.ProtocolDocumentOperation.newRetainItemCount = function(retain_item_cou
 	return c;
 };
  
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newDeleteElementStart = function(type, attributes)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -1011,6 +1204,11 @@ protocol.ProtocolDocumentOperation.newDeleteElementStart = function(type, attrib
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newDeleteElementEnd = function()
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -1018,6 +1216,11 @@ protocol.ProtocolDocumentOperation.newDeleteElementEnd = function()
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newReplaceAttributes = function(old_attribute, new_attribute)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -1027,6 +1230,11 @@ protocol.ProtocolDocumentOperation.newReplaceAttributes = function(old_attribute
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newUpdateAttributes = function(attributeUpdates)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -1035,6 +1243,11 @@ protocol.ProtocolDocumentOperation.newUpdateAttributes = function(attributeUpdat
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component_KeyValueUpdate.
+ */
 protocol.ProtocolDocumentOperation.newKeyValueUpdate = function( key, old_value, new_value )
 {
 	var c = new protocol.ProtocolDocumentOperation_Component_KeyValueUpdate();
@@ -1044,6 +1257,11 @@ protocol.ProtocolDocumentOperation.newKeyValueUpdate = function( key, old_value,
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component_KeyValuePair.
+ */
 protocol.ProtocolDocumentOperation.newKeyValuePair = function( key, value )
 {
 	var c = new protocol.ProtocolDocumentOperation_Component_KeyValuePair();
@@ -1052,6 +1270,11 @@ protocol.ProtocolDocumentOperation.newKeyValuePair = function( key, value )
 	return c;
 };
 
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
 protocol.ProtocolDocumentOperation.newAnnotationBoundary = function(end, change)
 {
 	var c = new protocol.ProtocolDocumentOperation_Component();
@@ -1067,6 +1290,23 @@ protocol.ProtocolDocumentOperation.newAnnotationBoundary = function(end, change)
 //
 /////////////////////////////////////////////////
 
+/**
+ * Performs operation transformation on the two wavelet operations.
+ * The following constraint holds:
+ * m1_orig = copy(m1);
+ * m2_orig = copy(m2);
+ * xform( m1, m2 );
+ * wavelet1 = copy(wavelet);
+ * wavelet2 = copy(wavelet);
+ * m1_orig.applyTo(wavelet1);
+ * m2.applyTo(wavelet1);
+ * m2_orig.applyTo(wavelet2);
+ * m1.applyTo(wavelet2);
+ * Now it is true that wavelet1 == wavelet2
+ *
+ * @param m1 is an instance of protocol.ProtocolWaveletOperation. The function modifies m1.
+ * @param m2 is an instance of protocol.ProtocolWaveletOperation. The function modifies m2.
+ */
 protocol.ProtocolWaveletOperation.xform = function( m1, m2 )
 {
 	if ( m1.has_add_participant() )
@@ -1096,6 +1336,23 @@ protocol.ProtocolWaveletOperation.xform = function( m1, m2 )
 //
 /////////////////////////////////////////////////
 
+/**
+ * Performs operation transformation on the two wavelet operations.
+ * The following constraint holds:
+ * m1_orig = copy(m1);
+ * m2_orig = copy(m2);
+ * xform( m1, m2 );
+ * doc1 = copy(doc);
+ * doc2 = copy(doc);
+ * m1_orig.applyTo(doc1);
+ * m2.applyTo(doc1);
+ * m2_orig.applyTo(doc2);
+ * m1.applyTo(doc2);
+ * Now it is true that doc1 == doc2
+ *
+ * @param m1 is an instance of protocol.ProtocolWaveletOperation_MutateDocument. The function modifies m1.
+ * @param m2 is an instance of protocol.ProtocolWaveletOperation_MutateDocument. The function modifies m2.
+ */
 protocol.ProtocolDocumentOperation.xform = function( m1, m2 )
 {
     if ( m1.component.length == 0 || m2.component.length == 0 )
