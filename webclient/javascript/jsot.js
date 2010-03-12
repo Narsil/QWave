@@ -423,10 +423,20 @@ JSOT.Doc.prototype.toString = function()
 	return result.join("");
 };
 
-/*
-JSOT.Doc.prototype.postProcessing = function()
+/**
+ * Iterates over the document to find new or changed elements.
+ * If these elements have callback functions, they are invoked to update the GUI.
+ *
+ * This function is automatically invoked when an update has been processed or a
+ * submit has beeen sent.
+ *
+ * @return a list of values, one for each top-level element. The type of the values
+ *         equals the type of the newChild or updateChild callback functions.
+ */
+JSOT.Doc.prototype.createGUI = function()
 {
-	var current = null;
+	var result = []
+	var current = this;
 	var currentIndex = -1;
 	var stack = [];
 	for( var i = 0; i < this.content.length; ++i )
@@ -437,21 +447,31 @@ JSOT.Doc.prototype.postProcessing = function()
 		}
 		else if ( item.element_start )
 		{
+			if ( !item.processed && current.newChild )
+			{
+				if ( currentIndex == -1 )
+					result.push( current.newChild.apply( this, [currentIndex, i] ) ); 
+				else
+				
+					current.newChild.apply( this, [currentIndex, i] )
+				item.processed = true;
+			}
 			stack.push( currentIndex );
 			current = item;
-			current.start_index = i;
-			current.parent_index = currentIndex;
 			currentIndex = i;
-		}	
+		}
 		else if ( item.element_end )
 		{
-			current.end_index = i;
 			currentIndex = stack.pop();
-			current = this.content[ currentIndex ];
+			if ( currentIndex == -1 )
+				current = this;
+			else
+				current = this.content[ currentIndex ];
 		}
 	}
+		
+	return result;
 };
-*/
 
 /////////////////////////////////////////////////
 //
