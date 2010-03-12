@@ -45,11 +45,30 @@ protected:
     virtual void customEvent( QEvent* event );
 
 private:
+    /**
+      * Handles requests received from the web browser.
+      */
     void handleRequest( const PBMessage<webclient::Request>* request );
+    /**
+      * Called by handleRequest.
+      */
     void openRequest( const waveserver::ProtocolOpenRequest* msg );
+    /**
+      * Called by handleRequest.
+      */
     void submitRequest( const waveserver::ProtocolSubmitRequest* msg );
+    /**
+      * Sends or enqueue a message for the web browser.
+      */
     void reply( PBMessage<webclient::Response>* response );
+    /**
+      * Sends or enqueues an error message for the web browser.
+      */
     void errorReply( const std::string& msg );
+    /**
+      * Used to close a pending HTTP connection.
+      */
+    void emptyReply();
 
     QString m_participant;
     QString m_sessionId;
