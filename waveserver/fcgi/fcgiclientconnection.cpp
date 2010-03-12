@@ -33,16 +33,19 @@ void FCGIClientConnection::customEvent( QEvent* event )
     PBMessage<waveserver::ProtocolWaveletUpdate>* update = dynamic_cast<PBMessage<waveserver::ProtocolWaveletUpdate>*>(event);
     if ( update )
     {
-        qDebug("FCGI: GOT UPDATE");
+        // qDebug("FCGI: GOT UPDATE");
         PBMessage<webclient::Response>* r = new PBMessage<webclient::Response>();
         r->mutable_update()->MergeFrom( *update );
+
+        qDebug("FCGI Update to %s >> %s", m_participant.toAscii().constData(), r->DebugString().data());
+
         reply(r);
         return;
     }
     PBMessage<messages::WaveletDigest>* digest = dynamic_cast<PBMessage<messages::WaveletDigest>*>(event);
     if ( digest )
     {
-        qDebug("FCGI: GOT DIGEST");
+        // qDebug("FCGI: GOT DIGEST");
         PBMessage<webclient::Response>* r = new PBMessage<webclient::Response>();
         r->mutable_update()->add_applied_delta()->MergeFrom( digest->digest_delta() );
         WaveUrl url( QString::fromStdString( digest->wavelet_name() ) );
@@ -51,6 +54,9 @@ void FCGIClientConnection::customEvent( QEvent* event )
         indexUrl.setHost( url.waveDomain() );
         indexUrl.setPath( "/!indexwave/" + url.waveId() );
         r->mutable_update()->set_wavelet_name( indexUrl.toString().toStdString() );
+
+        qDebug("FCGI Digest to %s >> %s", m_participant.toAscii().constData(), r->DebugString().data());
+
         reply(r);
         return;
     }
@@ -105,7 +111,7 @@ void FCGIClientConnection::handleRequest( const PBMessage<webclient::Request>* r
 
 void FCGIClientConnection::openRequest( const waveserver::ProtocolOpenRequest* msg )
 {
-    qDebug("FCGImsg<< %s", msg->DebugString().data());
+    qDebug("FCGImsg from %s << %s", m_participant.toAscii().constData(), msg->DebugString().data());
 
     // This is a chance of getting the client participant ID. A bit strange place, but well ...
     QString participantId = QString::fromStdString( msg->participant_id() );
@@ -173,7 +179,7 @@ void FCGIClientConnection::openRequest( const waveserver::ProtocolOpenRequest* m
 
 void FCGIClientConnection::submitRequest( const waveserver::ProtocolSubmitRequest* msg )
 {
-    qDebug("FCGImsg<< %s", msg->DebugString().data());
+    qDebug("FCGImsg frp, %s << %s", m_participant.toAscii().constData(), msg->DebugString().data());
     new ClientSubmitRequestActor( this, *msg );
 }
 
@@ -183,7 +189,7 @@ void FCGIClientConnection::sendFailedSubmitResponse( const QString& errorMessage
     response->mutable_submit()->set_error_message( errorMessage.toStdString() );
     response->mutable_submit()->set_operations_applied(0);
 
-    qDebug("FCGI SubmitResponse>> %s", response->DebugString().data());
+    qDebug("FCGI SubmitResponse to %s >> %s", m_participant.toAscii().constData(), response->DebugString().data());
 
     reply( response );
 }
@@ -193,7 +199,7 @@ void FCGIClientConnection::sendSubmitResponse( const waveserver::ProtocolSubmitR
     PBMessage<webclient::Response>* r = new PBMessage<webclient::Response>();
     r->mutable_submit()->MergeFrom( response );
 
-    qDebug("FCGI SubmitResponse>> %s", r->DebugString().data());
+    qDebug("FCGI SubmitResponse to %s >> %s", m_participant.toAscii().constData(), r->DebugString().data());
 
     reply( r );
 }
@@ -204,12 +210,12 @@ void FCGIClientConnection::reply( PBMessage<webclient::Response>* response )
 
     if ( m_pendingRequest.isNull() )
     {
-        qDebug("FCGI: Queueu");
+        //qDebug("FCGI: Queueu");
         m_outQueue.enqueue( response );
     }
     else
     {
-        qDebug("FCGI: Post to %s", m_pendingRequest.toString().toAscii().constData());
+        //qDebug("FCGI: Post to %s", m_pendingRequest.toString().toAscii().constData());
         response->setReceiver( m_pendingRequest );
         m_pendingRequest = ActorId();
         response->set_server_ack( m_clientSequenceNumber );

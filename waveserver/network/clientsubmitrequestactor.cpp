@@ -26,7 +26,7 @@ ClientSubmitRequestActor::ClientSubmitRequestActor( FCGIClientConnection* con, c
 
 void ClientSubmitRequestActor::execute()
 {
-    qDebug("EXECUTE SubmitRequestActor");
+    // qDebug("EXECUTE SubmitRequestActor");
 
     BEGIN_EXECUTE;
 
@@ -35,21 +35,13 @@ void ClientSubmitRequestActor::execute()
         if ( m_needsParsing )
         {
             if ( !m_update.ParseFromArray(m_data.constData(), m_data.length()) ) { CLIENTERROR("Could not parse submit request"); }
-            qDebug("msg<< %s", m_update.DebugString().data());
+            //qDebug("msg<< %s", m_update.DebugString().data());
         }
 
         QString waveletId = QString::fromStdString( m_update.wavelet_name() );
 
         m_url = waveletId;
         if ( m_url.isNull() ) { CLIENTERROR("Malformed wave url"); }
-//
-//        // Find the wave
-//        Wave* wave = Wave::wave( m_url.waveDomain(), m_url.waveId(), (m_url.waveDomain() == pbConnection()->domain()) );
-//        if ( !wave ) { CLIENTERROR("Could not create wave"); }
-//
-//        // If the wavelet does not exist -> create it (but only if it is a local wavelet)
-//        m_wavelet = wave->wavelet( m_url.waveletDomain(), m_url.waveletId(), (m_url.waveletDomain() == pbConnection()->domain()) );
-//        if ( !m_wavelet ) { CLIENTERROR("Could not create wavelet"); }
     }
 
     // if ( m_wavelet->isRemote() )
@@ -73,7 +65,7 @@ void ClientSubmitRequestActor::execute()
         yield( RecvPB<waveserver::ProtocolSubmitResponse>( m_id ) | Timeout(10000) );
         if ( REASON( RecvPB<waveserver::ProtocolSubmitResponse> ) )
         {
-            CLIENTLOG("Got submit response");
+            //CLIENTLOG("Got submit response");
             // Send a response
             if ( pbConnection() )
                 pbConnection()->sendSubmitResponse( *REASON );
@@ -106,7 +98,7 @@ void ClientSubmitRequestActor::execute()
         yield( RecvPB<messages::SubmitResponse>( m_id ) | Timeout(10000) );
         if ( REASON( RecvPB<messages::SubmitResponse> ) )
         {
-            CLIENTLOG("Got submit response");
+            //CLIENTLOG("Got submit response");
             // Send a response to the client
             waveserver::ProtocolSubmitResponse response;
             response.set_operations_applied( REASON->operations_applied() );

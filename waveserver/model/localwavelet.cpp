@@ -93,7 +93,7 @@ LocalWavelet::SubmitRequestActor::SubmitRequestActor( LocalWavelet* wavelet, PBM
 
 void LocalWavelet::SubmitRequestActor::execute()
 {
-    qDebug("EXECUTE LocalWavelet::SubmitRequestActor");
+    // qDebug("EXECUTE LocalWavelet::SubmitRequestActor");
 
     BEGIN_EXECUTE;
 

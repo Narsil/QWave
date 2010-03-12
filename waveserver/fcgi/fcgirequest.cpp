@@ -83,8 +83,6 @@ void FCGI::FCGIRequest::appendParam( const std::string& name, const std::string&
 
 void FCGI::FCGIRequest::process()
 {
-    qDebug("Starting to handle request #%i", m_id );
-
     // Try to parse the data sent as a JSON protobuf
     QByteArray ba = QByteArray::fromRawData( m_stdinStream.data(), m_stdinStream.length() );
     webclient::Request r;
@@ -144,27 +142,6 @@ void FCGI::FCGIRequest::process()
         errorReply("Session ID is invalid");
         return;
     }
-
-//    else if ( r.has_open() )
-//    {
-//        PBMessage<waveserver::ProtocolOpenRequest>* open = new PBMessage<waveserver::ProtocolOpenRequest>( ActorId("client", QString::fromStdString( r.session_id() ) ) );
-//        open->MergeFrom( r.open() );
-//        bool ok = ActorDispatcher::dispatcher()->send( open );
-//        if ( !ok )
-//        {
-//            errorReply("Session ID is invalid");
-//            return;
-//        }
-//
-//        webclient::Response ret;
-//        ret.set_ack( true );
-//        reply( ret );
-//        return;
-//    }
-//    else if ( r.has_pull() )
-//    {
-//
-//    }
 
 //    std::ostringstream os;
 //    os << "Content-type: text/html\r\n"
