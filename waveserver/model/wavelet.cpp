@@ -524,7 +524,7 @@ Wavelet::InitActor::InitActor( Wavelet* wavelet )
 
 void Wavelet::InitActor::execute()
 {
-    qDebug("EXECUTE LocalWavelet::InitActor");
+    // qDebug("EXECUTE LocalWavelet::InitActor");
 
     BEGIN_EXECUTE;
 
@@ -575,14 +575,14 @@ Wavelet::SubscribeActor::SubscribeActor( Wavelet* wavelet, const PBMessage<messa
 
 void Wavelet::SubscribeActor::execute()
 {
-    qDebug("EXECUTE Wavelet::SubscribeActor");
+    // qDebug("EXECUTE Wavelet::SubscribeActor");
 
     BEGIN_EXECUTE;
 
     if ( !m_wavelet->criticalSection()->tryEnter(this) )
         yield( RecvCriticalSection( m_wavelet->criticalSection() ) );
 
-    qDebug("Subscribing to %s", m_wavelet->url().toString().toAscii().constData() );
+    // qDebug("Subscribing to %s", m_wavelet->url().toString().toAscii().constData() );
     QByteArray id( m_message.actor_id().data(), m_message.actor_id().length() );
     ActorId actorid( QString::fromUtf8(id) );
     if ( m_message.subscribe() )
@@ -594,7 +594,7 @@ void Wavelet::SubscribeActor::execute()
                 m_wavelet->m_contentSubscribers.insert( id );
                 if ( m_wavelet->m_version > 0 )
                 {
-                    qDebug("Sending content to %s", actorid.toString().toAscii().constData() );
+                    // qDebug("Sending content to %s", actorid.toString().toAscii().constData() );
                     PBMessage<waveserver::ProtocolWaveletUpdate>* update = new PBMessage<waveserver::ProtocolWaveletUpdate>( actorid );
                     m_wavelet->toWaveletUpdate( update );
                     post( update );
@@ -608,7 +608,7 @@ void Wavelet::SubscribeActor::execute()
                 m_wavelet->m_indexSubscribers.insert( id );
                 if ( m_wavelet->m_version > 0 )
                 {
-                    qDebug("Sending digest to %s", actorid.toString().toAscii().constData() );
+                    // qDebug("Sending digest to %s", actorid.toString().toAscii().constData() );
                     // Send an initial digest
                     WaveletDelta delta = m_wavelet->initialDigest();
                     PBMessage<messages::WaveletDigest>* digest = new PBMessage<messages::WaveletDigest>( actorid );

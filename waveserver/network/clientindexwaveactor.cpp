@@ -22,7 +22,7 @@ ClientIndexWaveActor::ClientIndexWaveActor(FCGIClientConnection* con)
 
 void ClientIndexWaveActor::execute()
 {
-    qDebug("EXECUTE ClientIndexWaveActor");
+    // qDebug("EXECUTE ClientIndexWaveActor");
 
     BEGIN_EXECUTE;
 
@@ -40,7 +40,7 @@ void ClientIndexWaveActor::execute()
     yield( RecvPB<messages::QueryParticipantWaveletsResponse>() | Timeout(10000) );
     if ( REASON( RecvPB<messages::QueryParticipantWaveletsResponse> ) )
     {
-        CLIENTLOG("Got query response");
+        // CLIENTLOG("Got query response");
         m_response.MergeFrom( *REASON );
     }
     else if ( REASON( Timeout ) ) { CLIENTERROR("Timeout waiting for response from store"); }
@@ -49,7 +49,7 @@ void ClientIndexWaveActor::execute()
     for( i = 0; i < m_response.wavelet_name_size(); ++i )
     {
         WaveUrl url( QString::fromStdString( m_response.wavelet_name(i) ) );
-        CLIENTLOG("Subscribing to " + url.toString() );
+        // CLIENTLOG("Subscribing to " + url.toString() );
         // Subscribe to this wavelet
         PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( WaveFolk::actorId( url ) );
         subscribe->setCreateOnDemand( true );
@@ -61,7 +61,7 @@ void ClientIndexWaveActor::execute()
         if ( !ok ) { CLIENTERROR("Could not subscribe to wavelet"); }
     }
 
-    qDebug("FINISHED ClientIndexWaveActor");
+    // qDebug("FINISHED ClientIndexWaveActor");
 
     END_EXECUTE;
 }
