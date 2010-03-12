@@ -85,10 +85,21 @@ JSOT.Rpc.processSubmitRequest = function( wavelet, submitRequest, openWavelet )
 	// Apply the delta locally
 	JSOT.Wave.processSubmit( submitRequest );
 
+	// Show the changes in the UI
+	for( var i = 0; i < submitRequest.delta.operation.length; ++i )
+	{
+		var op = submitRequest.delta.operation[i];
+		if ( op.has_mutate_document() )
+		{
+			var docid = op.mutate_document.document_id;
+			var doc = wavelet.getDoc(docid);
+			doc.createGUI();
+		}
+	}
+	
 	// Print the wave1
-	var c = document.createElement("pre");
-	c.appendChild( document.createTextNode( wavelet.toString() ) );
-	document.getElementById("out").appendChild(c);	
+	if ( window.console )
+		window.console.log( wavelet.toString() );
 
 	JSOT.Rpc.sendNextSubmitRequest();
 };
@@ -226,14 +237,35 @@ JSOT.Rpc.applyUpdate = function( update )
 		for( var a in wave.wavelets )
 		{
 			var wavelet = wave.wavelets[a];
-			var c = document.createElement("pre");
-			c.appendChild( document.createTextNode( wavelet.toString() ) );
-			document.getElementById("out").appendChild(c);
+			if ( window.console )
+				window.console.log( wavelet.toString() );
+		}
+		
+		// Show the changes in the UI
+		var done = { }
+		for( var a = 0; a < update.applied_delta.length; ++a )
+		{
+			var d = update.applied_delta[a];
+			for( var i = 0; i < d.operation.length; ++i )
+			{
+				var op = d.operation[i];
+				if ( op.has_mutate_document() )
+				{
+					var docid = op.mutate_document.document_id;
+					if ( !done[docid] )
+					{
+						done[docid] = true;
+						var doc = wavelet.getDoc(docid);
+						doc.createGUI();
+					}
+				}
+			}
 		}
 	}
 	catch( e )
 	{
-		console.log(e);
+		if ( window.console )
+		  window.console.log(e.toString());
 	}
 };
 
@@ -294,7 +326,7 @@ JSOT.Rpc.callServer = function(jsonData, callback)
 					catch( e )
 					{
 						if ( window.console )
-							window.console.log(e);
+							window.console.log(e.toString());
 					}
 				}
 			}

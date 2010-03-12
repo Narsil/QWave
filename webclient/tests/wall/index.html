@@ -153,6 +153,7 @@ body { font-family:aria,sans-serif; }
 function login()
 {
 	document.getElementById('logintext').innerHTML = "Logging in ... please wait";
+	// Login at the wave server
 	JSOT.Rpc.login( document.getElementById('jid').value + "@wave1.vs.uni-due.de", onLogin );
 }
 
@@ -160,6 +161,15 @@ function onLogin()
 {
 	document.getElementById( 'login' ).style.visibility = "hidden";
 	document.getElementById( 'app' ).style.visibility = "visible";
+	
+	// Initialize the wave
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+	var mainDoc = wavelet.getDoc("conversation");
+	mainDoc.newChild = conversationNewChild;
+	
+	// Open the wave
+	JSOT.Rpc.openWavelet( "wave://wave1.vs.uni-due.de/w+wall/conv+root" );
 }
 
 function showWall()
@@ -183,6 +193,7 @@ function showFriends()
 	document.getElementById( 'friends' ).style.visibility = "visible";
 }
 
+/*
 var maindoc = new JSOT.Doc();
 maindoc.content.push( new JSOT.Doc.ElementStart( "message", { id : "m+1" }, maindoc ) );
 maindoc.content.push( new JSOT.Doc.ElementEnd() );
@@ -205,6 +216,7 @@ doc.postProcessing();
 
 var docs = { };
 docs[ "m+1" ] = doc;
+*/
 
 function newMessage(doc)
 {
@@ -363,8 +375,8 @@ function messageNewChild( selfIndex, childIndex )
 	}
 }
 
-myNewChild = function(selfIndex, childIndex)
-{
+function messageDocNewChild(selfIndex, childIndex)
+{  
 	var child = this.content[childIndex];
 	if ( child.type == "message" )
 	{
@@ -385,7 +397,7 @@ myNewChild = function(selfIndex, childIndex)
 	return null;
 };
 
-JSOT.Doc.prototype.process = function()
+JSOT.Doc.prototype.createGUI = function()
 {
 	var result = []
 	var current = this;
@@ -425,59 +437,85 @@ JSOT.Doc.prototype.process = function()
 	return result;
 };
 
-maindoc.newChild = function(selfIndex, childIndex)
+function conversationNewChild(selfIndex, childIndex)
 {
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+
 	var child = this.content[childIndex];
 	if ( child.type == "message" )
 	{
-		var d = docs[ child.attributes[ "id" ] ];
-		d.newChild = myNewChild;
-		var result = d.process();
+		var d = wavelet.getDoc( child.attributes[ "id" ] );
+		if ( !d )
+			return null;
+		d.newChild = messageDocNewChild;
+		var result = d.createGUI();
 		var dom = document.getElementById( "messages" );
 		var next = child.nextSibling();
 		// dom.appendChild(result[0]);
 		dom.insertBefore( result[0], next ? next.dom : null );
 		child.dom = result[0];
+		return result[0];
 	}
 	return null;
 };
 
-maindoc.process();
+//maindoc.process();
 
 function publish()
 {
-	var doc = new JSOT.Doc("m+2");
-	var docop = new protocol.ProtocolDocumentOperation();
-	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "message", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", "Torben Weis" ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+	var conversationDoc = wavelet.getDoc("conversation");
+	var blipid = "b+" + Math.random();
+	
+	var mutations = [];
+
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = blipid;
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "message", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", JSOT.Rpc.jid ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "content" ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( document.getElementById("inputtext").value ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-	docop.applyTo( doc );
-	docs[ "m+2" ] = doc;
+	mutations.push(m2);
 
-	var docop = new protocol.ProtocolDocumentOperation();
-	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "message", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", "m+2" ) ] ) );
+	var m1 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m1.document_id = "conversation";
+	m1.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m1.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "message", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", blipid ) ] ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( maindoc.itemCount() ) );
-	docop.applyTo( maindoc );
+	if ( conversationDoc.itemCount() > 0 )
+		docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( conversationDoc.itemCount() ) );
+	mutations.push(m1);
+  
+	wavelet.submitMutations( mutations );
 
 	document.getElementById("inputtext").value = "";
-	
-	maindoc.process();
 }
 
 function like(m)
 {
-	var doc = docs[m];
-	var docop = new protocol.ProtocolDocumentOperation();
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+	var doc = wavelet.getDoc(m);
+
+	var mutations = [];
+
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = m;
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
 	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - 1 ) );
-	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "like", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", "Torben Weis" ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "like", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", JSOT.Rpc.jid ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 1 ) );
-	docop.applyTo( doc );
+	mutations.push(m2);
 
-	doc.process();
+	wavelet.submitMutations( mutations );
 }
 
 function publishComment(m)
@@ -487,7 +525,7 @@ function publishComment(m)
 	
 	var docop = new protocol.ProtocolDocumentOperation();
 	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - 1 ) );
-	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "comment", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", "Torben Weis" ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "comment", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", JSOT.Rpc.jid ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "content" ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( textarea.value ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
