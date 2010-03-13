@@ -58,7 +58,7 @@ void Converter::convert(protocol::ProtocolWaveletDelta* result, const WaveletDel
                         comp->mutable_delete_element_start()->set_type( (*it).text.toStdString() );
                         foreach( QString key, (*it).attributes.keys() )
                         {
-                            protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_element_start()->add_attribute();
+                            protocol::ProtocolDocumentOperation_Component_KeyValuePair* pair = comp->mutable_delete_element_start()->add_attribute();
                             pair->set_key( key.toStdString() );
                             pair->set_value( (*it).attributes[key].toStdString() );
                         }
