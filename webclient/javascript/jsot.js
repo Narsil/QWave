@@ -8,6 +8,8 @@ if ( !window.JSOT )
 /////////////////////////////////////////////////
 
 /**
+ * Creates a new wave url by parsing a string. A parsing error results in a null url (see isNull).
+ *
  * param url a string of the form wave://waveletId/waveDomain$waveId/waveletId or the
  *           short format wave://waveletId/waveId/waveletId.
  *			 Passing a null value results in a null url (see isNull)
@@ -46,11 +48,17 @@ JSOT.WaveUrl = function(url)
 	}	
 };
 
+/**
+ * @return true if the url is null.
+ */
 JSOT.WaveUrl.prototype.isNull = function()
 {
 	return this.waveletId == null;
 };
 
+/**
+ * @return a URL of the form wave://waveletDomain/waveDomain$waveId/waveletId or null.
+ */
 JSOT.WaveUrl.prototype.toString = function()
 {
 	if ( this.isNull() )
@@ -607,10 +615,9 @@ JSOT.Doc.prototype.createGUI = function()
 			if ( !item.processed && current.newChild )
 			{
 				if ( currentIndex == -1 )
-					result.push( current.newChild.apply( this, [currentIndex, i] ) ); 
-				else
-				
-					current.newChild.apply( this, [currentIndex, i] )
+					result.push( current.newChild( item ) ); 
+				else				
+					current.newChild(item);
 				item.processed = true;
 			}
 			stack.push( currentIndex );
@@ -643,6 +650,85 @@ JSOT.Doc.prototype.createGUI = function()
  */
 protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 {
+	// Find out which elements are to be deleted and notify the application logic
+	// before the document is changed.
+
+	// Position in this.components
+	var opIndex = 0;
+	// Position in doc.content
+	var contentIndex = 0;
+	// Position in the text of variable 'c'
+	var inContentIndex = 0;
+	var c = doc.content[contentIndex];
+	// Loop until all ops are processed
+	while( opIndex < this.component.length )
+	{
+		var op = this.component[opIndex++];
+		if ( op.element_start || op.element_end || op.characters )
+		{
+		}
+		else if ( op.retain_item_count || op.delete_characters )
+		{
+			if ( !c )
+				break;
+			if ( op.delete_characters )
+				var count = op.delete_characters.length;
+			else
+				var count = op.retain_item_count;
+			while( count > 0 )
+			{
+				if ( !c )
+					throw "document op is larger than doc";	
+				if ( c.element_start || c.element_end )
+				{
+					count--;
+					c = doc.content[++contentIndex];
+					inContentIndex = 0;
+				}
+				else  // Characters
+				{
+					// How many characters can be retained?
+					var m = Math.min( count, c.length - inContentIndex );
+					// Skip characters
+					count -= m;
+					// Retained the entire string? -> Move to the next element
+					if ( m == c.length - inContentIndex )
+					{
+						// Go to the next content entry
+						c = doc.content[++contentIndex];
+						inContentIndex = 0;
+					}
+				}
+			}
+		}
+		else if ( op.delete_element_start )
+		{
+			if ( !c )
+				break;			
+			var p = c.parent();
+			if ( p )
+			{
+				if ( p.removeChild )
+					p.removeChild( c );
+			}
+			else if ( doc.removeChild )
+				doc.removeChild( c );
+			c = doc.content[++contentIndex];
+		}
+		else if ( op.delete_element_end )
+		{
+			if ( !c )
+				break;
+			c = doc.content[++contentIndex];
+		}
+		else if ( op.update_attributes || op.replace_attributes )
+		{
+			if ( !c )
+				break;
+			c = doc.content[++contentIndex];
+		}
+	}
+
 	// Position in this.components
 	var opIndex = 0;
 	// Position in doc.content

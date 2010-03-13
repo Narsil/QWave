@@ -244,34 +244,32 @@ function newMessage(doc)
  * Called when the message element in the wavelet document has a new child,
  * i.e. someone commented on the message, liked it, ...
  */
-function messageNewChild( selfIndex, childIndex )
+function messageNewChild( child )
 {
-	var self = this.content[selfIndex];
-	var child = this.content[childIndex];
 	if ( child.type == "content" )
 	{
-		var dom = getElementByClass( self.dom, "content" );
+		var dom = getElementByClass( this.dom, "content" );
 		child.dom = dom;
 		var t = ""
 		for( var i = child.start_index + 1; i < child.end_index; ++i )
-			if ( typeof(this.content[i]) == "string" )
-				t += this.content[i];
+			if ( typeof(this.doc.content[i]) == "string" )
+				t += this.doc.content[i];
 		var text = document.createTextNode( t );
 		dom.appendChild( text );
 	}
 	else if ( child.type == "like" )
 	{
-		var dom = getElementByClass( self.dom, "content" );
-		// Doe the hline exist already?
-		var hline = getElementByClass( self.dom, "hline" );
+		var dom = getElementByClass( this.dom, "content" );
+		// Doew the hline exist already?
+		var hline = getElementByClass( this.dom, "hline" );
 		if ( !hline )
 		{
 			hline = document.createElement("div");
 			hline.className = "hline";
 			dom.parentNode.insertBefore( hline, dom.nextSibling );
 		}
-		var like = getElementByClass( self.dom, "like" );
-		var liketext = getElementByClass( self.dom, "liketext" );
+		var like = getElementByClass( this.dom, "like" );
+		var liketext = getElementByClass( this.dom, "liketext" );
 		if ( !like )
 		{
 			like = document.createElement("div");
@@ -282,38 +280,45 @@ function messageNewChild( selfIndex, childIndex )
 			like.appendChild( liketext );
 			dom.parentNode.insertBefore( like, hline.nextSibling );
 		}		
-		var t = "likes this. - ";
+		var t = " this. - ";
 		var likes = 0;
 		var first = -1;
-		for( var i = self.start_index + 1; i < self.end_index; ++i )
-			if ( typeof(this.content[i]) != "string" && this.content[i].type == "like" )
+		for( var i = this.start_index + 1; i < this.end_index; ++i )
+			if ( typeof(this.doc.content[i]) != "string" && this.doc.content[i].type == "like" )
 			{
 				if ( first == -1 ) first = i;
 				likes++;
 			}
 		if ( likes == 1 )
-			t = "One person " + t;
+			t = "One person likes" + t;
 		else if ( likes == 2 ) 
-			t = "Two persons " + t;
+			t = "Two persons like" + t;
 		else if ( likes == 3 ) 
-			t = "Three persons " + t;
+			t = "Three persons like" + t;
 		else
-			t = likes.toString() + " persons " + t;			
+			t = likes.toString() + " persons like" + t;
 		liketext.childNodes[0].data = t;
 		var a = document.createElement("a");
 		a.className = "likeusername";
 		a.href = "#";
 		t = child.attributes["author"];
-		if ( first != childIndex )
+		if ( first != child.start_index )
 			t = ", " + t;
 		a.appendChild( document.createTextNode( t ) );
+		child.dom = a;
 		like.insertBefore( a, null );
+		
+		if ( child.attributes["author"] == JSOT.Rpc.jid )
+		{
+			var control = getElementByClass( this.dom, "controllike" );
+			control.innerHTML = "Dislike";
+		}
 	}
 	else if ( child.type == "comment" )
 	{
-		var dom = getElementByClass( self.dom, "content" );
+		var dom = getElementByClass( this.dom, "content" );
 		// Doe the hline exist already?
-		var hline = getElementByClass( self.dom, "hline" );
+		var hline = getElementByClass( this.dom, "hline" );
 		if ( !hline )
 		{
 			hline = document.createElement("div");
@@ -333,8 +338,8 @@ function messageNewChild( selfIndex, childIndex )
 		
 		var t = " - "
 		for( var i = child.start_index + 1; i < child.end_index; ++i )
-			if ( typeof(this.content[i]) == "string" )
-				t += this.content[i];
+			if ( typeof(this.doc.content[i]) == "string" )
+				t += this.doc.content[i];
 		t += " ";
 		var text = document.createTextNode( t );
 		span.appendChild( document.createTextNode( t ) );
@@ -349,14 +354,110 @@ function messageNewChild( selfIndex, childIndex )
 }
 
 /**
+ * Called when the message element in the wavelet document has a new child,
+ * i.e. someone commented on the message, liked it, ...
+ */
+function messageRemoveChild( child )
+{
+	if ( child.type == "content" )
+	{
+		// Should not happen anyway
+	}
+	else if ( child.type == "like" )
+	{
+		if ( child.attributes["author"] == JSOT.Rpc.jid )
+		{
+			// Change the control text
+			var control = getElementByClass( this.dom, "controllike" );
+			control.innerHTML = "Like";
+		}
+	  
+		// How many people still like this?
+		var likes = 0;
+		var comments = 0;
+		for( var i = this.start_index + 1; i < this.end_index; ++i )
+		{
+			if ( typeof(this.doc.content[i]) != "string" )
+			{
+				if ( this.doc.content[i].type == "like" )
+					likes++;
+				else if ( this.doc.content[i].type == "comment" )
+					comments++;
+			}
+		}
+	  
+		// Nobody likes it anymore?
+		if ( likes == 1 )
+		{
+			var like = getElementByClass( this.dom, "like" );
+			if ( like )
+				like.parentNode.removeChild(like);
+			if ( comments == 0 )
+			{
+				var hline = getElementByClass( this.dom, "hline" );
+				if ( hline )
+					hline.parentNode.removeChild( hline );
+			}
+			delete child.dom;
+			return;
+		}
+		
+		// Delete the author
+		child.dom.parentNode.removeChild( child.dom );
+		delete child.dom;
+		likes--;
+		// Adapt the text
+		var liketext = getElementByClass( this.dom, "liketext" );
+		var t = " this. - ";
+		if ( likes == 1 )
+			t = "One person likes" + t;
+		else if ( likes == 2 ) 
+			t = "Two persons like" + t;
+		else if ( likes == 3 ) 
+			t = "Three persons like" + t;
+		else
+			t = likes.toString() + " persons like" + t;
+		liketext.childNodes[0].data = t;		
+	}
+	else if ( child.type == "comment" )
+	{
+		// Delete the comment
+		child.dom.parentNode.removeChild( child.dom );
+		delete child.dom;
+	  
+		// How many people still like or comment this?
+		var likes = 0;
+		var comments = 0;
+		for( var i = this.start_index + 1; i < this.end_index; ++i )
+		{
+			if ( typeof(this.doc.content[i]) != "string" )
+			{
+				if ( this.doc.content[i].type == "like" )
+					likes++;
+				else if ( this.doc.content[i].type == "comment" )
+					comments++;
+			}
+		}
+	  
+		if ( likes == 0 && comments == 0 )
+		{
+			var hline = getElementByClass( this.dom, "hline" );
+			if ( hline )
+				hline.parentNode.removeChild( hline );
+		}
+	}
+}
+
+/**
  * Called when the wavelet document containing the message tag has a new child.
  */
-function messageDocNewChild(selfIndex, childIndex)
+function messageDocNewChild(child)
 {  
-	var child = this.content[childIndex];
 	if ( child.type == "message" )
 	{
 		child.newChild = messageNewChild;
+		child.removeChild = messageRemoveChild;
+		
 		var mdom = newMessage(this);
 		child.dom = mdom;
 		
@@ -376,12 +477,11 @@ function messageDocNewChild(selfIndex, childIndex)
 /**
  * Called when the wavelet document containing the list of messages has a new child.
  */
-function conversationNewChild(selfIndex, childIndex)
+function conversationNewChild(child)
 {
 	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
 	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
 
-	var child = this.content[childIndex];
 	if ( child.type == "message" )
 	{
 		var d = wavelet.getDoc( child.attributes[ "id" ] );
@@ -451,11 +551,40 @@ function like(m)
 	var doc = wavelet.getDoc(m);
 
 	var mutations = [];
-
 	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
 	m2.document_id = m;
 	m2.document_operation = new protocol.ProtocolDocumentOperation();
 	var docop = m2.document_operation;
+
+	var retain = 0;
+	// Do I like it already? In this case dislike it
+	for( var i = 0; i < doc.content.length; ++i )
+	{
+		if ( typeof(doc.content[i]) != "string" )
+		{
+			if ( doc.content[i].type == "like" && doc.content[i].attributes["author"] == JSOT.Rpc.jid )
+			{
+				docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( retain ) );
+				docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( "like", 
+																							[ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", JSOT.Rpc.jid ),
+																							  protocol.ProtocolDocumentOperation.newKeyValuePair( "date", doc.content[i].attributes["date"] ) ] ) );
+				docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
+				docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - retain - 2 ) );
+				mutations.push(m2);
+
+				// Apply locally and send to the server
+				wavelet.submitMutations( mutations );
+				return;
+			}
+			else
+				retain++;
+		}
+		else
+			retain += doc.content[i].length;
+		  
+	}
+
+	// Like it.
 	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - 1 ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( "like", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", JSOT.Rpc.jid ) , protocol.ProtocolDocumentOperation.newKeyValuePair( "date", "10. March" ) ] ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
