@@ -455,11 +455,13 @@ JSOT.Doc.ElementStart.prototype.parent = function()
 };
 
 /**
+ * @param type is either null or a string denoting an element type, In this case their
+ *             previous sibling of the requested element type is returned.
  * @return the previous sibling element or null. The return type is JSOT.Doc.ElementStart.
  *
  * Please note that text strings are not treated as siblings.
  */
-JSOT.Doc.ElementStart.prototype.previousSibling = function()
+JSOT.Doc.ElementStart.prototype.previousSibling = function(type)
 {
 	var depth = 0;
 	for( var i = this.start_index - 1; i >= 0; --i )
@@ -470,7 +472,7 @@ JSOT.Doc.ElementStart.prototype.previousSibling = function()
 		if ( item.element_start )
 		{
 			depth--;
-			if ( depth == 0 )
+			if ( depth == 0 && (!type || item.type == type ) )
 				return item;
 		}
 		else if ( item.element_end )
@@ -481,11 +483,13 @@ JSOT.Doc.ElementStart.prototype.previousSibling = function()
 };
 
 /**
+ * @param type is either null or a string denoting an element type, In this case their
+ *             next sibling of the requested element type is returned.
  * @return the next sibling element or null. The return type is JSOT.Doc.ElementStart.
  *
  * Please note that text strings are not treated as siblings.
  */
-JSOT.Doc.ElementStart.prototype.nextSibling = function()
+JSOT.Doc.ElementStart.prototype.nextSibling = function(type)
 {
 	var depth = 0;
 	for( var i = this.end_index + 1; i < this.doc.content.length; i++ )
@@ -493,7 +497,7 @@ JSOT.Doc.ElementStart.prototype.nextSibling = function()
 		var item = this.doc.content[i];
 		if ( typeof(item) == "string" )
 			continue;
-		if ( item.element_start )
+		if ( item.element_start && (!type || item.type == type ) )
 		{
 			if ( depth == 0 )
 				return item;
@@ -503,6 +507,75 @@ JSOT.Doc.ElementStart.prototype.nextSibling = function()
 			depth--;
 	}
 
+	return null;
+};
+
+/**
+ * The number of items in front of this element. Each element_start, element_end
+ * and single characters count as one.
+ */
+JSOT.Doc.ElementStart.prototype.itemCountBefore = function()
+{
+	var count = 0;
+	for( var i = 0; i < this.start_index; ++i )
+	{
+		if ( typeof(this.doc.content[i]) == "string" )
+			count += this.doc.content[i].length;
+		else
+			count++;
+	}
+	return count;
+};
+
+JSOT.Doc.ElementStart.prototype.getText = function()
+{
+	var t = ""
+	for( var i = this.start_index + 1; i < this.end_index; ++i )
+		if ( typeof(this.doc.content[i]) == "string" )
+			t += this.doc.content[i];
+	return t;
+};
+
+JSOT.Doc.ElementStart.prototype.getElementByType = function(type)
+{
+	for( var i = this.start_index + 1; i < this.end_index; ++i )
+	{
+		var item = this.doc.content[i];
+		if ( typeof(item) != "string" )
+		{
+			if ( item.element_start && item.type == type )
+				return item;
+		}
+	}
+	return null;
+};
+
+JSOT.Doc.ElementStart.prototype.getElementsByType = function(type)
+{
+	var result = [];
+	for( var i = this.start_index; i < this.end_index; ++i )
+	{
+		var item = this.doc.content[i];
+		if ( typeof(item) != "string" )
+		{
+			if ( item.element_start && item.type == type )
+				result.push( item );
+		}
+	}
+	return result;
+};
+
+JSOT.Doc.ElementStart.prototype.getElementById = function(id)
+{
+	for( var i = this.start_index; i < this.end_index; ++i )
+	{
+		var item = this.doc.content[i];
+		if ( typeof(item) != "string" )
+		{
+			if ( item.element_start && item.attributes["id"] == id )
+				return item;
+		}
+	}
 	return null;
 };
 
@@ -532,6 +605,49 @@ JSOT.Doc.prototype.itemCount = function()
 			count++;
 	}
 	return count;
+};
+
+JSOT.Doc.prototype.getElementByType = function(type)
+{
+	for( var i = 0; i < this.content.length; ++i )
+	{
+		var item = this.content[i];
+		if ( typeof(item) != "string" )
+		{
+			if ( item.element_start && item.type == type )
+				return item;
+		}
+	}
+	return null;
+};
+
+JSOT.Doc.prototype.getElementsByType = function(type)
+{
+	var result = [];
+	for( var i = 0; i < this.content.length; ++i )
+	{
+		var item = this.content[i];
+		if ( typeof(item) != "string" )
+		{
+			if ( item.element_start && item.type == type )
+				result.push( item );
+		}
+	}
+	return result;
+};
+
+JSOT.Doc.prototype.getElementById = function(id)
+{
+	for( var i = 0; i < this.content.length; ++i )
+	{
+		var item = this.content[i];
+		if ( typeof(item) != "string" )
+		{
+			if ( item.element_start && item.attributes["id"] == id )
+				return item;
+		}
+	}
+	return null;
 };
 
 /**
@@ -604,6 +720,7 @@ JSOT.Doc.prototype.createGUI = function()
 	var current = this;
 	var currentIndex = -1;
 	var stack = [];
+	
 	for( var i = 0; i < this.content.length; ++i )
 	{
 		var item = this.content[i];
@@ -612,13 +729,28 @@ JSOT.Doc.prototype.createGUI = function()
 		}
 		else if ( item.element_start )
 		{
-			if ( !item.processed && current.newChild )
+			if ( item.is_new && current.newChild )
 			{
 				if ( currentIndex == -1 )
 					result.push( current.newChild( item ) ); 
 				else				
 					current.newChild(item);
-				item.processed = true;
+				delete item.is_new;
+			}
+			else if ( item.has_new_text && item.textChange )
+			{
+				var e = item;
+				while( e )
+				{
+					if ( e.textChange )
+					{
+						e.blockTextChange = true;
+						e.textChange();
+						break;
+					}
+					e = e.parent();
+				}
+				delete item.has_new_text;
 			}
 			stack.push( currentIndex );
 			current = item;
@@ -626,6 +758,7 @@ JSOT.Doc.prototype.createGUI = function()
 		}
 		else if ( item.element_end )
 		{
+			delete current.blockTextChange;
 			currentIndex = stack.pop();
 			if ( currentIndex == -1 )
 				current = this;
@@ -771,6 +904,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			currentElement.start_index = contentIndex;
 			currentElement.parent_index = currentElementIndex;
 			currentElementIndex = contentIndex;
+			currentElement.is_new = true;
 			
 			if ( inContentIndex == 0 )
 			{
@@ -818,17 +952,14 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c = doc.content[contentIndex];
 				inContentIndex = 0;
 			}
-			
-//			if ( currentElement.newChild )
-//				currentElement.newChild.apply( doc, [currentElementIndex, e] );
 		}
 		else if ( op.characters )
 		{
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
 
-			// if ( inContentIndex == 0 && contentIndex > 0 && typeof(doc.content[contentIndex-1]) == "string" )
-			//	doc.content[contentIndex-1] = doc.content[contentIndex-1] + op.characters;
+			currentElement.has_new_text = true;
+			
 			if ( typeof(c) == "string" )
 			{
 				// If the annotation does not change here, simply insert some text
@@ -866,7 +997,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		else if ( op.delete_characters )
 		{
 			if ( !c )
-				break;		
+				break;
+			
+			currentElement.has_new_text = true;
+			
 			var count = op.delete_characters.length;
 			var done = 0;
 			while( count > 0 )

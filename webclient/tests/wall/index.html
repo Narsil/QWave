@@ -54,6 +54,8 @@ body { font-family:aria,sans-serif; }
 .commenttextbox { background-color:#FFFFFF; padding:2px; margin:0px; width:53em;  margin-left:65px }
 .commenttextarea { font-family:arial,sans-serif; font-size:inherit; background-color:#FFFFFF; outline-style:none; outline-width:0; border:none; width:53em }
 .commentbuttonbox { margin:0; margin-top:2px; margin-left:63px }
+.changetextarea { font-family:arial,sans-serif; font-size:inherit; background-color:#FFFFFF; outline:1px solid #E3E9F0; border:none; width:53em }
+.editlink { margin-left:6px; margin-right:6px }
 
 	</style>	
 </head>
@@ -87,7 +89,7 @@ body { font-family:aria,sans-serif; }
 					<div style="clear:both"></div>
 				</div>
 				<div id="messages">
-				<!--
+				
 					<div class="messageframe">
 						<b class="frame1" >
 							<b class="frame1b"></b>
@@ -97,7 +99,7 @@ body { font-family:aria,sans-serif; }
 						</b>
 						<b class="frame3">
 							<b class="frame3b"></b>
-						</b>					
+						</b>
 						<div class="messagemain">
 							<div class="messageinnerframe">
 								<div class="messageactions" ><a href="#">Actions</a></div>
@@ -105,7 +107,11 @@ body { font-family:aria,sans-serif; }
 								<span class="messagedate">9. March</span>
 								<div class="messagebody">
 									<div class="author"><a href="#" class="username">Joe Doe</a></div>
-									<div class="content">Here we can say what we always wanted to tell</div>
+									<div class="content">
+										<div><textarea class="changetextarea"></textarea></div>
+										<div><input type="button" value="Publish" /> <input type="button" value="Delete" /> <input type="button" value="Cancel" /></div>
+									</div>
+									<!-- <div class="content">Here we can say what we always wanted to tell</div> -->
 									<div class="hline"></div>
 									<div class="like"><span class="liketext">One person liked this. - </span><a href="#" class="likeusername">Torben</a></div>
 									<div class="comment"><span class="commentspan"><a href="#" class="username">Heinz Wurst</a> - This is some comment that is supposed to be longer than a single line to show what happens if it becomes too long and the text breaks around. <span class="commentdate">9. March</span></span></div>
@@ -123,23 +129,23 @@ body { font-family:aria,sans-serif; }
 								</div>
 								<div class="commentbuttonbox">
 									<input type="button" value="Publish" onclick="publish()" /> <input type="button" value="Cancel" onclick="" />
-								</div>								
+								</div>
 								<div style="clear:both"></div>
 								</div>
 							</div>
 						</div>
 						<b class="frame4">
 							<b class="frame4b"></b>
-						</b>					
+						</b>
 						<b class="frame5">
 							<b class="frame5b"></b>
 						</b>
 						<b class="frame6">
 							<b class="frame6b"></b>
-						</b>					
+						</b>
 					</div>
-				-->
-				</div>				
+				
+				</div>
 			</div>
 			<div id="newsfeed" style="visibility:hidden">
 				<h1>Newsfeed</h1>
@@ -173,8 +179,10 @@ function onLogin()
 	// Initialize the wave
 	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
 	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+	// Register event handlers to become notified when something changes
 	var mainDoc = wavelet.getDoc("conversation");
 	mainDoc.newChild = conversationNewChild;
+	mainDoc.removeChild = conversationRemoveChild;
 	
 	// Open the wave
 	JSOT.Rpc.openWavelet( "wave://wave1.vs.uni-due.de/w+wall/conv+root" );
@@ -240,6 +248,104 @@ function newMessage(doc)
 	return dom;
 }
 
+function updateLike( message, remove )
+{
+	var likes = message.doc.getElementsByType("like");
+
+	// Nobody likes it anymore? Then remove the corresponding HTML
+	var like = getElementByClass( message.dom, "like" );
+	var hline = getElementByClass( message.dom, "hline" );
+	if ( likes.length == 0 || ( remove && likes.length == 1 ) )
+	{
+		if ( like ) like.parentNode.removeChild(like);
+		
+		if ( hline && message.doc.getElementsByType("comment").length == 0 )
+			hline.parentNode.removeChild(hline);
+		return;
+	}
+	
+	var dom = getElementByClass( message.dom, "content" );
+	// Doew the hline exist already?
+	if ( !hline )
+	{
+		hline = document.createElement("div");
+		hline.className = "hline";
+		dom.parentNode.insertBefore( hline, dom.nextSibling );
+	}
+	// Create the like div
+	if ( !like )
+	{
+		like = document.createElement("div");
+		like.className = "like";
+		dom.parentNode.insertBefore( like, hline.nextSibling );
+	}
+	else
+		like.innerHTML = "";
+	// Create the liketext span
+	var liketext = document.createElement("span");
+	liketext.className = "liketext";
+	liketext.appendChild( document.createTextNode("") );
+	like.appendChild( liketext );
+	// Construct the text to show
+	var t = " this. - ";
+	var count = likes.length;
+	if ( remove )
+		count--;
+	if ( count == 1 )
+		t = "One person likes" + t;
+	else if ( count == 2 ) 
+		t = "Two persons like" + t;
+	else if ( count == 3 ) 
+		t = "Three persons like" + t;
+	else
+		t = count.toString() + " persons like" + t;
+	liketext.childNodes[0].data = t;
+	var isliked = false;
+	var count = 0;
+	for( var i = 0; i < likes.length; ++i )
+	{
+		var a = document.createElement("a");
+		a.className = "likeusername";
+		a.href = "#";
+		var t = "";
+		if ( count > 0 )
+			t += ", ";
+		var author = likes[i].attributes["author"];
+		if ( author == remove )
+			continue;
+		t += author;
+		if ( author == JSOT.Rpc.jid )
+			isliked = true;
+		a.appendChild( document.createTextNode( t ) );
+		like.insertBefore( a, null );
+		count++;
+	}
+	
+	var control = getElementByClass( message.dom, "controllike" );
+	if ( isliked )	
+		control.innerHTML = "Dislike";
+	else
+		control.innerHTML = "Like";
+}
+
+function contentTextChange()
+{
+	var dom = getElementByClass( this.parent().dom, "content" );
+	dom.innerHTML = "";
+	var text = document.createTextNode( this.getText() );
+	dom.appendChild( text );
+	if ( this.parent().attributes["author"] == JSOT.Rpc.jid )
+	{
+		var a = document.createElement("a");
+		a.href = "#";
+		a.className = "editlink";
+		a.innerHTML = "Edit";
+		var self = this;
+		a.onclick = function() { showEditMessage( self ); }
+		dom.appendChild(a);
+	}
+}
+
 /**
  * Called when the message element in the wavelet document has a new child,
  * i.e. someone commented on the message, liked it, ...
@@ -248,71 +354,12 @@ function messageNewChild( child )
 {
 	if ( child.type == "content" )
 	{
-		var dom = getElementByClass( this.dom, "content" );
-		child.dom = dom;
-		var t = ""
-		for( var i = child.start_index + 1; i < child.end_index; ++i )
-			if ( typeof(this.doc.content[i]) == "string" )
-				t += this.doc.content[i];
-		var text = document.createTextNode( t );
-		dom.appendChild( text );
+		child.textChange = contentTextChange;
+		child.textChange();
 	}
 	else if ( child.type == "like" )
 	{
-		var dom = getElementByClass( this.dom, "content" );
-		// Doew the hline exist already?
-		var hline = getElementByClass( this.dom, "hline" );
-		if ( !hline )
-		{
-			hline = document.createElement("div");
-			hline.className = "hline";
-			dom.parentNode.insertBefore( hline, dom.nextSibling );
-		}
-		var like = getElementByClass( this.dom, "like" );
-		var liketext = getElementByClass( this.dom, "liketext" );
-		if ( !like )
-		{
-			like = document.createElement("div");
-			like.className = "like";
-			liketext = document.createElement("span");
-			liketext.className = "liketext";
-			liketext.appendChild( document.createTextNode("") );
-			like.appendChild( liketext );
-			dom.parentNode.insertBefore( like, hline.nextSibling );
-		}		
-		var t = " this. - ";
-		var likes = 0;
-		var first = -1;
-		for( var i = this.start_index + 1; i < this.end_index; ++i )
-			if ( typeof(this.doc.content[i]) != "string" && this.doc.content[i].type == "like" )
-			{
-				if ( first == -1 ) first = i;
-				likes++;
-			}
-		if ( likes == 1 )
-			t = "One person likes" + t;
-		else if ( likes == 2 ) 
-			t = "Two persons like" + t;
-		else if ( likes == 3 ) 
-			t = "Three persons like" + t;
-		else
-			t = likes.toString() + " persons like" + t;
-		liketext.childNodes[0].data = t;
-		var a = document.createElement("a");
-		a.className = "likeusername";
-		a.href = "#";
-		t = child.attributes["author"];
-		if ( first != child.start_index )
-			t = ", " + t;
-		a.appendChild( document.createTextNode( t ) );
-		child.dom = a;
-		like.insertBefore( a, null );
-		
-		if ( child.attributes["author"] == JSOT.Rpc.jid )
-		{
-			var control = getElementByClass( this.dom, "controllike" );
-			control.innerHTML = "Dislike";
-		}
+		updateLike( this, null );
 	}
 	else if ( child.type == "comment" )
 	{
@@ -327,6 +374,7 @@ function messageNewChild( child )
 		}
 		var comment = document.createElement("div");
 		comment.className = "comment";
+		child.dom = comment;
 		var span = document.createElement("span");
 		span.className = "commentspan";
 		comment.appendChild( span );
@@ -335,21 +383,26 @@ function messageNewChild( child )
 		a.href = "#";
 		a.appendChild( document.createTextNode( child.attributes["author"] ) );
 		span.appendChild( a );
-		
-		var t = " - "
-		for( var i = child.start_index + 1; i < child.end_index; ++i )
-			if ( typeof(this.doc.content[i]) == "string" )
-				t += this.doc.content[i];
-		t += " ";
-		var text = document.createTextNode( t );
-		span.appendChild( document.createTextNode( t ) );
+		span.appendChild( document.createTextNode( " - " + child.getText() + " " ) );
+
+		if ( child.attributes["author"] == JSOT.Rpc.jid )
+		{
+			var a = document.createElement("a");
+			a.href = "#";
+			a.className = "editlink";
+			a.innerHTML = "Edit";
+			a.onclick = function() { showEditComment( child ); }
+			span.appendChild(a);
+		}
 
 		var span2 = document.createElement("span");
 		span2.className = "commentdate";
 		span2.appendChild( document.createTextNode( child.attributes["date"] ) );
 		span.appendChild( span2 );
 		
-		dom.parentNode.insertBefore( comment, null );
+		// Where to insert this comment
+		var before = child.nextSibling( "comment" );
+		dom.parentNode.insertBefore( comment, before ? before.dom : null );
 	}
 }
 
@@ -365,59 +418,7 @@ function messageRemoveChild( child )
 	}
 	else if ( child.type == "like" )
 	{
-		if ( child.attributes["author"] == JSOT.Rpc.jid )
-		{
-			// Change the control text
-			var control = getElementByClass( this.dom, "controllike" );
-			control.innerHTML = "Like";
-		}
-	  
-		// How many people still like this?
-		var likes = 0;
-		var comments = 0;
-		for( var i = this.start_index + 1; i < this.end_index; ++i )
-		{
-			if ( typeof(this.doc.content[i]) != "string" )
-			{
-				if ( this.doc.content[i].type == "like" )
-					likes++;
-				else if ( this.doc.content[i].type == "comment" )
-					comments++;
-			}
-		}
-	  
-		// Nobody likes it anymore?
-		if ( likes == 1 )
-		{
-			var like = getElementByClass( this.dom, "like" );
-			if ( like )
-				like.parentNode.removeChild(like);
-			if ( comments == 0 )
-			{
-				var hline = getElementByClass( this.dom, "hline" );
-				if ( hline )
-					hline.parentNode.removeChild( hline );
-			}
-			delete child.dom;
-			return;
-		}
-		
-		// Delete the author
-		child.dom.parentNode.removeChild( child.dom );
-		delete child.dom;
-		likes--;
-		// Adapt the text
-		var liketext = getElementByClass( this.dom, "liketext" );
-		var t = " this. - ";
-		if ( likes == 1 )
-			t = "One person likes" + t;
-		else if ( likes == 2 ) 
-			t = "Two persons like" + t;
-		else if ( likes == 3 ) 
-			t = "Three persons like" + t;
-		else
-			t = likes.toString() + " persons like" + t;
-		liketext.childNodes[0].data = t;		
+		updateLike( this, child.attributes["author"] );
 	}
 	else if ( child.type == "comment" )
 	{
@@ -497,6 +498,23 @@ function conversationNewChild(child)
 		return result[0];
 	}
 	return null;
+};
+
+/**
+ * Called when the wavelet document containing the list of messages removes a child.
+ */
+function conversationRemoveChild(child)
+{
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+
+	if ( child.type == "message" )
+	{
+		var d = wavelet.getDoc( child.attributes[ "id" ] );
+		if ( !d )
+			return null;
+		child.dom.parentNode.removeChild( child.dom );
+	}
 };
 
 /**
@@ -684,5 +702,117 @@ function deleteCommentBox(m)
 		comment.parentNode.removeChild( comment );
 	}
 }
+
+function showEditMessage( content )
+{
+	var message = content.parent();
+	var dom = getElementByClass( message.dom, "content" );
+	dom.innerHTML = '<div><textarea class="changetextarea"></textarea></div>' +
+					'<div><input type="button" value="Publish" class="editpublish" /> <input type="button" value="Delete" class="editdelete" /> <input type="button" value="Cancel" class="editcancel"/></div>';
+				
+	var text = document.createTextNode( content.getText() );
+	var ta = getElementByClass( dom, "changetextarea" );
+	ta.appendChild( text );
+	
+	var b = getElementByClass( dom, "editcancel" );
+	b.onclick = function() { hideEditMessage( content ); }
+	
+	var b = getElementByClass( dom, "editpublish" );
+	b.onclick = function() { updateContent( message ); }	
+	
+	var b = getElementByClass( dom, "editdelete" );
+	b.onclick = function() { deleteMessage( message ); }
+}
+
+function updateContent( message )
+{
+	var newText = getElementByClass( message.dom, "changetextarea" ).value;
+	// Remove the HTML for editing the message
+	// var dom = getElementByClass( message.dom, "content" );
+	// dom.innerHTML = "";
+	
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+	var doc = message.doc;
+	var content = message.getElementByType("content");
+	var pos = content.itemCountBefore();
+	var oldText = content.getText();
+
+	var mutations = [];
+
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = doc.docId;
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos + 1 ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( oldText ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( newText ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - pos - 1 - oldText.length ) );
+	mutations.push(m2);
+
+	// Apply locally and send to the server
+	wavelet.submitMutations( mutations );
+}
+
+function deleteMessage( message )
+{
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+
+	var doc = wavelet.getDoc("conversation");
+	// Find the <message id="xxx"> element where xxx == docId of the message
+	var m = doc.getElementById( message.doc.docId );
+	var pos = m.itemCountBefore();
+	
+	var mutations = [];
+
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = doc.docId;
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( "message", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "id", message.doc.docId ) ] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );	
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - pos - 2 ) );
+	mutations.push(m2);
+
+	// Apply locally and send to the server
+	wavelet.submitMutations( mutations );
+}
+
+function hideEditMessage( content )
+{
+	var message = content.parent();
+	var dom = content.dom
+	dom.innerHTML = "";
+	message.newChild( content );
+}
+
+function showEditComment( comment )
+{
+	var dom = comment.dom;
+	dom.innerHTML = '<div style="margin-left:-15px"><a href="#" class="username"></a></div>' +
+					'<div style="margin-left:-15px"><textarea class="changetextarea"></textarea></div>' +
+					'<div style="margin-left:-15px"><input type="button" value="Publish" /> <input type="button" value="Delete" /> <input type="button" value="Cancel" class="editcancel"/></div>';
+				
+	var text = document.createTextNode( comment.getText );
+	var ta = getElementByClass( dom, "changetextarea" );
+	ta.appendChild( text );
+	
+	var b = getElementByClass( dom, "editcancel" );
+	b.onclick = function() { hideEditComment( comment ); }
+
+	var b = getElementByClass( dom, "username" );
+	var text = document.createTextNode( comment.attributes["author"] );
+	b.appendChild(text);
+}
+
+function hideEditComment( comment )
+{
+	var dom = comment.dom
+	dom.parentNode.removeChild( dom );
+	comment.parent().newChild( comment );
+}
+
 	</script>
 </body>	

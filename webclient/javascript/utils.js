@@ -1,5 +1,7 @@
 function getElementByClass( root, className )
 {
+	if ( !root )
+		window.console.log("SHIT");
 	for( var i = 0; i < root.childNodes.length; ++i )
 	{
 		var child = root.childNodes[i];
