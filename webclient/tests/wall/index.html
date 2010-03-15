@@ -89,7 +89,7 @@ body { font-family:aria,sans-serif; }
 					<div style="clear:both"></div>
 				</div>
 				<div id="messages">
-				
+<!--				
 					<div class="messageframe">
 						<b class="frame1" >
 							<b class="frame1b"></b>
@@ -111,7 +111,7 @@ body { font-family:aria,sans-serif; }
 										<div><textarea class="changetextarea"></textarea></div>
 										<div><input type="button" value="Publish" /> <input type="button" value="Delete" /> <input type="button" value="Cancel" /></div>
 									</div>
-									<!-- <div class="content">Here we can say what we always wanted to tell</div> -->
+									<div class="content">Here we can say what we always wanted to tell</div>
 									<div class="hline"></div>
 									<div class="like"><span class="liketext">One person liked this. - </span><a href="#" class="likeusername">Torben</a></div>
 									<div class="comment"><span class="commentspan"><a href="#" class="username">Heinz Wurst</a> - This is some comment that is supposed to be longer than a single line to show what happens if it becomes too long and the text breaks around. <span class="commentdate">9. March</span></span></div>
@@ -144,7 +144,7 @@ body { font-family:aria,sans-serif; }
 							<b class="frame6b"></b>
 						</b>
 					</div>
-				
+				-->
 				</div>
 			</div>
 			<div id="newsfeed" style="visibility:hidden">
@@ -346,6 +346,36 @@ function contentTextChange()
 	}
 }
 
+function commentTextChange()
+{
+	this.dom.innerHTML = "";
+	var span = document.createElement("span");
+	span.className = "commentspan";
+	this.dom.appendChild( span );
+	var a = document.createElement("a");
+	a.className = "username";
+	a.href = "#";
+	a.appendChild( document.createTextNode( this.attributes["author"] ) );
+	span.appendChild( a );
+	span.appendChild( document.createTextNode( " - " + this.getText() + " " ) );
+
+	if ( this.attributes["author"] == JSOT.Rpc.jid )
+	{
+		var a = document.createElement("a");
+		a.href = "#";
+		a.className = "editlink";
+		a.innerHTML = "Edit";
+		var self = this;
+		a.onclick = function() { showEditComment( self ); }
+		span.appendChild(a);
+	}
+
+	var span2 = document.createElement("span");
+	span2.className = "commentdate";
+	span2.appendChild( document.createTextNode( this.attributes["date"] ) );
+	span.appendChild( span2 );  
+}
+
 /**
  * Called when the message element in the wavelet document has a new child,
  * i.e. someone commented on the message, liked it, ...
@@ -375,30 +405,9 @@ function messageNewChild( child )
 		var comment = document.createElement("div");
 		comment.className = "comment";
 		child.dom = comment;
-		var span = document.createElement("span");
-		span.className = "commentspan";
-		comment.appendChild( span );
-		var a = document.createElement("a");
-		a.className = "username";
-		a.href = "#";
-		a.appendChild( document.createTextNode( child.attributes["author"] ) );
-		span.appendChild( a );
-		span.appendChild( document.createTextNode( " - " + child.getText() + " " ) );
-
-		if ( child.attributes["author"] == JSOT.Rpc.jid )
-		{
-			var a = document.createElement("a");
-			a.href = "#";
-			a.className = "editlink";
-			a.innerHTML = "Edit";
-			a.onclick = function() { showEditComment( child ); }
-			span.appendChild(a);
-		}
-
-		var span2 = document.createElement("span");
-		span2.className = "commentdate";
-		span2.appendChild( document.createTextNode( child.attributes["date"] ) );
-		span.appendChild( span2 );
+		child.textChange = commentTextChange;
+		
+		child.textChange();
 		
 		// Where to insert this comment
 		var before = child.nextSibling( "comment" );
@@ -793,18 +802,82 @@ function showEditComment( comment )
 	var dom = comment.dom;
 	dom.innerHTML = '<div style="margin-left:-15px"><a href="#" class="username"></a></div>' +
 					'<div style="margin-left:-15px"><textarea class="changetextarea"></textarea></div>' +
-					'<div style="margin-left:-15px"><input type="button" value="Publish" /> <input type="button" value="Delete" /> <input type="button" value="Cancel" class="editcancel"/></div>';
+					'<div style="margin-left:-15px"><input type="button" value="Publish" class="editpublish" /> <input type="button" value="Delete" class="editdelete" /> <input type="button" value="Cancel" class="editcancel"/></div>';
 				
-	var text = document.createTextNode( comment.getText );
+	var text = document.createTextNode( comment.getText() );
 	var ta = getElementByClass( dom, "changetextarea" );
 	ta.appendChild( text );
-	
-	var b = getElementByClass( dom, "editcancel" );
-	b.onclick = function() { hideEditComment( comment ); }
 
 	var b = getElementByClass( dom, "username" );
 	var text = document.createTextNode( comment.attributes["author"] );
 	b.appendChild(text);
+
+	var b = getElementByClass( dom, "editcancel" );
+	b.onclick = function() { hideEditComment( comment ); }
+	
+	var b = getElementByClass( dom, "editpublish" );
+	b.onclick = function() { updateComment( comment ); }	
+	
+	var b = getElementByClass( dom, "editdelete" );
+	b.onclick = function() { deleteComment( comment ); }
+	
+}
+
+function updateComment( comment )
+{
+	var newText = getElementByClass( comment.dom, "changetextarea" ).value;
+	
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+	var doc = comment.doc;
+	var content = comment.getElementByType("content");
+	var pos = content.itemCountBefore();
+	var oldText = content.getText();
+
+	var mutations = [];
+
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = doc.docId;
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos + 1 ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( oldText ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( newText ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - pos - 1 - oldText.length ) );
+	mutations.push(m2);
+
+	// Apply locally and send to the server
+	wavelet.submitMutations( mutations );
+}
+
+function deleteComment( comment )
+{
+	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+
+	var doc = comment.doc;
+	// Find the <message id="xxx"> element where xxx == docId of the message
+	var pos = comment.itemCountBefore();
+	var oldText = comment.getText();
+	var mutations = [];
+
+	var m2 = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m2.document_id = doc.docId;
+	m2.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m2.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( "comment",
+																  [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", comment.attributes["author"] ),
+																	protocol.ProtocolDocumentOperation.newKeyValuePair( "date", comment.attributes["date"] )] ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( "comment" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( oldText ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( doc.itemCount() - pos - 4 - oldText.length ) );
+	mutations.push(m2);
+
+	// Apply locally and send to the server
+	wavelet.submitMutations( mutations );
 }
 
 function hideEditComment( comment )

@@ -92,6 +92,8 @@ JSOT.Rpc.processSubmitRequest = function( wavelet, submitRequest, openWavelet )
 		if ( op.has_mutate_document() )
 		{
 			var docid = op.mutate_document.document_id;
+			if ( wavelet.hashed_version.version == 0 && docId != "conversation" )
+			  continue;
 			var doc = wavelet.getDoc(docid);
 			doc.createGUI();
 		}
@@ -229,11 +231,14 @@ JSOT.Rpc.applyUpdate = function( update )
 {
 	try
 	{
+		var url = new JSOT.WaveUrl( update.wavelet_name );
+		var wave = JSOT.Wave.getWave( url.waveId, url.waveDomain );
+		var wavelet = wave.getWavelet( url.waveletId, url.waveletDomain );
+		var is_initial = wavelet.hashed_version.version == 0;
+
 		JSOT.Wave.processUpdate( update );
 	
 		// Print the wave1
-		var url = new JSOT.WaveUrl( update.wavelet_name );
-		var wave = JSOT.Wave.getWave( url.waveId, url.waveDomain );
 		for( var a in wave.wavelets )
 		{
 			var wavelet = wave.wavelets[a];
@@ -252,6 +257,8 @@ JSOT.Rpc.applyUpdate = function( update )
 				if ( op.has_mutate_document() )
 				{
 					var docid = op.mutate_document.document_id;
+					if ( is_initial && docid != "conversation" )
+						break;
 					if ( !done[docid] )
 					{
 						done[docid] = true;
