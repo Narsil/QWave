@@ -1,4 +1,7 @@
 if ( !window.JSOT )
+	/**
+	  * @namespace the JavaScript Operation Transformation library
+	  */
 	JSOT = { };
 
 /////////////////////////////////////////////////
@@ -9,8 +12,9 @@ if ( !window.JSOT )
 
 /**
  * Creates a new wave url by parsing a string. A parsing error results in a null url (see isNull).
+ * @constructor
  *
- * param url a string of the form wave://waveletId/waveDomain$waveId/waveletId or the
+ * @param {string} url a string of the form wave://waveletId/waveDomain$waveId/waveletId or the
  *           short format wave://waveletId/waveId/waveletId.
  *			 Passing a null value results in a null url (see isNull)
  */
@@ -49,6 +53,27 @@ JSOT.WaveUrl = function(url)
 };
 
 /**
+ * The id of the wave.
+ * @type string
+ */
+JSOT.WaveUrl.prototype.waveId = null;
+/**
+ * The domain of the wave.
+ * @type string
+ */
+JSOT.WaveUrl.prototype.waveDomain = null;
+/**
+ * The id of the wavelet.
+ * @type string
+ */
+JSOT.WaveUrl.prototype.waveletId = null;
+/**
+ * The domain of the wavelet.
+ * @type string
+ */
+JSOT.WaveUrl.prototype.waveletDomain = null;
+
+/**
  * @return true if the url is null.
  */
 JSOT.WaveUrl.prototype.isNull = function()
@@ -80,6 +105,8 @@ JSOT.WaveUrl.prototype.toString = function()
 
 /**
  * Do not create waves directly. Use getWave instead.
+ * @constructor
+ * @see JSOT#getWave
  */
 JSOT.Wave = function(id, domain)
 {
@@ -91,6 +118,7 @@ JSOT.Wave = function(id, domain)
 
 /**
  * Dictionary of all wave objects. This is NOT equal to all waves a user might have access to.
+ * @private
  */
 JSOT.Wave.waves = { };
 
@@ -124,7 +152,8 @@ JSOT.Wave.processUpdate = function( update )
 	var wavelet = wave.getWavelet( url.waveletId, url.waveletDomain );
 	for( var i = 0; i < update.applied_delta.length; ++i )
 		wavelet.applyDelta( update.applied_delta[i] );
-	wavelet.hashed_version = update.resulting_version;
+	if ( update.has_resulting_version() )
+		wavelet.hashed_version = update.resulting_version;
 };
 
 /**
@@ -165,6 +194,7 @@ JSOT.Wave.prototype.getWavelet = function(id, domain)
 
 /**
  * Do not use this function directly. Use Wave.getWavelet instead.
+ * @constructor
  *
  * @param wave is the wave containing the wavelet.
  * @param id is the wavelet-id, such as "conv+root".
@@ -172,11 +202,34 @@ JSOT.Wave.prototype.getWavelet = function(id, domain)
  */
 JSOT.Wavelet = function(wave, id, domain)
 {
+	/**
+	 * The id of the wave, for example "conv+root"
+	 * @type string
+	 */
 	this.id = id;
+	/**
+	 * The domain of the wave, for example "example.com"
+	 * @type string
+	 */
 	this.domain = domain;
+	/**
+	 * The wave to which this wavelet belongs
+	 * @type JSOT.Wave
+	 */	
 	this.wave = wave;
 	this.documents = { };
+	/**
+	 * The participants of the wave.
+	 * @type string[]
+	 */
 	this.participants = [ ];
+	/**
+	 * The current version of the wavelet. The wavelet may have additional applied deltas
+	 * which have been applied locally, sent to the server, but not yet acknowledged
+	 * by the server.
+	 *
+	 * @type protocol.ProtocolHashedVersion
+	 */
 	this.hashed_version = new protocol.ProtocolHashedVersion();
 	this.hashed_version.version = 0;
 	
@@ -382,6 +435,8 @@ JSOT.Wavelet.prototype.submitMutations = function( mutations, add_participant, o
 
 /**
  * Do not instantiate directly. Use Wavelet.getDoc instead.
+ * @constructor
+ * @see JSOT.Wavelet#getDoc
  *
  * @param docId is the name of a wavelet document such as "b+124".
  * @param wavelet is of type Wavelet.
@@ -408,7 +463,36 @@ JSOT.Doc = function(docId, wavelet)
 };
 
 /**
+ * This event is called if some text inside any element has changed and if none
+ * of the elements on the path have implemented the textChange event handler.
+ *
+ * @name JSOT.Doc#textChange
+ * @see JSOT.Doc.ElementStart#event:textChange
+ * @event
+ */
+
+/**
+ * This event is called if a new root element has been inserted in the document.
+ *
+ * @param {JSOT,Doc,ElementStart} child is the created child element.
+ * @see JSOT.Doc.ElementStart#event:newChild
+ * @name JSOT.Doc#newChild
+ * @event
+ */
+
+/**
+ * This event is called if a root element has will be removed from the document.
+ * The handler is called before it is actually removed.
+ *
+ * @param {JSOT,Doc,ElementStart} child is the child element that is to be removed.
+ * @see JSOT.Doc.ElementStart#event:removeChild
+ * @name JSOT.Doc#removeChild
+ * @event
+ */
+
+/**
  * The beginning of an element is marked with an instance of this class.
+ * @constructor
  *
  * @param type is a string.
  * @param attributes is null or a key/value dictionary.
@@ -427,6 +511,9 @@ JSOT.Doc.ElementStart = function(type, attributes, doc)
 	this.element_start = true;
 	this.type = type;
 	if ( !attributes )
+		/**
+		 * A dictionary of all attributes belonging to the element.
+		 */
 		this.attributes = { };
 	else
 		this.attributes = attributes;
@@ -511,7 +598,7 @@ JSOT.Doc.ElementStart.prototype.nextSibling = function(type)
 };
 
 /**
- * The number of items in front of this element. Each element_start, element_end
+ * @return {int} the number of items in front of this element. Each element_start, element_end
  * and single characters count as one.
  */
 JSOT.Doc.ElementStart.prototype.itemCountBefore = function()
@@ -527,6 +614,9 @@ JSOT.Doc.ElementStart.prototype.itemCountBefore = function()
 	return count;
 };
 
+/**
+ * @return {string} the concatenation of all text inside this element. This includes text of nested elements as well.
+ */
 JSOT.Doc.ElementStart.prototype.getText = function()
 {
 	var t = ""
@@ -536,6 +626,13 @@ JSOT.Doc.ElementStart.prototype.getText = function()
 	return t;
 };
 
+/**
+ * Searches for a direct or indirect child element. The document tree is travered in infix order
+ * and the first match is returned.
+ *
+ * @param {string} type the requested element type.
+ * @return {JSOT.Doc.ElementStart} a nested element of the requested element type or null.
+ */
 JSOT.Doc.ElementStart.prototype.getElementByType = function(type)
 {
 	for( var i = this.start_index + 1; i < this.end_index; ++i )
@@ -550,6 +647,12 @@ JSOT.Doc.ElementStart.prototype.getElementByType = function(type)
 	return null;
 };
 
+/**
+ * Searches for a all direct or indirect child elements.
+ *
+ * @param {string} type the requested element type.
+ * @return {JSOT.Doc.ElementStart[]} am array of all nested elements of the requested element type.
+ */
 JSOT.Doc.ElementStart.prototype.getElementsByType = function(type)
 {
 	var result = [];
@@ -565,6 +668,14 @@ JSOT.Doc.ElementStart.prototype.getElementsByType = function(type)
 	return result;
 };
 
+/**
+ * Searches for a direct or indirect child element. The document tree is travered in infix order
+ * and the first match is returned. The function inspects the {@link JSOT.Doc.ElementStart#attributes} field
+ * and looks up the id value there.
+ *
+ * @param {string} id the requested id.
+ * @return {JSOT.Doc.ElementStart} a nested element of the requested id or null.
+ */
 JSOT.Doc.ElementStart.prototype.getElementById = function(id)
 {
 	for( var i = this.start_index; i < this.end_index; ++i )
@@ -580,7 +691,39 @@ JSOT.Doc.ElementStart.prototype.getElementById = function(id)
 };
 
 /**
+ * This event is called if a new child element has been inserted in the document.
+ *
+ * @name JSOT.Doc.ElementStart#newChild
+ * @event
+ * @param {JSOT,Doc,ElementStart} child is the created child element.
+ * @see JSOT.Doc#event:newChild
+ */
+
+/**
+ * This event is called if a child element is to be removed, i.e. 
+ * before it is really removed from the document.
+ *
+ * @name JSOT.Doc.ElementStart#removeChild
+ * @event
+ * @param {JSOT,Doc,ElementStart} child is the child element that is to be removed.
+ * @see JSOT.Doc#event:removeChild
+ */
+
+/**
+ * This event is called if some text inside this element has changed. The text change
+ * may have occured in a nested element as well. The event bubbles up the document tree
+ * until some element has implemented the the textChange event handler.
+ *
+ * The event bubbling ends latest by calling the textChange handler of the document.
+ * @see JSOT.Doc#event:textChange
+ *
+ * @name JSOT.Doc.ElementStart#textChange
+ * @event
+ */
+
+/**
  * The end of an element is marked with an instance of this class.
+ * @constructor
  */
 JSOT.Doc.ElementEnd = function()
 {
@@ -636,6 +779,14 @@ JSOT.Doc.prototype.getElementsByType = function(type)
 	return result;
 };
 
+/**
+ * Searches for an element. The document tree is traversed in infix order
+ * and the first match is returned. The function inspects the {@link JSOT.Doc.ElementStart#attributes} field
+ * and looks up the id value there.
+ *
+ * @param {string} id the requested id.
+ * @return {JSOT.Doc.ElementStart} a nested element of the requested id or null.
+ */
 JSOT.Doc.prototype.getElementById = function(id)
 {
 	for( var i = 0; i < this.content.length; ++i )
@@ -716,6 +867,8 @@ JSOT.Doc.prototype.toString = function()
  */
 JSOT.Doc.prototype.createGUI = function()
 {
+	window.console.log("PROCESSING " + this.docId);
+	
 	var result = []
 	var current = this;
 	var currentIndex = -1;
@@ -735,13 +888,15 @@ JSOT.Doc.prototype.createGUI = function()
 					result.push( current.newChild( item ) ); 
 				else				
 					current.newChild(item);
-				delete item.is_new;
+				delete item.has_new_text;
 			}
-			else if ( item.has_new_text && item.textChange )
+			else if ( item.has_new_text )
 			{
 				var e = item;
 				while( e )
 				{
+					if ( e.blockTextChange || e.is_new )
+						break;
 					if ( e.textChange )
 					{
 						e.blockTextChange = true;
@@ -759,6 +914,7 @@ JSOT.Doc.prototype.createGUI = function()
 		else if ( item.element_end )
 		{
 			delete current.blockTextChange;
+			delete current.is_new;
 			currentIndex = stack.pop();
 			if ( currentIndex == -1 )
 				current = this;
