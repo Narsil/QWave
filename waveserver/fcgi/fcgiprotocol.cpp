@@ -21,6 +21,7 @@ FCGIProtocol::~FCGIProtocol()
 {
     for(ReqMap::iterator i = m_reqMap.begin(); i != m_reqMap.end(); ++i)
     {
+        i->second->onAbort();
         delete i->second;
     }
 

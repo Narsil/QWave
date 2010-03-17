@@ -2,12 +2,14 @@
 #define FCGICLIENTCONNECTION_H
 
 #include <QQueue>
+#include <QList>
 #include "actor/actorgroup.h"
 #include "actor/pbmessage.h"
 #include "actor/actorid.h"
 #include "protocol/webclient.pb.h"
 
 class ClientActorFolk;
+class ClientIndexWaveActor;
 
 namespace waveserver
 {
@@ -29,6 +31,11 @@ public:
     QString sessionId() const { return m_sessionId; }
 
     /**
+      * @return true if the connection did anything since the last call to isDead.
+      */
+    bool isDead();
+
+    /**
       * @internal
       *
       * Called from ClientSubmitRequestActor.
@@ -45,6 +52,15 @@ protected:
     virtual void customEvent( QEvent* event );
 
 private:
+    friend class ClientIndexWaveActor;
+
+    void subscribe( const std::string& waveletName, bool index, bool content );
+    /**
+      * @param onDeath is set to true when called from unsubscribeAll.
+      */
+    void unsubscribe( const std::string& waveletName, bool index, bool content, bool all = false );
+    void unsubscribeAll();
+
     /**
       * Handles requests received from the web browser.
       */
@@ -80,7 +96,9 @@ private:
       * Messages which must be sent to the web browser when possible.
       */
     QQueue<PBMessage<webclient::Response>*> m_outQueue;
-    ActorId m_pendingRequest;    
+    ActorId m_pendingRequest;
+    bool m_isDead;
+    QList<std::string> m_subscriptions;
 };
 
 #endif // FCGICLIENTCONNECTION_H

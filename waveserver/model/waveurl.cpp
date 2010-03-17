@@ -6,6 +6,11 @@ WaveUrl::WaveUrl()
 {
 }
 
+WaveUrl::WaveUrl( const std::string& url )
+{
+    parse( QString::fromStdString( url) );
+}
+
 WaveUrl::WaveUrl( const QString& url )
 {
     parse(url);

@@ -60,7 +60,13 @@ void FCGI::FCGIRequest::endRequest(quint32 appStatus, FCGI::FCGIRequest::Protoco
 
 void FCGI::FCGIRequest::onAbort()
 {
+    qDebug("FCGIRequest aborted");
     m_aborted = true;
+    if ( !m_sessionId.empty() )
+    {
+        DeathNotice* msg = new DeathNotice( ActorId("client", QString::fromStdString( m_sessionId ) ) );
+        post( msg );
+    }
 }
 
 void FCGI::FCGIRequest::appendStdin( const char* data, size_t len )
@@ -142,6 +148,8 @@ void FCGI::FCGIRequest::process()
         errorReply("Session ID is invalid");
         return;
     }
+
+    m_sessionId = r.session_id();
 
 //    std::ostringstream os;
 //    os << "Content-type: text/html\r\n"

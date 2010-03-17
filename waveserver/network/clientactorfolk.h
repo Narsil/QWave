@@ -9,6 +9,7 @@ class FCGIClientConnection;
 
 class ClientActorFolk : public ActorFolk
 {
+    Q_OBJECT
 public:
     ClientActorFolk(QObject* parent = 0);
 
@@ -18,6 +19,12 @@ public:
     static ClientActorFolk* instance();
 
     virtual ActorGroup* group( const QString& id, bool createOnDemand );
+
+private slots:
+    /**
+      * Delete dead client connections, i.e. dead sessions.
+      */
+    void periodicCleanup();
 
 private:
     static ClientActorFolk* s_folk;

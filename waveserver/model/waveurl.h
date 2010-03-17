@@ -7,6 +7,7 @@ class WaveUrl
 {
 public:
     WaveUrl();
+    WaveUrl( const std::string& url );
     WaveUrl( const QString& url );
     WaveUrl( const WaveUrl& url );
     WaveUrl( const QString& waveDomain, const QString& waveId, const QString& waveletDomain, const QString& waveletId );

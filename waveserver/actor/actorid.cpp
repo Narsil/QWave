@@ -74,3 +74,8 @@ QString ActorId::toString() const
 
     return url.toString();
 }
+
+bool operator==( const ActorId& id1, const ActorId& id2 )
+{
+    return ( id1.folk() == id2.folk() && id1.group() == id2.group() && id1.actor() == id2.actor() );
+}
