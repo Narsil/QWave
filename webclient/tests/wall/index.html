@@ -183,6 +183,7 @@ function onLogin()
 	var mainDoc = wavelet.getDoc("conversation");
 	mainDoc.newChild = conversationNewChild;
 	mainDoc.removeChild = conversationRemoveChild;
+	mainDoc.createGUI();
 	
 	// Open the wave
 	JSOT.Rpc.openWavelet( "wave://wave1.vs.uni-due.de/w+wall/conv+root" );
