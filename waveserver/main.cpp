@@ -75,6 +75,8 @@ int main(int argc, char *argv[])
     // Listen to clients
     ServerSocket socket;
 
+    qDebug("Waveserver started ...");
+
     // Loop
     return a.exec();
 }

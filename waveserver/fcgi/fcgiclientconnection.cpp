@@ -9,12 +9,18 @@
 #include <QUrl>
 
 FCGIClientConnection::FCGIClientConnection(const QString& sessionId, const QString& participant, ClientActorFolk* parent)
-    : ActorGroup( sessionId, parent ), m_participant( participant ), m_sessionId( sessionId ), m_waveletsOpened( false ), m_clientSequenceNumber(1), m_serverSequenceNumber(0), m_ackedSequenceNumber(0)
+    : ActorGroup( sessionId, parent ), m_participant( participant ), m_sessionId( sessionId ), m_waveletsOpened( false ), m_clientSequenceNumber(1), m_serverSequenceNumber(0), m_ackedSequenceNumber(0), m_isDead( false )
 {
 }
 
 FCGIClientConnection::~FCGIClientConnection()
 {
+    qDebug("~FCGIClientConnection");
+
+    // Don't receive updates for wavelets anymore
+    unsubscribeAll();
+
+    // Delete queued messages
     while( !m_outQueue.isEmpty() )
     {
         PBMessage<webclient::Response>* msg = m_outQueue.dequeue();
@@ -24,12 +30,14 @@ FCGIClientConnection::~FCGIClientConnection()
 
 void FCGIClientConnection::customEvent( QEvent* event )
 {
+    // Got a request from the web browser?
     PBMessage<webclient::Request>* request = dynamic_cast<PBMessage<webclient::Request>*>( event );
     if ( request )
     {
         handleRequest( request );
         return;
     }
+    // Got an update from inside the waveserver?
     PBMessage<waveserver::ProtocolWaveletUpdate>* update = dynamic_cast<PBMessage<waveserver::ProtocolWaveletUpdate>*>(event);
     if ( update )
     {
@@ -42,6 +50,7 @@ void FCGIClientConnection::customEvent( QEvent* event )
         reply(r);
         return;
     }
+    // Got a digest update from inside the waveserver?
     PBMessage<messages::WaveletDigest>* digest = dynamic_cast<PBMessage<messages::WaveletDigest>*>(event);
     if ( digest )
     {
@@ -60,16 +69,31 @@ void FCGIClientConnection::customEvent( QEvent* event )
         reply(r);
         return;
     }
+    // The participant of this connection has been invited to a new wavelet?
     PBMessage<messages::WaveletNotify>* notify = dynamic_cast<PBMessage<messages::WaveletNotify>*>(event);
     if ( notify )
     {
         // There is a new wavelet in which the connected user is a participant -> subscribe to it to receive updates and digest
-        PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( notify->sender() );
-        subscribe->set_subscribe( true );
-        subscribe->set_index( true );
-        subscribe->set_actor_id( actorId().toString().toStdString() );
-        subscribe->set_content( m_waveletsOpened );
-        post( subscribe );
+        subscribe( notify->wavelet_name(), true, false );
+//        // There is a new wavelet in which the connected user is a participant -> subscribe to it to receive updates and digest
+//        PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( notify->sender() );
+//        subscribe->set_subscribe( true );
+//        subscribe->set_index( true );
+//        subscribe->set_actor_id( actorId().toString().toStdString() );
+//        subscribe->set_content( m_waveletsOpened );
+//        post( subscribe );
+        return;
+    }
+    DeathNotice* death = dynamic_cast<DeathNotice*>(event);
+    if ( death )
+    {
+        qDebug("Death notice1");
+        // A pending request has been canceled?
+        if ( death->sender() == m_pendingRequest )
+        {
+            qDebug("Death notice2");
+            m_pendingRequest = ActorId();
+        }
         return;
     }
 
@@ -78,6 +102,9 @@ void FCGIClientConnection::customEvent( QEvent* event )
 
 void FCGIClientConnection::handleRequest( const PBMessage<webclient::Request>* request )
 {
+    // Something is happening. Don't delete this connection
+    m_isDead = false;
+
     m_ackedSequenceNumber = qMax( (qint64)request->client_ack(), m_ackedSequenceNumber );
     // TODO: If the client sequence number is not what we expected?
     m_clientSequenceNumber = request->client_sequence_number();
@@ -213,11 +240,14 @@ void FCGIClientConnection::reply( PBMessage<webclient::Response>* response )
     // Is there a pending HTTP request? No -> queue. Yes -> send
     if ( m_pendingRequest.isNull() )
     {
+        // TODO: If the queue becomes too large, we consider this connection to be dead?
         //qDebug("FCGI: Queueu");
         m_outQueue.enqueue( response );
     }
     else
     {
+        // Something is happening. Don't delete this connection
+        m_isDead = false;
         //qDebug("FCGI: Post to %s", m_pendingRequest.toString().toAscii().constData());
         response->setReceiver( m_pendingRequest );
         m_pendingRequest = ActorId();
@@ -250,3 +280,61 @@ void FCGIClientConnection::emptyReply()
     m_pendingRequest = ActorId();
     post( response );
 }
+
+bool FCGIClientConnection::isDead()
+{
+    qDebug("Test for death");
+    // Nothing happened since the last invocation?
+    if ( m_isDead )
+    {
+        // Close the connection and see whether it becomes reconnected
+        if ( !m_pendingRequest.isNull() )
+        {
+            qDebug("HTTP connection closed to see whether it reconnects");
+            emptyReply();
+            return false;
+        }
+        // Definitely dead.
+        return true;
+    }
+    // The connection could be dead. Mark it but give it a second chance.
+    m_isDead = true;
+    return false;
+}
+
+void FCGIClientConnection::subscribe( const std::string& waveletName, bool index, bool content )
+{
+    WaveUrl url( waveletName );
+
+    PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( WaveFolk::actorId(url) );
+    subscribe->set_subscribe( true );
+    subscribe->set_index( index );
+    subscribe->set_actor_id( actorId().toString().toStdString() );
+    subscribe->set_content( content );
+    bool ok = post( subscribe );
+    if ( ok )
+        m_subscriptions.append( waveletName );
+}
+
+void FCGIClientConnection::unsubscribe( const std::string& waveletName, bool index, bool content, bool all )
+{
+    WaveUrl url( waveletName );
+
+    PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( WaveFolk::actorId(url) );
+    subscribe->set_subscribe( false );
+    subscribe->set_index( index );
+    subscribe->set_actor_id( actorId().toString().toStdString() );
+    subscribe->set_content( content );
+    post( subscribe );
+    if ( !all )
+        m_subscriptions.removeOne( waveletName );
+}
+
+void FCGIClientConnection::unsubscribeAll()
+{
+    // Unsubscribe from wavelets
+    foreach( const std::string& str, m_subscriptions )
+        unsubscribe( str, true, true, true );
+    m_subscriptions.clear();
+}
+

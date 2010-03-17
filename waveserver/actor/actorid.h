@@ -54,4 +54,6 @@ private:
     QString m_actor;
 };
 
+bool operator==( const ActorId& id1, const ActorId& id2 );
+
 #endif // ACTORID_H

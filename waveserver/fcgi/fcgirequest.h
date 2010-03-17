@@ -73,6 +73,7 @@ namespace FCGI
         bool m_stdinEOF;
         bool m_aborted;
         FCGIProtocol* m_driver;
+        std::string m_sessionId;
 
         static qint64 s_id;
     };

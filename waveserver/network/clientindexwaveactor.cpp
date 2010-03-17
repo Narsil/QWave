@@ -48,17 +48,22 @@ void ClientIndexWaveActor::execute()
     // Subscribe to all wavelets
     for( i = 0; i < m_response.wavelet_name_size(); ++i )
     {
-        WaveUrl url( QString::fromStdString( m_response.wavelet_name(i) ) );
-        // CLIENTLOG("Subscribing to " + url.toString() );
-        // Subscribe to this wavelet
-        PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( WaveFolk::actorId( url ) );
-        subscribe->setCreateOnDemand( true );
-        subscribe->set_index( true );
-        subscribe->set_content( false );
-        subscribe->set_subscribe( true );
-        subscribe->set_actor_id( connection()->actorId().toString().toStdString() );
-        bool ok = post( subscribe );
-        if ( !ok ) { CLIENTERROR("Could not subscribe to wavelet"); }
+        if ( fcgiConnection() )
+            fcgiConnection()->subscribe(m_response.wavelet_name(i), true, false );
+        else
+        {
+            WaveUrl url( m_response.wavelet_name(i) );
+            // CLIENTLOG("Subscribing to " + url.toString() );
+            // Subscribe to this wavelet
+            PBMessage<messages::SubscribeWavelet>* subscribe = new PBMessage<messages::SubscribeWavelet>( WaveFolk::actorId( url ) );
+            subscribe->setCreateOnDemand( true );
+            subscribe->set_index( true );
+            subscribe->set_content( false );
+            subscribe->set_subscribe( true );
+            subscribe->set_actor_id( connection()->actorId().toString().toStdString() );
+            bool ok = post( subscribe );
+            if ( !ok ) { CLIENTERROR("Could not subscribe to wavelet"); }
+        }
     }
 
     // qDebug("FINISHED ClientIndexWaveActor");

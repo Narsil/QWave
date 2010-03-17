@@ -66,4 +66,10 @@ private:
     bool m_createOnDemand;
 };
 
+class DeathNotice : public IMessage
+{
+public:
+    DeathNotice( const ActorId& receiver ) : IMessage( receiver ) { }
+};
+
 #endif // IMESSAGE_H
