@@ -867,6 +867,7 @@ JSOT.Doc.prototype.toString = function()
  */
 JSOT.Doc.prototype.createGUI = function()
 {
+	this.has_gui = true;
 	window.console.log("PROCESSING " + this.docId);
 	
 	var result = []

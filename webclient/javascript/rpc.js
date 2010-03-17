@@ -10,7 +10,8 @@ JSOT.Rpc = {
 	waveDomain : "wave1.vs.uni-due.de",
 	queue : { },
 	pendingSubmitUrl : null,
-	onLogin : null
+	onLogin : null,
+	pendingRequestCount : 0
 };
 
 JSOT.Rpc.login = function( jid, callback )
@@ -92,10 +93,11 @@ JSOT.Rpc.processSubmitRequest = function( wavelet, submitRequest, openWavelet )
 		if ( op.has_mutate_document() )
 		{
 			var docid = op.mutate_document.document_id;
-			if ( wavelet.hashed_version.version == 0 && docId != "conversation" )
-			  continue;
+//			if ( wavelet.hashed_version.version == 0 && docId != "conversation" )
+//			  continue;
 			var doc = wavelet.getDoc(docid);
-			doc.createGUI();
+			if ( doc.has_gui )
+				doc.createGUI();
 		}
 	}
 	
@@ -257,13 +259,14 @@ JSOT.Rpc.applyUpdate = function( update )
 				if ( op.has_mutate_document() )
 				{
 					var docid = op.mutate_document.document_id;
-					if ( is_initial && docid != "conversation" )
-						break;
+//					if ( is_initial && docid != "conversation" )
+//						break;
 					if ( !done[docid] )
 					{
 						done[docid] = true;
 						var doc = wavelet.getDoc(docid);
-						doc.createGUI();
+						if ( doc.has_gui )
+							doc.createGUI();
 					}
 				}
 			}
@@ -312,11 +315,14 @@ JSOT.Rpc.callServer = function(jsonData, callback)
 		if ( window.console )
 			window.console.log( "OUT: " + jsonData );
     
+		JSOT.Rpc.pendingRequestCount++;
+		
 		xmlHttp.open('POST', 'wave.fcgi', true);
 		xmlHttp.onreadystatechange = function ()
 		{
 			if (xmlHttp.readyState == 4)
 			{
+				JSOT.Rpc.pendingRequestCount--;
 //				var c = document.createElement("pre");
 //				c.appendChild( document.createTextNode("IN:") );
 //				c.appendChild( document.createTextNode(xmlHttp.responseText) );
@@ -389,7 +395,8 @@ JSOT.Rpc.onMessage = function(jsonData)
 	if ( JSOT.Rpc.sendNextSubmitRequest() )
 		return;
 	
-	if ( response.has_login() || response.has_update() || response.has_submit() )
+	// if ( response.has_login() || response.has_update() || response.has_submit() )
+	if ( JSOT.Rpc.pendingRequestCount == 0 )
 	{
 		// Ask for more
 		var r = new webclient.Request();
