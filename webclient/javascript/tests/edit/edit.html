@@ -1,0 +1,209 @@
+<html>
+<head>
+<title>JavaScript OT</title>
+<script src="../../common.pbjson.js" type="text/javascript"></script>
+<script src="../../jsot.js" type="text/javascript"></script>
+</head>
+<body>
+	<h1>Hello world</h1>
+	<div id="out"></div>
+	<div id="out2" contentEditable="true" style="border:1px solid black"></div>
+	<script type="text/javascript">
+function toDom( doc )
+{
+	var dom = document.getElementById("out2");
+	dom.innerHTML = "";
+	var line = null;
+	var inline = false;
+	for( var i = 0; i < doc.content.length; ++i )
+	{
+		var c = doc.content[i];
+		if ( typeof(c) == "string" )
+		{
+			if ( inline || !line )
+				throw "Malformed doc, characters outside of line";
+			var t = document.createTextNode( c );
+			var f = doc.format[i];
+			if ( f )
+			{				
+				var span = document.createElement("span");
+				span.appendChild(t);
+				for( var a in f )
+				{
+					span.style[a] = f[a];
+				}
+				line.appendChild( span );
+			}
+			else
+				line.appendChild( t );
+		}
+		else if ( c.element_start )
+		{
+			if ( inline )
+				throw "Malformed doc, nested lines";
+			line = document.createElement("div");
+			dom.appendChild( line );
+			inline = true;
+		}
+		else if ( c.element_end )
+		{
+			if ( !line || !inline )
+				throw "Malformed doc, missing opening line tag";
+			inline = false;
+		}
+		else
+			throw "Busted";
+	}
+}
+
+var doc = new JSOT.Doc();
+
+var ops = new protocol.ProtocolDocumentOperation();
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-weight", null, "bold" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("This is bold") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-weight" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" ") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("and italic") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("A second line") );
+
+ops.applyTo(doc);
+
+var result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(result) );
+
+toDom( doc );
+
+function DomIterator( dom )
+{
+	this.lineno = -1;
+	this.line = null;
+	this.current = dom;
+	this.index = 0;
+//	this.skipChars(0);
+}
+
+DomIterator.prototype.skipLineBreak = function()
+{
+	if ( this.lineno == -1 )
+	{
+		this.line = this.current.childNodes[0];
+	}
+	else
+		this.line = this.line.nextSibling();
+	if ( !this.line )
+		throw "There is no more line to go to";
+	this.current = this.line.firstChild;
+	this.lineno++;
+//	this.skipChars(0);
+};
+
+DomIterator.prototype.skipChars = function( count )
+{
+	if ( this.current.nodeType == 3 )
+	{
+		var min = Math.min( this.current.data.length - this.index, count );
+		this.index += min;
+		count -= min;
+//		if ( this.index == this.current.data.length )
+//		{
+//			this.index = 0;
+//			var x = this.current.nextSibling;
+//			if ( x )
+//				this.current = x;
+//			else
+//			{
+//				if ( this.current.parentNode.nodeName != "span" )
+//					throw "Expected a span in the DOM;
+//				this.current = this.current.parentNode.nextSibling;
+//			}
+//		}
+		if ( count > 0 )
+		{
+			this.index = 0;
+			var x = this.current.nextSibling;
+			if ( x )
+				this.current = x;
+			else
+			{
+				if ( this.current.parentNode.nodeName != "SPAN" )
+					throw "Expected a span in the DOM";
+				this.current = this.current.parentNode.nextSibling;
+			}
+			this.skipChars( count );
+		}
+	}
+	else if ( this.current.nodeType == 1 )
+	{
+		var name = this.current.nodeName;
+		if ( this.current.childNodes.length == 0 )
+			throw "Did not expect an empty span";
+		this.current = this.current.firstChild;
+		this.skipChars( count );
+	}
+	else
+		throw "There are no more characters in the line to skip";
+};
+
+DomIterator.prototype.insertChars = function( str )
+{
+	if ( this.current.nodeType == 3 )
+	{
+		// var old = this.current.data;
+		// this.current.data = old.substr( 0, this.index ) + str + old.substring( this.index, old.length );
+		this.current.insertData( this.index, str );
+		this.index += str.length;
+	}
+	else
+	{
+		var t = document.createTextNode( str );
+		this.current.parentNode.insertBefore( t, this.current );
+		this.current = t;
+		this.index += str.length;
+	}
+};
+
+DomIterator.prototype.setStyle = function( formatUpdate )
+{
+	if ( this.current.nodeType == 3 )
+	{
+		if ( 
+		if ( this.parentNode.nodeName == "SPAN" )
+		{
+		}
+	}
+	else if ( this.current.nodeType == 1 )
+	{
+	}
+	else
+		throw "Busted";
+};
+
+DomIterator.prototype.updateSpan = function( span, formatUpdates )
+{
+	for( var i = 0; i < formatUpdates.length; ++i )
+	{
+		var update = formatUpdates[i];
+		if ( update.new_value )
+			span.style[update.key] = update.new_value;
+		else
+			span.style[update.key] = null;
+	}
+};
+
+var it = new DomIterator( document.getElementById("out2") );
+it.skipLineBreak();
+it.insertChars("New! ");
+it.skipChars(5);
+it.insertChars("was");
+it.skipChars(8);
+it.insertChars("est");
+
+	</script>
+</body>
+</html>
