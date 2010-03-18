@@ -182,6 +182,7 @@ DomIterator.prototype.insertChars = function( str )
 			this.current.insertBefore( span, this.current.firstChild );
 			this.current = t;
 			this.index += str.length;
+			return;
 		}
 		// Prepend to the existing text node
 		var t = this.current.firstChild;
@@ -203,7 +204,7 @@ DomIterator.prototype.insertChars = function( str )
 		}
 		// Insert a new text node in the span
 		var t = document.createTextNode( str );
-		this.current.parentNode.insertBefore( t, this.current );
+		this.current.appendChild( t );
 		this.current = t;
 		this.index = str.length;
 	}
@@ -402,6 +403,64 @@ DomIterator.prototype.deleteChars = function( count )
 		throw "There are no more characters in the line to delete";
 };
 
+DomIterator.prototype.splitTextNode = function(node, pos)
+{
+	if ( pos == 0 )
+		return node;
+	var data = node.data;
+	if ( data.length == pos )
+		return node.nextSibling;
+	var t = document.createTextNode( data.substring( pos, data.length ) );
+	node.data = data.substr( 0, pos );
+	node.parentNode.insertBefore( t, node.nextSibling );
+	return t;
+};
+
+DomIterator.prototype.splitNodeBefore = function(node, before)
+{
+	var el = document.createElement( node.nodeName );
+	while( before )
+	{
+		var n = before.nextSibling;
+		node.removeChild( before );
+		el.appendChild( before );
+		before = n;
+	}
+	node.parentNode.insertBefore( el, before );
+	return el;
+};
+
+DomIterator.prototype.insertLineBreak = function()
+{
+	var node = this.current;
+	var before;
+	if ( this.current.nodeType == 3 )
+	{
+		before = this.splitTextNode( node, this.index );
+		node = node.parentNode;
+	}
+	if ( node.nodeName == "SPAN" )
+	{
+		before = this.splitNodeBefore( node, before );
+		before.class = "split";
+		node = node.parentNode;
+		if ( this.formatUpdate )
+			this.setSpanStyle( before, this.formatUpdate );
+	}
+	if ( node.nodeName != "DIV" )
+		throw "Expected DIV";
+	this.line = this.splitNodeBefore( node, before );
+	this.current = this.line;
+	this.index = 0;
+	this.lineno++;
+	if ( this.line.firstChild && this.line.firstChild.nodeType == 1 && this.line.firstChild.class == "split" )
+	{
+		this.current = this.line.firstChild;
+		this.current.class = null;
+	}
+};
+
+/*
 DomIterator.prototype.insertLineBreak = function()
 {
 	if ( this.current.nodeType == 3 )
@@ -508,7 +567,8 @@ DomIterator.prototype.insertLineBreak = function()
 	else
 		throw "Busted"
 };
-					
+*/
+
 DomIterator.prototype.setSpanStyle = function( span, format )
 {
 	if ( format && format["font-weight"] )
@@ -562,9 +622,14 @@ it.skipChars(1);
 it.deleteLineBreak();
 it.skipChars(2);
 it.setStyle( null );
+//it.deleteChars(5);
 it.deleteChars(3);
 it.skipChars(2);
+it.setStyle( { "font-style" : "italic" } );
 it.insertChars("[NewText]");
+it.insertLineBreak();
+it.insertChars("Neue Zeile");
+//it.setStyle( null );
 	</script>
 </body>
 </html>
