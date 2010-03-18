@@ -168,17 +168,39 @@ DomIterator.prototype.insertChars = function( str )
 	}
 };
 
-DomIterator.prototype.setStyle = function( formatUpdate )
+DomIterator.prototype.setStyle = function( formatUpdates )
 {
 	if ( this.current.nodeType == 3 )
 	{
-		if ( 
 		if ( this.parentNode.nodeName == "SPAN" )
 		{
+		}
+		else // Inside the DIV
+		{
+			// In front of a text node?
+			if ( this.index == 0 )
+			{
+				var span = document.createElement( "span" );
+				this.updateSpan( span, formatUpdates );
+				this.current.parentNode.insertBefore( span, this.current );
+				this.current = span;
+				return;
+			}
+			// Behind a text node?
+			if ( this.index == this.current.data.length )
+			{
+				var span = document.createElement( "span" );
+				this.updateSpan( span, formatUpdates );
+				this.current.parentNode.insertBefore( span, this.current.nextSibling );
+				this.current = span;
+				return;
+			}
+			// Inside a text node
 		}
 	}
 	else if ( this.current.nodeType == 1 )
 	{
+		this.updateSpan( this.current, formatUpdates );
 	}
 	else
 		throw "Busted";
