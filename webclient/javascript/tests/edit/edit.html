@@ -71,7 +71,22 @@ ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ 
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("A second line") );
-
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("An ") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("italic") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("ABC DEF") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("GHI JKL") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("MNO PQR") );
 ops.applyTo(doc);
 
 var result = doc.toString();
@@ -85,6 +100,7 @@ function DomIterator( dom )
 	this.line = null;
 	this.current = dom;
 	this.index = 0;
+	this.formatUpdate = null;
 //	this.skipChars(0);
 }
 
@@ -95,34 +111,27 @@ DomIterator.prototype.skipLineBreak = function()
 		this.line = this.current.childNodes[0];
 	}
 	else
-		this.line = this.line.nextSibling();
+		this.line = this.line.nextSibling;
 	if ( !this.line )
 		throw "There is no more line to go to";
 	this.current = this.line.firstChild;
+	this.index = 0;
 	this.lineno++;
+	if ( this.formatUpdate )
+		this.setStyle( this.formatUpdate );
 //	this.skipChars(0);
 };
 
 DomIterator.prototype.skipChars = function( count )
 {
+	if ( this.lineno == -1 )
+		throw "Must skip line break first";
+		
 	if ( this.current.nodeType == 3 )
 	{
 		var min = Math.min( this.current.data.length - this.index, count );
 		this.index += min;
 		count -= min;
-//		if ( this.index == this.current.data.length )
-//		{
-//			this.index = 0;
-//			var x = this.current.nextSibling;
-//			if ( x )
-//				this.current = x;
-//			else
-//			{
-//				if ( this.current.parentNode.nodeName != "span" )
-//					throw "Expected a span in the DOM;
-//				this.current = this.current.parentNode.nextSibling;
-//			}
-//		}
 		if ( count > 0 )
 		{
 			this.index = 0;
@@ -140,7 +149,6 @@ DomIterator.prototype.skipChars = function( count )
 	}
 	else if ( this.current.nodeType == 1 )
 	{
-		var name = this.current.nodeName;
 		if ( this.current.childNodes.length == 0 )
 			throw "Did not expect an empty span";
 		this.current = this.current.firstChild;
@@ -152,70 +160,374 @@ DomIterator.prototype.skipChars = function( count )
 
 DomIterator.prototype.insertChars = function( str )
 {
+	if ( this.lineno == -1 )
+		throw "Must skip line break first";
+
+	// Insert inside a text node?
 	if ( this.current.nodeType == 3 )
 	{
-		// var old = this.current.data;
-		// this.current.data = old.substr( 0, this.index ) + str + old.substring( this.index, old.length );
 		this.current.insertData( this.index, str );
 		this.index += str.length;
+		return;
 	}
+	// At the beginning of a line?
+	else if ( this.current.nodeName == "DIV" )
+	{
+		// Insert a new span at the beginning of the document
+		if ( !this.current.firstChild || this.formatUpdate || this.current.firstChild.nodeType != 3 )
+		{
+			var span = document.createElement("span");
+			this.setSpanStyle( span, this.formatUpdate );
+			var t = document.createTextNode( str );
+			this.current.insertBefore( span, this.current.firstChild );
+			this.current = t;
+			this.index += str.length;
+		}
+		// Prepend to the existing text node
+		var t = this.current.firstChild;
+		t.insertData( 0, str );
+		this.current = t;
+		this.index = str.length;
+		return;
+	}
+	// At the beginning of a span
 	else
 	{
+		// The span has a text node? -> Use it
+		if ( this.current.firstChild )
+		{
+			this.current = this.current.firstChild;
+			this.index = 0;
+			this.insertChars( str );
+			return;
+		}
+		// Insert a new text node in the span
 		var t = document.createTextNode( str );
 		this.current.parentNode.insertBefore( t, this.current );
 		this.current = t;
-		this.index += str.length;
+		this.index = str.length;
 	}
 };
 
-DomIterator.prototype.setStyle = function( formatUpdates )
+DomIterator.prototype.setStyle = function( format )
 {
+	if ( this.lineno == -1 )
+		throw "Must skip line break first";
+	this.formatUpdate = format;
+	
 	if ( this.current.nodeType == 3 )
 	{
-		if ( this.parentNode.nodeName == "SPAN" )
+		if ( this.current.parentNode.nodeName == "SPAN" )
 		{
-		}
+			// Defensive programming. Should not happen
+			if ( this.index == 0 )
+			{
+				this.current = this.current.parentNode;
+				this.setStyle( format );
+				return;
+			}
+			// Att the end of this span? Go to its sibling (if there is one)
+			if ( this.index == this.current.data.length && !this.current.nextSibling && this.current.parentNode.nextSibling )
+			{
+				var next = this.current.parentNode.nextSibling;
+				// If this is the end of an annotation update then there is no need to do anything about the next span
+				if ( format )
+				{
+					this.current = next;
+					this.index = 0;
+					this.setStyle( format );
+				}
+				else
+				{
+					// The next span has the same style? -> Join them
+					if ( this.compareStyles( this.current.parentNode, next ) )
+					{
+						while( next.firstChild )
+						{
+							var f = next.firstChild;
+							next.removeChild( f );
+							this.current.parentNode.appendChild( f );
+						}
+						next.parentNode.removeChild(next);
+					}
+					else
+					{
+						this.current = next;
+						this.index = 0;
+					}
+				}
+				return;
+			}
+			var span = document.createElement( "span" );
+			this.setSpanStyle( span, format );
+			// Not at the end of a text node?
+			if ( this.index != this.current.data.length )
+			{
+				// Split the text node
+				var data = this.current.data;
+				span.appendChild( document.createTextNode( data.substring( this.index, data.length ) ) );
+				this.current.data = data.substr(0, this.index);				
+			}
+			// Split the span
+			this.current.parentNode.parentNode.insertBefore( span, this.current.parentNode.nextSibling );
+			while( this.current.nextSibling )
+			{
+				t = this.current.nextSibling;
+				this.current.parentNode.removeChild( t );
+				span.appendChild(t);
+			}
+			this.current = span
+			this.index = 0;					
+			return;
+		}	
 		else // Inside the DIV
 		{
-			// In front of a text node?
+			// In front of a text node? -> Move the text node inside a new span
 			if ( this.index == 0 )
 			{
 				var span = document.createElement( "span" );
-				this.updateSpan( span, formatUpdates );
-				this.current.parentNode.insertBefore( span, this.current );
+				this.setSpanStyle( span, format );
+				this.current.parentNode.replaceChild( span, this.current );
+				span.appendChild(this.current);
 				this.current = span;
+				this.index = 0;
 				return;
 			}
-			// Behind a text node?
+			// At the end of a text node?
 			if ( this.index == this.current.data.length )
 			{
+				// Is there a sibling? -> Use it instead
+				if ( this.current.nextSibling )
+				{
+					this.current = this.current.nextSibling;
+					this.index = 0;
+					this.setStyle( format );
+					return;
+				}
+				// No sibling. Create one
+				// TODO: This could create an empty span
 				var span = document.createElement( "span" );
-				this.updateSpan( span, formatUpdates );
+				this.updateSpan( span, format );
 				this.current.parentNode.insertBefore( span, this.current.nextSibling );
 				this.current = span;
+				this.index = 0;
 				return;
 			}
-			// Inside a text node
+			// Inside a text node -> split it
+			var span = document.createElement( "span" );
+			this.setSpanStyle( span, format );
+			this.current.parentNode.insertBefore( span, this.current.nextSibling );
+			var data = this.current.data;
+			span.appendChild( document.createTextNode( data.substring( this.index, data.length ) ) );
+			this.current.data = data.substr(0, this.index);
+			this.current = span;
+			this.index = 0;
 		}
 	}
 	else if ( this.current.nodeType == 1 )
 	{
-		this.updateSpan( this.current, formatUpdates );
+		if ( format )
+			this.setSpanStyle( this.current, format );
 	}
 	else
 		throw "Busted";
 };
 
-DomIterator.prototype.updateSpan = function( span, formatUpdates )
+DomIterator.prototype.deleteLineBreak = function()
 {
-	for( var i = 0; i < formatUpdates.length; ++i )
+	if ( this.lineno == -1 )
+		throw "Deleting the first line tag is not allowed";
+
+	var l = this.line.nextSibling;
+	if ( !l )
+		throw "There is no more line to go to";
+	while( l.firstChild )
 	{
-		var update = formatUpdates[i];
-		if ( update.new_value )
-			span.style[update.key] = update.new_value;
+		var f = l.firstChild;
+		l.removeChild(f);
+		this.line.appendChild(f);
+	};
+	if ( this.formatUpdate )
+		this.setStyle( this.formatUpdate );
+};
+
+DomIterator.prototype.deleteChars = function( count )
+{
+	// Inside a text node
+	if ( this.current.nodeType == 3 )
+	{
+		var data = this.current.data;
+		var min = Math.min( data.length - this.index, count );
+		count -= min;
+		// Delete the entire text node?
+		if ( this.index == 0 && min == data.length )
+		{
+			var t = this.current;
+			var p = t.parentNode;
+			this.index = 0;
+			var x = t.nextSibling;
+			p.removeChild(t);
+			if ( x )
+				this.current = x;
+			else
+			{
+				if ( p.nodeName != "SPAN" )
+					throw "Expected a span in the DOM";
+				this.current = p.nextSibling;
+				// Is the span now empty? -> Remove it unless it is the last span in t he line
+				if ( !p.firstChild )
+				{
+					if ( this.current )
+						p.parentNode.removeChild(p);
+					else
+						this.current = p;
+				}
+			}
+		}
+		// Delete only some part of the text node?
 		else
-			span.style[update.key] = null;
+			this.current.deleteData( this.index, min );		
+		// Need to delete more?
+		if ( count > 0 )
+			this.deleteChars( count );		
 	}
+	else if ( this.current.nodeType == 1 )
+	{
+		if ( this.current.childNodes.length == 0 )
+			throw "Did not expect an empty span";
+		this.current = this.current.firstChild;
+		this.deleteChars( count );
+	}
+	else
+		throw "There are no more characters in the line to delete";
+};
+
+DomIterator.prototype.insertLineBreak = function()
+{
+	if ( this.current.nodeType == 3 )
+	{
+		// At the beginning of a text node?
+		if ( this.index == 0 )
+		{
+			this.current = this.current.parentNode;
+			this.insertLineBreak();
+			return;
+		}
+		var data = this.current.data;
+		// Return at the end of a span?
+		if ( this.index == data.length )
+		{
+			// Go to the next span if there is one
+			if ( this.current.parentNode.nextSibling )
+			{
+				this.current = this.current.parentNode.nextSibling;
+				this.insertLineBreak();
+				this.current = this.line;
+				this.index = 0;
+				return;
+			}
+			// Return at the end of the last span.
+			var div = document.createElement("div");
+			this.line.parentNode.insertBefore( div, this.line.nextSibling );
+			this.current = div;
+			this.line = divl
+			this.index = 0;
+			return;
+		}
+		// Return in the middle of a span
+		var t = document.createTextNode( data.substring( this.index, data.length ) );
+		this.current.data = data.substr( 0, this.index );
+		this.current = t;
+		this.index = 0;
+		this.insertLineBreak();
+		return;		
+	}
+	// At the beginning of a span?
+	else if ( this.current.nodeName == "SPAN" )
+	{
+		// Return in front of the first span?
+		if ( !this.current.previousSibling )
+		{
+			this.current = this.line;
+			this.insertLineBreak();
+			return;
+		}
+		// Return in front of the last span which in turn is empty?
+		if ( !this.current.nextSibling && !this.current.firstChild )
+		{
+			// Delete the empty span, reposition the cursor and try again
+			this.current = this.current.previousSibling;
+			if ( !this.current )
+				this.current = line;
+			this.line.removeChild(this.current);
+			this.insertLineBreak();
+			return;
+		}			
+		// Return in front of a middle span
+		var div = document.createElement("div");
+		var prev = this.current.previousSibling;
+		while( prev.nextSibling )
+		{
+			var f = prev.nextSibling;
+			prev.parentNode.removeChild(f);
+			div.appendChild(f);
+		}
+		this.current = div.firstChild;
+		if ( !this.current )
+			this.current = div;
+		this.line = div;
+		this.lineno++;
+		this.index = 0;
+		return;
+	}
+	// At the beginning of a line or at the beginning of the entire document?
+	else if ( this.current.nodeName == "DIV" || this.lineno == -1 )
+	{
+		var div = document.createElement("div");
+		// Currently in some line?
+		if ( this.line )
+		{
+			this.line.parentNode.insertBefore( div, this.line.nextSibling );
+			// Move all contents from the current line to the new line
+			while( this.line.firstChild )
+			{
+				var f = this.line.firstChild;
+				this.line.removeChild(f);
+				div.appendChild(f);
+			}
+		}
+		else
+			// First line in the document
+			this.current.appendChild( div );
+		// Put cursor on the new line
+		this.current = div;
+		this.line = div;
+		this.lineno++;
+		this.index = 0;
+	}
+	else
+		throw "Busted"
+};
+					
+DomIterator.prototype.setSpanStyle = function( span, format )
+{
+	if ( format && format["font-weight"] )
+		span.style.fontWeight = format["font-weight"];
+	else
+		span.style.fontWeight = null;
+	if ( format && format["font-style"] )
+		span.style.fontStyle = format["font-style"];
+	else
+		span.style.fontStyle = null;
+	if ( format && format["font-size"] )
+		span.style.fontSize = format["font-size"];
+	else
+		span.style.fontSize = null;		
+};
+
+DomIterator.prototype.compareStyles = function( span1, span2 )
+{
+	return span1.style.fontWeight == span2.style.fontWeight && span1.style.fontStyle == span2.style.fontStyle && span1.style.fontSize == span2.style.fontSize;
 };
 
 var it = new DomIterator( document.getElementById("out2") );
@@ -225,7 +537,34 @@ it.skipChars(5);
 it.insertChars("was");
 it.skipChars(8);
 it.insertChars("est");
-
+it.skipChars(10);
+it.skipLineBreak();
+it.skipChars(2);
+it.setStyle( { "font-size" : "20pt" } );
+it.insertChars("large ");
+it.setStyle( null );
+it.skipChars(11);
+it.skipLineBreak();
+it.setStyle( { "font-style" : "italic" } );
+it.skipChars(3);
+it.setStyle( null );
+it.skipChars(11);
+it.skipLineBreak();
+it.skipChars(4);
+it.setStyle( { "font-weight" : "bold" } );
+it.skipChars(3);
+it.skipLineBreak();
+it.skipChars(3);
+it.setStyle( null );
+it.skipChars(3);
+it.setStyle( { "font-size" : "20pt" } );
+it.skipChars(1);
+it.deleteLineBreak();
+it.skipChars(2);
+it.setStyle( null );
+it.deleteChars(3);
+it.skipChars(2);
+it.insertChars("[NewText]");
 	</script>
 </body>
 </html>
