@@ -363,13 +363,25 @@ DomIterator.prototype.deleteChars = function( count )
 						this.current = p;
 				}
 			}
+			// Need to delete more?
+			if ( count > 0 )
+				this.deleteChars( count );		
 		}
 		// Delete only some part of the text node?
 		else
-			this.current.deleteData( this.index, min );		
-		// Need to delete more?
-		if ( count > 0 )
-			this.deleteChars( count );		
+		{
+			this.current.deleteData( this.index, min );
+			if ( count > 0 )
+			{
+				this.index = 0;
+				var t = this.current.nextSibling;
+				if ( t )
+					this.current = t;
+				else
+					this.current = this.current.parentNode.nextSibling;
+				this.deleteChars( count );		
+			}
+		}
 	}
 	else if ( this.current.nodeType == 1 )
 	{
