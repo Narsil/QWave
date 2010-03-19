@@ -19,6 +19,7 @@ function toDom( doc )
 	var line = null;
 	var lineEmpty = false;
 	var inline = false;
+	var lineno = 0;
 	for( var i = 0; i < doc.content.length; ++i )
 	{
 		var c = doc.content[i];
@@ -49,6 +50,7 @@ function toDom( doc )
 			if ( inline )
 				throw "Malformed doc, nested lines";
 			line = document.createElement("div");
+			line.lineno = lineno++;
 			dom.appendChild( line );
 			inline = true;
 		}
@@ -96,6 +98,7 @@ DomIterator.prototype.skipLineBreak = function()
 	this.current = this.line; //.firstChild;
 	this.index = 0;
 	this.lineno++;
+	this.line.lineno = this.lineno;
 	if ( this.formatUpdate )
 		this.setStyle( this.formatUpdate );
 };
@@ -395,18 +398,19 @@ DomIterator.prototype.splitTextNode = function(node, pos)
 DomIterator.prototype.splitNodeBefore = function(node, before)
 {
 	var el = document.createElement( node.nodeName );
-	while( before )
+	var b = before;
+	while( b )
 	{
-		var n = before.nextSibling;
-		node.removeChild( before );
-		el.appendChild( before );
-		before = n;
+		var n = b.nextSibling;
+		node.removeChild( b );
+		el.appendChild( b );
+		b = n;
 	}
-	node.parentNode.insertBefore( el, before );
+	node.parentNode.insertBefore( el, node.nextSibling );
 	return el;
 };
 
-DomIterator.prototype.insertLineBreak = function()
+DomIterator.prototype.insertLineBreak = function(element)
 {
 	// The document is empty?
 	if ( !this.line )
@@ -416,6 +420,7 @@ DomIterator.prototype.insertLineBreak = function()
 		this.current = this.line;
 		this.index = 0;
 		this.lineno = 0;
+		this.line.lineno = this.lineno;
 		return;
 	}
 	
@@ -430,9 +435,8 @@ DomIterator.prototype.insertLineBreak = function()
 	{
 		before = this.splitNodeBefore( node, before );
 		before.class = "split";
+		this.copySpanStyle( before, node );
 		node = node.parentNode;
-		if ( this.formatUpdate )
-			this.setSpanStyle( before, this.formatUpdate );
 	}
 	if ( node.nodeName != "DIV" )
 		throw "Expected DIV";
@@ -442,6 +446,7 @@ DomIterator.prototype.insertLineBreak = function()
 	this.current = this.line;
 	this.index = 0;
 	this.lineno++;
+	this.line.lineno = this.lineno;
 	if ( this.line.firstChild && this.line.firstChild.nodeType == 1 && this.line.firstChild.class == "split" )
 	{
 		this.current = this.line.firstChild;
@@ -493,6 +498,13 @@ DomIterator.prototype.setSpanStyle = function( span, format )
 		span.style.fontSize = null;		
 };
 
+DomIterator.prototype.copySpanStyle = function( dest, source )
+{
+	dest.style.fontWeight = source.style.fontWeight;
+	dest.style.fontSize = source.style.fontSize;
+	dest.style.fontStyle = source.style.fontStyle;
+};
+
 DomIterator.prototype.compareStyles = function( span1, span2 )
 {
 	return span1.style.fontWeight == span2.style.fontWeight && span1.style.fontStyle == span2.style.fontStyle && span1.style.fontSize == span2.style.fontSize;
@@ -524,7 +536,7 @@ OTListener.prototype.retainElementEnd = function( element )
 OTListener.prototype.insertElementStart = function( element )
 {
 	if ( element.type == "line" )
-		this.it.insertLineBreak();
+		this.it.insertLineBreak( element );
 };
 
 OTListener.prototype.insertElementEnd = function( element )
@@ -580,9 +592,125 @@ OTListener.prototype.end = function()
 	delete this.it;
 };
 
+function Editor(doc, dom)
+{
+	this.dom = dom;
+	this.doc = doc;
+	var self = this;
+	dom.onkeydown = function(e) { self.keydown(e); }
+}
+
+Editor.prototype.keydown = function(e)
+{
+	window.console.log("Key = " + e.keyIdentifier);
+
+	var sel = window.getSelection();
+	var selDom = sel.anchorNode;
+	var selOffset = sel.anchorOffset;
+	
+	var charCount = selDom.nodeType == 3 ? selOffset : 0;
+	var lineno = 0;
+	// Find the line, i.e. <div> element
+	var line = selDom;
+	while( line.nodeType != 1 || line.nodeName != "DIV" )
+	{
+		var p = line.previousSibling;
+		while( p )
+		{
+			charCount += this.charCount(p);
+			p = p.previousSibling;
+		}
+		line = line.parentNode;
+	}
+	// Find the line number
+	var l = line.previousSibling;
+	while( l )
+	{
+		lineno++;
+		l = l.previousSibling;
+	}
+	
+	window.console.log("Line No " + line.lineno.toString() + " and pos " + charCount.toString() );
+	
+	if ( e.keyIdentifier == "Enter" || e.keyCode == 13)
+	{
+		window.console.log("Return");
+		e.stopPropagation();
+		e.preventDefault();
+
+		var iter = new DomIterator( this.dom );
+		iter.line = line;
+		iter.lineno = lineno;
+		iter.current = selDom;
+		iter.index = selOffset;
+		
+		// Insert a line break
+		iter.insertLineBreak();
+		iter.finalizeLine();
+		
+		// Position the cursor
+		if ( iter.current.nodeType == 1 )
+			sel.collapse( iter.current, 0 );	
+		else
+			sel.collapse( iter.current, iter.index );
+			
+		var element = this.getElementByLineNo( lineno );
+		var pos = element.itemCountBefore() + 2 + charCount;
+	
+		var ops = new protocol.ProtocolDocumentOperation();
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+		ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos ) );
+		ops.applyTo( this.doc );
+		return;
+	}
+	
+	var element = this.getElementByLineNo( lineno );
+	var pos = element.itemCountBefore() + 2 + charCount;
+	window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
+	var ops = new protocol.ProtocolDocumentOperation();
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+	ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("X") );
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos ) );
+	ops.applyTo( this.doc );
+};
+
+Editor.prototype.getElementByLineNo = function( lineno )
+{
+	var l = 0;
+	for( var i = 0; i < this.doc.content.length; ++i )
+	{
+		var c = this.doc.content[i];
+		if ( typeof(c) == "string" )
+			continue;
+		if ( c.element_start && c.type == "line" )
+		{
+			if ( l == lineno ) return c;
+			l++;
+		}
+	}
+	return null;
+};
+
+Editor.prototype.charCount = function( node )
+{
+	if ( node.nodeType == 3 )
+		return node.data.length;
+	var result = 0;
+	var c = node.firstChild;
+	while( c )
+	{
+		result += this.charCount(c);
+		c = c.nextSibling;
+	}
+	return result;
+};
 
 var doc = new JSOT.Doc();
 doc.listener = new OTListener( document.getElementById("out3") );
+
+var editor = new Editor( doc, document.getElementById("out2") );
 
 var ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
