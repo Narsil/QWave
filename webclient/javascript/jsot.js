@@ -1039,6 +1039,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 	var currentElementIndex = -1;
 	var stack = [];
 	
+	if ( doc.listener )
+		doc.listener.begin( doc );
+		
 	var c = doc.content[contentIndex];
 	// Loop until all ops are processed
 	while( opIndex < this.component.length )
@@ -1063,6 +1066,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			currentElementIndex = contentIndex;
 			currentElement.is_new = true;
 			
+			if ( doc.listener )
+				doc.listener.insertElementStart( currentElement );
+				
 			if ( inContentIndex == 0 )
 			{
 				doc.content.splice( contentIndex, 0, currentElement );
@@ -1083,6 +1089,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		{
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
+
+			if ( doc.listener )
+				doc.listener.insertElementEnd( currentElement );
 
 			var e = currentElement.start_index;
 			currentElement.end_index = contentIndex;
@@ -1114,6 +1123,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		{
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
+
+			if ( doc.listener )
+				doc.listener.insertCharacters( op.characters );
 
 			currentElement.has_new_text = true;
 			
@@ -1156,6 +1168,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( !c )
 				break;
 			
+			if ( doc.listener )
+				doc.listener.deleteCharacters( op.delete_characters );
+
 			currentElement.has_new_text = true;
 			
 			var count = op.delete_characters.length;
@@ -1215,6 +1230,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				}
 				if ( c.element_start )
 				{
+					if ( doc.listener )
+						doc.listener.retainElementStart( c );
+
 					stack.push( currentElementIndex );
 					currentElement = c;
 					currentElement.start_index = contentIndex;
@@ -1228,6 +1246,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				}
 				else if ( c.element_end )
 				{
+					if ( doc.listener )
+						doc.listener.retainElementEnd( currentElement );
+
 					currentElement.end_index = contentIndex;
 					currentElementIndex = stack.pop();
 					if ( currentElementIndex == -1 )
@@ -1247,6 +1268,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					// Skip characters
 					count -= m;					
 					inContentIndex += m;
+					
+					if ( doc.listener )
+						doc.listener.retainCharacters( m );
+
 					// Retained the entire string? -> Move to the next element
 					if ( inContentIndex == c.length )
 					{						
@@ -1278,6 +1303,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				docAnnotation = anno;
 				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 			}
+			
 			// Count how many opening elements have been deleted. The corresponding closing elements must be deleted, too.
 			deleteDepth++;
 			if ( !c.element_start )
@@ -1289,7 +1315,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				++acount;			
 			if ( acount != op.delete_element_start.attribute.length )
 				throw "Cannot delete element start because the attributes of Op and Doc differ";
-			
+		
 			var attribs = { };
 			for( var a in op.delete_element_start.attribute )
 			{
@@ -1301,6 +1327,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				if ( c.attributes[a] != attribs[a] )
 					throw "Cannot delete element start because attribute values differ";
 			}
+			
+			if ( doc.listener )
+				doc.listener.deleteElementStart( c );
+	
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
 			c = doc.content[contentIndex];
@@ -1322,6 +1352,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				throw "Cannot delete element end, because matching delete element start is missing";
 			if ( !c.element_end )
 				throw "Cannot delete element end at this position, because in the document there is none";
+				
+			if ( doc.listener )
+				doc.listener.deleteElementEnd();
+
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
 			c = doc.content[contentIndex];
@@ -1373,7 +1407,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				}
 			}
 			c = doc.content[++contentIndex];
-			inContentIndex = 0;							
+			inContentIndex = 0;
+
+			if ( doc.listener )
+				doc.listener.updateAttributes( currentElement );
 		}
 		else if ( op.replace_attributes )
 		{
@@ -1414,7 +1451,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c.attributes[keyvalue.key] = keyvalue.value;
 			}
 			c = doc.content[++contentIndex];
-			inContentIndex = 0;							
+			inContentIndex = 0;					
+
+			if ( doc.listener )
+				doc.listener.replaceAttributes( currentElement );			
 		}
 		else if ( op.annotation_boundary )
 		{
@@ -1444,8 +1484,14 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c = doc.content[contentIndex];
 				inContentIndex = 0;								
 			}
+			
+			if ( doc.listener )
+				doc.listener.annotationBoundary( annotationUpdateCount == 0 ? null : updatedAnnotation );
 		}
 	}
+
+	if ( doc.listener )
+		doc.listener.end( doc );
 	
 	if ( opIndex < this.component.length )
 		throw "Document is too small for op"
