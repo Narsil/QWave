@@ -8,6 +8,8 @@
 	<h1>Hello world</h1>
 	<div id="out"></div>
 	<div id="out2" contentEditable="true" style="border:1px solid black"></div>
+	<br><br>
+	<div id="out3" contentEditable="true" style="border:1px solid blue"></div>
 	<script type="text/javascript">
 	
 function toDom( doc )
@@ -62,49 +64,6 @@ function toDom( doc )
 	}
 }
 
-var doc = new JSOT.Doc();
-
-var ops = new protocol.ProtocolDocumentOperation();
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("First") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-weight", null, "bold" ) ] ) );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("This is bold") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-weight" ], [ ] ) );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" ") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("and italic") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("A second line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("An ") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("italic") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("ABC DEF") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("GHI JKL") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
-ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("MNO PQR") );
-ops.applyTo(doc);
-
-var result = doc.toString();
-document.getElementById("out").appendChild( document.createTextNode(result) );
-
-toDom( doc );
-
 function DomIterator( dom )
 {
 	this.lineno = -1;
@@ -113,6 +72,13 @@ function DomIterator( dom )
 	this.index = 0;
 	this.formatUpdate = null;
 }
+
+DomIterator.prototype.dispose = function()
+{
+	delete this.current;
+	delete this.formatUpdate;
+	delete this.line;
+};
 
 DomIterator.prototype.skipLineBreak = function()
 {
@@ -442,6 +408,17 @@ DomIterator.prototype.splitNodeBefore = function(node, before)
 
 DomIterator.prototype.insertLineBreak = function()
 {
+	// The document is empty?
+	if ( !this.line )
+	{
+		this.line = document.createElement("div");
+		this.current.appendChild(this.line);
+		this.current = this.line;
+		this.index = 0;
+		this.lineno = 0;
+		return;
+	}
+	
 	var node = this.current;
 	var before;
 	if ( this.current.nodeType == 3 )
@@ -476,6 +453,9 @@ DomIterator.prototype.insertLineBreak = function()
 
 DomIterator.prototype.finalizeLine = function()
 {
+	if ( !this.line )
+		return;
+		
 	// Last span is empty?
 	if ( this.line.lastChild && this.line.lastChild.nodeType == 1 && this.line.lastChild.childNodes.length == 0 )	
 		this.line.removeChild( this.line.lastChild );
@@ -517,6 +497,135 @@ DomIterator.prototype.compareStyles = function( span1, span2 )
 {
 	return span1.style.fontWeight == span2.style.fontWeight && span1.style.fontStyle == span2.style.fontStyle && span1.style.fontSize == span2.style.fontSize;
 };
+
+
+OTListener = function(dom)
+{
+	this.dom = dom;
+};
+
+OTListener.prototype.begin = function( doc )
+{
+	this.doc = doc;
+	this.it = new DomIterator( this.dom );
+}
+
+OTListener.prototype.retainElementStart = function( element )
+{
+	if ( element.type == "line" )
+		this.it.skipLineBreak();
+};
+
+OTListener.prototype.retainElementEnd = function( element )
+{
+	// Do nothing
+};
+
+OTListener.prototype.insertElementStart = function( element )
+{
+	if ( element.type == "line" )
+		this.it.insertLineBreak();
+};
+
+OTListener.prototype.insertElementEnd = function( element )
+{
+	// Do nothing
+};
+
+OTListener.prototype.deleteElementStart = function( element )
+{
+	if ( element.type == "line" )
+		this.it.deleteLineBreak();
+};
+
+OTListener.prototype.deleteElementEnd = function()
+{
+	// Do nothing
+};
+
+OTListener.prototype.insertCharacters = function( chars )
+{
+	this.it.insertChars( chars );
+};
+
+OTListener.prototype.deleteCharacters = function( chars )
+{
+	this.it.deleteChars( chars.length );
+};
+
+OTListener.prototype.retainCharacters = function( count )
+{
+	this.it.skipChars( count );
+};
+
+OTListener.prototype.updateAttributes = function( element )
+{
+	// Do nothing
+};
+
+OTListener.prototype.replaceAttributes = function( element )
+{
+	// Do nothing
+};
+
+OTListener.prototype.annotationBoundary = function( format )
+{
+	this.it.setStyle( format );
+};
+
+OTListener.prototype.end = function()
+{
+	this.it.finalizeLine();
+	this.it.dispose();
+	delete this.it;
+};
+
+
+var doc = new JSOT.Doc();
+doc.listener = new OTListener( document.getElementById("out3") );
+
+var ops = new protocol.ProtocolDocumentOperation();
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("First") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-weight", null, "bold" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("This is bold") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-weight" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" ") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("and italic") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("A second line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("An ") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("italic") );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("ABC DEF") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("GHI JKL") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("MNO PQR") );
+ops.applyTo(doc);
+
+var result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(result) );
+
+toDom( doc );
+
+/*
 
 var it = new DomIterator( document.getElementById("out2") );
 it.skipLineBreak();
@@ -566,6 +675,8 @@ it.insertLineBreak();
 it.insertLineBreak();
 it.insertChars("Nach Leerzeile");
 it.finalizeLine();
+
+*/
 	</script>
 </body>
 </html>
