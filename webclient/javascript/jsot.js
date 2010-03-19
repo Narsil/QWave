@@ -460,6 +460,14 @@ JSOT.Doc = function(docId, wavelet)
 	 * the annotation of an element or string.
 	 */
 	this.format = [ ];
+	this.listeners = null;
+};
+
+JSOT.Doc.prototype.addListener = function( listener )
+{
+	if ( !this.listeners )
+		this.listeners = [];
+	this.listeners.push( listener );
 };
 
 /**
@@ -748,6 +756,29 @@ JSOT.Doc.prototype.itemCount = function()
 			count++;
 	}
 	return count;
+};
+
+JSOT.Doc.prototype.getCharAt = function(pos)
+{
+	var count = 0;
+	var i = 0;
+	while( i < this.content.length )
+	{
+		var c = this.content[i++];
+		if ( typeof(c) == "string" )
+		{
+			if ( count + c.length > pos )
+				return c[pos - count];
+			count += c.length;
+		}
+		else
+		{
+			if ( pos == count )
+				return null;
+			count++;
+		}
+	}
+	return null;
 };
 
 JSOT.Doc.prototype.getElementByType = function(type)
@@ -1039,8 +1070,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 	var currentElementIndex = -1;
 	var stack = [];
 	
-	if ( doc.listener )
-		doc.listener.begin( doc );
+	if ( doc.listeners )
+		for( var i = 0; i < doc.listeners.length; ++i )
+			doc.listeners[i].begin( doc );
 		
 	var c = doc.content[contentIndex];
 	// Loop until all ops are processed
@@ -1066,8 +1098,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			currentElementIndex = contentIndex;
 			currentElement.is_new = true;
 			
-			if ( doc.listener )
-				doc.listener.insertElementStart( currentElement );
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].insertElementStart( currentElement );
 				
 			if ( inContentIndex == 0 )
 			{
@@ -1091,8 +1124,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
 
-			if ( doc.listener )
-				doc.listener.insertElementEnd( currentElement );
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].insertElementEnd( currentElement );
 
 			currentElement.end_index = contentIndex;
 
@@ -1126,8 +1160,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
 
-			if ( doc.listener )
-				doc.listener.insertCharacters( op.characters );
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].insertCharacters( op.characters );
 
 			currentElement.has_new_text = true;
 			
@@ -1170,8 +1205,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( !c )
 				break;
 			
-			if ( doc.listener )
-				doc.listener.deleteCharacters( op.delete_characters );
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].deleteCharacters( op.delete_characters );
 
 			currentElement.has_new_text = true;
 			
@@ -1238,8 +1274,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					currentElement.parent_index = currentElementIndex;
 					currentElementIndex = contentIndex;
 				 
-					if ( doc.listener )
-						doc.listener.retainElementStart( c );
+					if ( doc.listeners )
+						for( var i = 0; i < doc.listeners.length; ++i )
+							doc.listeners[i].retainElementStart( c );
 				 
 					// Skip the element
 					count--;
@@ -1255,8 +1292,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					else
 						currentElement = doc.content[ currentElementIndex ];
 
-					if ( doc.listener )
-						doc.listener.retainElementEnd( currentElement );
+					if ( doc.listeners )
+						for( var i = 0; i < doc.listeners.length; ++i )
+							doc.listeners[i].retainElementEnd( currentElement );
 
 					// Skip the element
 					count--;
@@ -1271,8 +1309,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					count -= m;					
 					inContentIndex += m;
 					
-					if ( doc.listener )
-						doc.listener.retainCharacters( m );
+					if ( doc.listeners )
+						for( var i = 0; i < doc.listeners.length; ++i )
+							doc.listeners[i].retainCharacters( m );
 
 					// Retained the entire string? -> Move to the next element
 					if ( inContentIndex == c.length )
@@ -1330,8 +1369,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					throw "Cannot delete element start because attribute values differ";
 			}
 			
-			if ( doc.listener )
-				doc.listener.deleteElementStart( c );
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].deleteElementStart( c );
 	
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
@@ -1355,8 +1395,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( !c.element_end )
 				throw "Cannot delete element end at this position, because in the document there is none";
 				
-			if ( doc.listener )
-				doc.listener.deleteElementEnd();
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].deleteElementEnd();
 
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
@@ -1411,8 +1452,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			c = doc.content[++contentIndex];
 			inContentIndex = 0;
 
-			if ( doc.listener )
-				doc.listener.updateAttributes( currentElement );
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )			
+					doc.listeners[i].updateAttributes( currentElement );
 		}
 		else if ( op.replace_attributes )
 		{
@@ -1455,8 +1497,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			c = doc.content[++contentIndex];
 			inContentIndex = 0;					
 
-			if ( doc.listener )
-				doc.listener.replaceAttributes( currentElement );			
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].replaceAttributes( currentElement );			
 		}
 		else if ( op.annotation_boundary )
 		{
@@ -1487,13 +1530,15 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				inContentIndex = 0;								
 			}
 			
-			if ( doc.listener )
-				doc.listener.annotationBoundary( annotationUpdateCount == 0 ? null : updatedAnnotation );
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )		
+					doc.listeners[i].annotationBoundary( annotationUpdateCount == 0 ? null : updatedAnnotation );
 		}
 	}
 
-	if ( doc.listener )
-		doc.listener.end( doc );
+	if ( doc.listeners )
+		for( var i = 0; i < doc.listeners.length; ++i )	
+			doc.listeners[i].end( doc );
 	
 	if ( opIndex < this.component.length )
 		throw "Document is too small for op"
