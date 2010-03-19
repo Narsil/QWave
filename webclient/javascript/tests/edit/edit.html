@@ -9,17 +9,20 @@
 	<div id="out"></div>
 	<div id="out2" contentEditable="true" style="border:1px solid black"></div>
 	<script type="text/javascript">
+	
 function toDom( doc )
 {
 	var dom = document.getElementById("out2");
 	dom.innerHTML = "";
 	var line = null;
+	var lineEmpty = false;
 	var inline = false;
 	for( var i = 0; i < doc.content.length; ++i )
 	{
 		var c = doc.content[i];
 		if ( typeof(c) == "string" )
 		{
+			lineEmpty = false;
 			if ( inline || !line )
 				throw "Malformed doc, characters outside of line";
 			var t = document.createTextNode( c );
@@ -39,6 +42,8 @@ function toDom( doc )
 		}
 		else if ( c.element_start )
 		{
+			if ( line && lineEmpty )
+				line.appendChild( document.createElement("br") );
 			if ( inline )
 				throw "Malformed doc, nested lines";
 			line = document.createElement("div");
@@ -50,6 +55,7 @@ function toDom( doc )
 			if ( !line || !inline )
 				throw "Malformed doc, missing opening line tag";
 			inline = false;
+			lineEmpty = true;
 		}
 		else
 			throw "Busted";
@@ -59,6 +65,11 @@ function toDom( doc )
 var doc = new JSOT.Doc();
 
 var ops = new protocol.ProtocolDocumentOperation();
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("First") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
+ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-weight", null, "bold" ) ] ) );
@@ -101,7 +112,6 @@ function DomIterator( dom )
 	this.current = dom;
 	this.index = 0;
 	this.formatUpdate = null;
-//	this.skipChars(0);
 }
 
 DomIterator.prototype.skipLineBreak = function()
@@ -111,22 +121,26 @@ DomIterator.prototype.skipLineBreak = function()
 		this.line = this.current.childNodes[0];
 	}
 	else
+	{
+		this.finalizeLine();
 		this.line = this.line.nextSibling;
+	}
 	if ( !this.line )
 		throw "There is no more line to go to";
-	this.current = this.line.firstChild;
+	this.current = this.line; //.firstChild;
 	this.index = 0;
 	this.lineno++;
 	if ( this.formatUpdate )
 		this.setStyle( this.formatUpdate );
-//	this.skipChars(0);
 };
 
 DomIterator.prototype.skipChars = function( count )
 {
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
-		
+	if ( this.current == this.line )
+		this.removeBr();
+	
 	if ( this.current.nodeType == 3 )
 	{
 		var min = Math.min( this.current.data.length - this.index, count );
@@ -173,12 +187,15 @@ DomIterator.prototype.insertChars = function( str )
 	// At the beginning of a line?
 	else if ( this.current.nodeName == "DIV" )
 	{
+		if ( this.current == this.line )
+			this.removeBr();	  
 		// Insert a new span at the beginning of the document
 		if ( !this.current.firstChild || this.formatUpdate || this.current.firstChild.nodeType != 3 )
 		{
 			var span = document.createElement("span");
 			this.setSpanStyle( span, this.formatUpdate );
 			var t = document.createTextNode( str );
+			span.appendChild(t);
 			this.current.insertBefore( span, this.current.firstChild );
 			this.current = t;
 			this.index += str.length;
@@ -214,6 +231,9 @@ DomIterator.prototype.setStyle = function( format )
 {
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
+	if ( this.current == this.line )
+		this.removeBr();
+
 	this.formatUpdate = format;
 	
 	if ( this.current.nodeType == 3 )
@@ -227,7 +247,7 @@ DomIterator.prototype.setStyle = function( format )
 				this.setStyle( format );
 				return;
 			}
-			// Att the end of this span? Go to its sibling (if there is one)
+			// At the end of this span? Go to its sibling (if there is one)
 			if ( this.index == this.current.data.length && !this.current.nextSibling && this.current.parentNode.nextSibling )
 			{
 				var next = this.current.parentNode.nextSibling;
@@ -278,7 +298,7 @@ DomIterator.prototype.setStyle = function( format )
 				span.appendChild(t);
 			}
 			this.current = span
-			this.index = 0;					
+			this.index = 0;
 			return;
 		}	
 		else // Inside the DIV
@@ -327,8 +347,31 @@ DomIterator.prototype.setStyle = function( format )
 	}
 	else if ( this.current.nodeType == 1 )
 	{
-		if ( format )
-			this.setSpanStyle( this.current, format );
+		if ( this.current.nodeName == "SPAN" )
+		{
+			if ( format )
+				this.setSpanStyle( this.current, format );
+		}
+		else if ( this.current.nodeName == "DIV" )
+		{
+			if ( format )
+			{
+				if ( this.current.firstChild )
+				{
+					this.current = this.current.firstChild;
+					this.setStyle( format );
+				}
+				else
+				{
+					var span = document.createElement( "span" );
+					this.setSpanStyle( span, format );
+					this.current.appendChild(span);
+					this.current = span;
+				}
+			}
+		}
+		else
+			throw "Busted";
 	}
 	else
 		throw "Busted";
@@ -338,10 +381,13 @@ DomIterator.prototype.deleteLineBreak = function()
 {
 	if ( this.lineno == -1 )
 		throw "Deleting the first line tag is not allowed";
+	if ( this.current == this.line )
+		this.removeBr();
 
 	var l = this.line.nextSibling;
 	if ( !l )
 		throw "There is no more line to go to";
+	this.removeBr( l );
 	while( l.firstChild )
 	{
 		var f = l.firstChild;
@@ -354,6 +400,11 @@ DomIterator.prototype.deleteLineBreak = function()
 
 DomIterator.prototype.deleteChars = function( count )
 {
+	if ( this.lineno == -1 )
+		throw "Deleting chars before the first line tag is not allowed";
+	if ( this.current == this.line )
+		this.removeBr();
+  
 	// Inside a text node
 	if ( this.current.nodeType == 3 )
 	{
@@ -449,7 +500,9 @@ DomIterator.prototype.insertLineBreak = function()
 	}
 	if ( node.nodeName != "DIV" )
 		throw "Expected DIV";
-	this.line = this.splitNodeBefore( node, before );
+	before = this.splitNodeBefore( node, before );
+	this.finalizeLine();
+	this.line = before;
 	this.current = this.line;
 	this.index = 0;
 	this.lineno++;
@@ -458,116 +511,32 @@ DomIterator.prototype.insertLineBreak = function()
 		this.current = this.line.firstChild;
 		this.current.class = null;
 	}
+	else if ( this.formatUpdate )
+		this.setStyle( this.formatUpdate );
 };
 
-/*
-DomIterator.prototype.insertLineBreak = function()
+DomIterator.prototype.finalizeLine = function()
 {
-	if ( this.current.nodeType == 3 )
+	// Last span is empty?
+	if ( this.line.lastChild && this.line.lastChild.nodeType == 1 && this.line.lastChild.childNodes.length == 0 )	
+		this.line.removeChild( this.line.lastChild );
+	
+	// Empty line?
+	if ( !this.line.firstChild )
 	{
-		// At the beginning of a text node?
-		if ( this.index == 0 )
-		{
-			this.current = this.current.parentNode;
-			this.insertLineBreak();
-			return;
-		}
-		var data = this.current.data;
-		// Return at the end of a span?
-		if ( this.index == data.length )
-		{
-			// Go to the next span if there is one
-			if ( this.current.parentNode.nextSibling )
-			{
-				this.current = this.current.parentNode.nextSibling;
-				this.insertLineBreak();
-				this.current = this.line;
-				this.index = 0;
-				return;
-			}
-			// Return at the end of the last span.
-			var div = document.createElement("div");
-			this.line.parentNode.insertBefore( div, this.line.nextSibling );
-			this.current = div;
-			this.line = divl
-			this.index = 0;
-			return;
-		}
-		// Return in the middle of a span
-		var t = document.createTextNode( data.substring( this.index, data.length ) );
-		this.current.data = data.substr( 0, this.index );
-		this.current = t;
-		this.index = 0;
-		this.insertLineBreak();
-		return;		
+		this.line.appendChild( document.createElement("br") );
 	}
-	// At the beginning of a span?
-	else if ( this.current.nodeName == "SPAN" )
-	{
-		// Return in front of the first span?
-		if ( !this.current.previousSibling )
-		{
-			this.current = this.line;
-			this.insertLineBreak();
-			return;
-		}
-		// Return in front of the last span which in turn is empty?
-		if ( !this.current.nextSibling && !this.current.firstChild )
-		{
-			// Delete the empty span, reposition the cursor and try again
-			this.current = this.current.previousSibling;
-			if ( !this.current )
-				this.current = line;
-			this.line.removeChild(this.current);
-			this.insertLineBreak();
-			return;
-		}			
-		// Return in front of a middle span
-		var div = document.createElement("div");
-		var prev = this.current.previousSibling;
-		while( prev.nextSibling )
-		{
-			var f = prev.nextSibling;
-			prev.parentNode.removeChild(f);
-			div.appendChild(f);
-		}
-		this.current = div.firstChild;
-		if ( !this.current )
-			this.current = div;
-		this.line = div;
-		this.lineno++;
-		this.index = 0;
-		return;
-	}
-	// At the beginning of a line or at the beginning of the entire document?
-	else if ( this.current.nodeName == "DIV" || this.lineno == -1 )
-	{
-		var div = document.createElement("div");
-		// Currently in some line?
-		if ( this.line )
-		{
-			this.line.parentNode.insertBefore( div, this.line.nextSibling );
-			// Move all contents from the current line to the new line
-			while( this.line.firstChild )
-			{
-				var f = this.line.firstChild;
-				this.line.removeChild(f);
-				div.appendChild(f);
-			}
-		}
-		else
-			// First line in the document
-			this.current.appendChild( div );
-		// Put cursor on the new line
-		this.current = div;
-		this.line = div;
-		this.lineno++;
-		this.index = 0;
-	}
-	else
-		throw "Busted"
 };
-*/
+
+/**
+  * @param l is optional. It is the <div> tag of a line. If not specified, the current line is used.
+  */
+DomIterator.prototype.removeBr = function(l)
+{
+	if ( !l ) l = this.line;
+	if ( l && l.firstChild && l.firstChild.nodeType == 1 && l.firstChild.nodeName == "BR" )
+		l.removeChild( l.firstChild );
+};
 
 DomIterator.prototype.setSpanStyle = function( span, format )
 {
@@ -591,6 +560,10 @@ DomIterator.prototype.compareStyles = function( span1, span2 )
 };
 
 var it = new DomIterator( document.getElementById("out2") );
+it.skipLineBreak();
+it.skipChars(5);
+it.skipLineBreak();
+it.insertChars("Neu");
 it.skipLineBreak();
 it.insertChars("New! ");
 it.skipChars(5);
@@ -629,7 +602,11 @@ it.setStyle( { "font-style" : "italic" } );
 it.insertChars("[NewText]");
 it.insertLineBreak();
 it.insertChars("Neue Zeile");
-//it.setStyle( null );
+it.setStyle( null );
+it.insertLineBreak();
+it.insertLineBreak();
+it.insertChars("Nach Leerzeile");
+it.finalizeLine();
 	</script>
 </body>
 </html>
