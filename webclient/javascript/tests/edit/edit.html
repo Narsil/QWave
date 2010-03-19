@@ -279,70 +279,29 @@ DomIterator.prototype.setStyle = function( format )
 				}
 				return;
 			}
-			var span = document.createElement( "span" );
-			this.setSpanStyle( span, format );
-			// Not at the end of a text node?
-			if ( this.index != this.current.data.length )
-			{
-				// Split the text node
-				var data = this.current.data;
-				span.appendChild( document.createTextNode( data.substring( this.index, data.length ) ) );
-				this.current.data = data.substr(0, this.index);				
-			}
+			// Split the text node (if required)
+			var t = this.splitTextNode( this.current, this.index );
 			// Split the span
-			this.current.parentNode.parentNode.insertBefore( span, this.current.parentNode.nextSibling );
-			while( this.current.nextSibling )
-			{
-				t = this.current.nextSibling;
-				this.current.parentNode.removeChild( t );
-				span.appendChild(t);
-			}
-			this.current = span
+			var span = this.splitNodeBefore( this.current.parentNode, t );
+			this.setSpanStyle( span, format );
+			this.current = t || span;
 			this.index = 0;
 			return;
 		}	
 		else // Inside the DIV
 		{
-			// In front of a text node? -> Move the text node inside a new span
-			if ( this.index == 0 )
-			{
-				var span = document.createElement( "span" );
-				this.setSpanStyle( span, format );
-				this.current.parentNode.replaceChild( span, this.current );
-				span.appendChild(this.current);
-				this.current = span;
-				this.index = 0;
-				return;
-			}
-			// At the end of a text node?
-			if ( this.index == this.current.data.length )
-			{
-				// Is there a sibling? -> Use it instead
-				if ( this.current.nextSibling )
-				{
-					this.current = this.current.nextSibling;
-					this.index = 0;
-					this.setStyle( format );
-					return;
-				}
-				// No sibling. Create one
-				// TODO: This could create an empty span
-				var span = document.createElement( "span" );
-				this.updateSpan( span, format );
-				this.current.parentNode.insertBefore( span, this.current.nextSibling );
-				this.current = span;
-				this.index = 0;
-				return;
-			}
-			// Inside a text node -> split it
+			// Wrap the text inside a span and repeat
 			var span = document.createElement( "span" );
-			this.setSpanStyle( span, format );
-			this.current.parentNode.insertBefore( span, this.current.nextSibling );
-			var data = this.current.data;
-			span.appendChild( document.createTextNode( data.substring( this.index, data.length ) ) );
-			this.current.data = data.substr(0, this.index);
-			this.current = span;
-			this.index = 0;
+			this.current.parentNode.insertBefore( span, this.current );
+			while( span.nextSibling && span.nextSibling.nodeType == 3 )
+			{
+				var t = span.nextSibling;
+				t.parentNode.removeChild( t );
+				span.appendChild(t);
+			}
+			this.current = span.firstChild;
+			this.setStyle( format );
+			return;
 		}
 	}
 	else if ( this.current.nodeType == 1 )
