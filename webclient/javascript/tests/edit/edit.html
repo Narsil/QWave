@@ -514,16 +514,21 @@ DomIterator.prototype.compareStyles = function( span1, span2 )
 OTListener = function(dom)
 {
 	this.dom = dom;
+	this.suspend = false;
 };
 
 OTListener.prototype.begin = function( doc )
 {
+	if ( this.suspend )
+		return;
 	this.doc = doc;
 	this.it = new DomIterator( this.dom );
 }
 
 OTListener.prototype.retainElementStart = function( element )
 {
+	if ( this.suspend )
+		return;
 	if ( element.type == "line" )
 		this.it.skipLineBreak();
 };
@@ -535,6 +540,8 @@ OTListener.prototype.retainElementEnd = function( element )
 
 OTListener.prototype.insertElementStart = function( element )
 {
+	if ( this.suspend )
+		return;
 	if ( element.type == "line" )
 		this.it.insertLineBreak( element );
 };
@@ -546,6 +553,8 @@ OTListener.prototype.insertElementEnd = function( element )
 
 OTListener.prototype.deleteElementStart = function( element )
 {
+	if ( this.suspend )
+		return;
 	if ( element.type == "line" )
 		this.it.deleteLineBreak();
 };
@@ -557,16 +566,22 @@ OTListener.prototype.deleteElementEnd = function()
 
 OTListener.prototype.insertCharacters = function( chars )
 {
+	if ( this.suspend )
+		return;
 	this.it.insertChars( chars );
 };
 
 OTListener.prototype.deleteCharacters = function( chars )
 {
+	if ( this.suspend )
+		return;
 	this.it.deleteChars( chars.length );
 };
 
 OTListener.prototype.retainCharacters = function( count )
 {
+	if ( this.suspend )
+		return;
 	this.it.skipChars( count );
 };
 
@@ -582,14 +597,23 @@ OTListener.prototype.replaceAttributes = function( element )
 
 OTListener.prototype.annotationBoundary = function( format )
 {
+	if ( this.suspend )
+		return;
 	this.it.setStyle( format );
 };
 
 OTListener.prototype.end = function()
 {
+	if ( this.suspend )
+		return;
 	this.it.finalizeLine();
 	this.it.dispose();
 	delete this.it;
+};
+
+OTListener.prototype.setSuspend = function( suspend )
+{
+	this.suspend = suspend;
 };
 
 function Editor(doc, dom)
@@ -597,11 +621,105 @@ function Editor(doc, dom)
 	this.dom = dom;
 	this.doc = doc;
 	var self = this;
+	dom.onkeypress = function(e) { self.keypress(e); }
 	dom.onkeydown = function(e) { self.keydown(e); }
+	
+	this.listener = new OTListener( this.dom );
+	this.doc.addListener( this.listener );
 }
 
 Editor.prototype.keydown = function(e)
 {
+	window.console.log("KeyDown = " + e.keyIdentifier);
+
+	var sel = window.getSelection();
+	var selDom = sel.anchorNode;
+	var selOffset = sel.anchorOffset;
+	
+	var charCount = selDom.nodeType == 3 ? selOffset : 0;
+	var lineno = 0;
+	// Find the line, i.e. <div> element
+	var line = selDom;
+	while( line.nodeType != 1 || line.nodeName != "DIV" )
+	{
+		var p = line.previousSibling;
+		while( p )
+		{
+			charCount += this.charCount(p);
+			p = p.previousSibling;
+		}
+		line = line.parentNode;
+	}
+	// Find the line number
+	var l = line.previousSibling;
+	while( l )
+	{
+		lineno++;
+		l = l.previousSibling;
+	}
+	
+	window.console.log("Line No " + line.lineno.toString() + " and pos " + charCount.toString() );
+	
+	// Backspace?
+	if ( e.keyCode == 8 )
+	{
+		var element = this.getElementByLineNo( lineno );
+
+		// Delete a linebreak?
+		if ( charCount == 0 )
+		{
+			e.stopPropagation();
+			e.preventDefault();
+
+			// At the beginning of the document? -> Do nothing
+			if ( !line.previousSibling )
+				return;
+
+			var iter = new DomIterator( this.dom );
+			iter.line = line;
+			iter.lineno = lineno - 1;
+			iter.current = line.previousSibling;
+			iter.index = 0;
+			iter.gotoEndOfLine();
+			iter.deleteLineBreak();
+			
+			var pos = element.itemCountBefore() - 2;
+			this.listener.setSuspend(true);
+			var ops = new protocol.ProtocolDocumentOperation();
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart("line") );
+			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 2 ) );
+			ops.applyTo( this.doc );
+			this.listener.setSuspend(false);
+			return;
+		}
+		else
+		{
+			var pos = element.itemCountBefore() + 2 + charCount - 1;
+			var ch = doc.getCharAt(pos);
+			window.console.log("Delete " + ch);
+			this.listener.setSuspend(true);
+			var ops = new protocol.ProtocolDocumentOperation();
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( ch ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 1 ) );
+			ops.applyTo( this.doc );
+			this.listener.setSuspend(false);
+			return;
+		}
+	}
+	// Delete?
+	else if ( e.keyCode == 127 )
+	{
+	}
+};
+
+Editor.prototype.keypress = function(e)
+{
+	if ( e.keyCode == 8 || e.keyCode == 127 )
+		return;
+
 	window.console.log("Key = " + e.keyIdentifier);
 
 	var sel = window.getSelection();
@@ -657,23 +775,27 @@ Editor.prototype.keydown = function(e)
 		var element = this.getElementByLineNo( lineno );
 		var pos = element.itemCountBefore() + 2 + charCount;
 	
+		this.listener.setSuspend(true);
 		var ops = new protocol.ProtocolDocumentOperation();
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos ) );
 		ops.applyTo( this.doc );
+		this.listener.setSuspend(false);
 		return;
 	}
 	
+	this.listener.setSuspend(true);
 	var element = this.getElementByLineNo( lineno );
 	var pos = element.itemCountBefore() + 2 + charCount;
 	window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
 	var ops = new protocol.ProtocolDocumentOperation();
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
-	ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("X") );
+	ops.component.push( protocol.ProtocolDocumentOperation.newCharacters( String.fromCharCode(e.keyCode) ) );
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos ) );
 	ops.applyTo( this.doc );
+	this.listener.setSuspend(false);
 };
 
 Editor.prototype.getElementByLineNo = function( lineno )
@@ -708,9 +830,9 @@ Editor.prototype.charCount = function( node )
 };
 
 var doc = new JSOT.Doc();
-doc.listener = new OTListener( document.getElementById("out3") );
 
 var editor = new Editor( doc, document.getElementById("out2") );
+var editor2 = new Editor( doc, document.getElementById("out3") );
 
 var ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
@@ -751,7 +873,7 @@ ops.applyTo(doc);
 var result = doc.toString();
 document.getElementById("out").appendChild( document.createTextNode(result) );
 
-toDom( doc );
+//toDom( doc );
 
 /*
 
