@@ -1077,6 +1077,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			}
 			else
 			{
+				currentElement.start_index++;
 				doc.content.splice( contentIndex + 1, 0, currentElement, c.substring(inContentIndex, c.length) );
 				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
@@ -1093,13 +1094,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( doc.listener )
 				doc.listener.insertElementEnd( currentElement );
 
-			var e = currentElement.start_index;
 			currentElement.end_index = contentIndex;
-			currentElementIndex = stack.pop();
-			if ( currentElementIndex == -1 )
-				currentElement = doc;
-			else
-				currentElement = doc.content[ currentElementIndex ];
 
 			if ( inContentIndex == 0 )
 			{
@@ -1109,6 +1104,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			}
 			else
 			{
+				currentElement.end_index++
 				if ( updatedAnnotation )
 					doc.format[contentIndex+1] = updatedAnnotation;
 				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementEnd(), c.substring(inContentIndex, c.length) );
@@ -1118,6 +1114,12 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c = doc.content[contentIndex];
 				inContentIndex = 0;
 			}
+			
+			currentElementIndex = stack.pop();
+			if ( currentElementIndex == -1 )
+				currentElement = doc;
+			else
+				currentElement = doc.content[ currentElementIndex ];			
 		}
 		else if ( op.characters )
 		{
@@ -1230,15 +1232,15 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				}
 				if ( c.element_start )
 				{
-					if ( doc.listener )
-						doc.listener.retainElementStart( c );
-
 					stack.push( currentElementIndex );
 					currentElement = c;
 					currentElement.start_index = contentIndex;
 					currentElement.parent_index = currentElementIndex;
 					currentElementIndex = contentIndex;
-				  
+				 
+					if ( doc.listener )
+						doc.listener.retainElementStart( c );
+				 
 					// Skip the element
 					count--;
 					c = doc.content[++contentIndex];
@@ -1246,15 +1248,15 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				}
 				else if ( c.element_end )
 				{
-					if ( doc.listener )
-						doc.listener.retainElementEnd( currentElement );
-
 					currentElement.end_index = contentIndex;
 					currentElementIndex = stack.pop();
 					if ( currentElementIndex == -1 )
 						currentElement = doc;
 					else
 						currentElement = doc.content[ currentElementIndex ];
+
+					if ( doc.listener )
+						doc.listener.retainElementEnd( currentElement );
 
 					// Skip the element
 					count--;
