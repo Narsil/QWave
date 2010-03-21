@@ -395,6 +395,15 @@ DomIterator.prototype.deleteChars = function( count )
 		throw "There are no more characters in the line to delete";
 };
 
+/**
+ * Splits a text node and inserts a new text node right of it. The split is at character
+ * number pos. The new text node is retuned.
+ * If pos is zero, the function does nothing and returns node.
+ * If pos is at then end of the text node, the function does nothing and returns the nextSibling
+ * of node, which can be null.
+ *
+ * @return a text node or null.
+ */
 DomIterator.prototype.splitTextNode = function(node, pos)
 {
 	if ( pos == 0 )
@@ -408,6 +417,11 @@ DomIterator.prototype.splitTextNode = function(node, pos)
 	return t;
 };
 
+/**
+ * @return a new HTML element of the same tagName as node. All children of node starting with
+ *         child number pos is moved to the new HTML element. Finally, the new HTML element
+ *         is inserted as the next sibling of node.
+ */
 DomIterator.prototype.splitNodeBefore = function(node, before)
 {
 	var el = document.createElement( node.nodeName );
@@ -532,6 +546,7 @@ DomIterator.prototype.compareStyles = function( span1, span2 )
 
 DomIterator.prototype.gotoEndOfLine = function()
 {
+	// Empty document?
 	if ( !this.line )
 		return;
 	this.index = 0;
@@ -553,6 +568,30 @@ DomIterator.prototype.gotoEndOfLine = function()
 	this.index = this.current.data.length;
 };
 
+DomIterator.prototype.isEndOfLine = function()
+{
+	// Empty document?
+	if ( !this.line )
+		return true;
+	var node = this.current;
+	do
+	{
+		if ( node.nodeType == 3 )
+		{
+			if ( this.index < node.data.length )
+				return false;
+		}
+		else if ( node.firstChild && !(node.firstChild.nodeType == 1 && node.firstChild.nodeName == "BR" ) )
+			return false;
+		if ( node.nodeName == "DIV" )
+			return true;
+		if ( node.nextSibling )
+			return false;
+		node = node.parentNode.nextSibling;
+	} while( node );
+	
+	return true;
+};
 
 OTListener = function(dom)
 {
@@ -765,8 +804,42 @@ Editor.prototype.keydown = function(e)
 	// Delete?
 	else if ( e.keyCode == 46 )
 	{
-			var element = this.getElementByLineNo( lineno );
-			var pos = element.itemCountBefore() + 2 + charCount;
+		var element = this.getElementByLineNo( lineno );
+		var pos = element.itemCountBefore() + 2 + charCount;
+
+		var iter = new DomIterator( this.dom );
+		iter.line = line;
+		iter.lineno = lineno;
+		iter.current = selDom;
+		iter.index = selOffset;
+		
+		if ( iter.isEndOfLine() )
+		{
+			e.stopPropagation();
+			e.preventDefault();
+
+			iter.deleteLineBreak();
+			iter.finalizeLine();
+			
+			// Position the cursor
+			if ( iter.current.nodeType == 1 )
+				sel.collapse( iter.current, 0 );
+			else
+				sel.collapse( iter.current, iter.index );
+
+			window.console.log("Delete line break" + ch);
+			this.listener.setSuspend(true);
+			var ops = new protocol.ProtocolDocumentOperation();
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart("line") );
+			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 2 ) );
+			ops.applyTo( this.doc );
+			this.listener.setSuspend(false);
+			return;
+		}
+		else
+		{
 			var ch = doc.getCharAt(pos);
 			window.console.log("Delete " + ch);
 			this.listener.setSuspend(true);
@@ -776,7 +849,17 @@ Editor.prototype.keydown = function(e)
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 1 ) );
 			ops.applyTo( this.doc );
 			this.listener.setSuspend(false);
+			
+			if ( this.charCount( line ) == 1 )
+			{
+				e.stopPropagation();
+				e.preventDefault();
+				
+				line.innerHTML = "<br>";
+				sel.collapse( line, 0 );
+			}
 			return;
+		}
 	}
 	else
 		throw "Unsupported keycode";
@@ -879,6 +962,9 @@ Editor.prototype.getElementByLineNo = function( lineno )
 	return null;
 };
 
+/**
+ * @return the number of characters in a HTML node.
+ */
 Editor.prototype.charCount = function( node )
 {
 	if ( node.nodeType == 3 )
@@ -891,6 +977,16 @@ Editor.prototype.charCount = function( node )
 		c = c.nextSibling;
 	}
 	return result;
+};
+
+Editor.prototype.isEmptyElement = function(node)
+{
+	if ( node.nodeType == 3 )
+		return node.data.length == 0;
+	for( var i = 0; i < node.childNodes.length; ++i )
+		if ( !this.isEmptyElement( node.childNodes[i] ) )
+			return false;
+	return true;
 };
 
 var doc = new JSOT.Doc();
