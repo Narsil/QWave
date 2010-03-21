@@ -798,6 +798,17 @@ Editor.prototype.keydown = function(e)
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 1 ) );
 			ops.applyTo( this.doc );
 			this.listener.setSuspend(false);
+			
+			// Chrome inserts some tags when a line becomes empty. Don't want this.
+			// Thus, I do the deletion myself and end up with a nice <div><br><div>
+			if ( this.charCount( line ) == 1 )
+			{
+				e.stopPropagation();
+				e.preventDefault();
+				
+				line.innerHTML = "<br>";
+				sel.collapse( line, 0 );
+			}			
 			return;
 		}
 	}
@@ -849,7 +860,9 @@ Editor.prototype.keydown = function(e)
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 1 ) );
 			ops.applyTo( this.doc );
 			this.listener.setSuspend(false);
-			
+
+			// Chrome inserts some tags when a line becomes empty. Don't want this.
+			// Thus, I do the deletion myself and end up with a nice <div><br><div>
 			if ( this.charCount( line ) == 1 )
 			{
 				e.stopPropagation();
