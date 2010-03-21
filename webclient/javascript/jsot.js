@@ -758,6 +758,11 @@ JSOT.Doc.prototype.itemCount = function()
 	return count;
 };
 
+/**
+ * @param pos is an item index. Each character, element_start and element_end
+ *            counts as one in this index.
+ * @return {string} The character at this position or null if there is no character.
+ */
 JSOT.Doc.prototype.getCharAt = function(pos)
 {
 	var count = 0;
@@ -775,6 +780,35 @@ JSOT.Doc.prototype.getCharAt = function(pos)
 		{
 			if ( pos == count )
 				return null;
+			count++;
+		}
+	}
+	return null;
+};
+
+/**
+ * @param pos is an item index. Each character, element_start and element_end
+ *            counts as one in this index.
+ * @return {string|JSOT.Doc.ElementStart|JSOT.Doc.ElementEnd} The character or item at this position.
+ *         If pos is outside of the allowed range, the function returns null.
+ */
+JSOT.Doc.prototype.getItemAt = function(pos)
+{
+	var count = 0;
+	var i = 0;
+	while( i < this.content.length )
+	{
+		var c = this.content[i++];
+		if ( typeof(c) == "string" )
+		{
+			if ( count + c.length > pos )
+				return c[pos - count];
+			count += c.length;
+		}
+		else
+		{
+			if ( pos == count )
+				return c;
 			count++;
 		}
 	}
@@ -971,9 +1005,11 @@ JSOT.Doc.prototype.createGUI = function()
  */
 protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 {
+	//
 	// Find out which elements are to be deleted and notify the application logic
 	// before the document is changed.
-
+	//
+	
 	// Position in this.components
 	var opIndex = 0;
 	// Position in doc.content
@@ -1012,8 +1048,9 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					var m = Math.min( count, c.length - inContentIndex );
 					// Skip characters
 					count -= m;
-					// Retained the entire string? -> Move to the next element
-					if ( m == c.length - inContentIndex )
+					inContentIndex += m;
+					// Retained/Deleted the entire string? -> Move to the next element
+					if ( c.length == inContentIndex )
 					{
 						// Go to the next content entry
 						c = doc.content[++contentIndex];
@@ -1025,7 +1062,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		else if ( op.delete_element_start )
 		{
 			if ( !c )
-				break;			
+				break;
 			var p = c.parent();
 			if ( p )
 			{
@@ -1050,6 +1087,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		}
 	}
 
+	//
+	// Transform the document
+	//
+	
 	// Position in this.components
 	var opIndex = 0;
 	// Position in doc.content
@@ -1223,6 +1264,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c = c.substring(0, inContentIndex).concat( c.substring(inContentIndex + i, c.length ) );
 				done += i;
 				count -= i;
+				// The entire string has been deleted?
 				if ( c.length == 0 )
 				{
 					// If there is an annotation boundary change in the deleted characters,, this change must be applied
@@ -1238,7 +1280,14 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					inContentIndex = 0;
 				}
 				else
+				{
 					doc.content[contentIndex] = c;
+					if ( c.length == inContentIndex )
+					{
+						c = doc.content[++contentIndex];
+						inContentIndex = 0;
+					}
+				}
 			}
 		}
 		else if ( op.retain_item_count )
@@ -1670,6 +1719,27 @@ protocol.ProtocolDocumentOperation.newDeleteElementStart = function(type, attrib
 		attributes = [ ];
 	c.delete_element_start = new protocol.ProtocolDocumentOperation_Component_ElementStart();
 	c.delete_element_start.type = type;
+	c.delete_element_start.attribute = attributes;
+	return c;
+};
+
+/**
+ * Helper function for manually constructing a document operation.
+ *
+ * @param {JSOT.Doc.ElementStart} element is the element that is to be deleted.
+ *
+ * @return an instance of protocol.ProtocolDocumentOperation_Component.
+ */
+protocol.ProtocolDocumentOperation.newDeleteElementStartFromElement = function(element)
+{
+	var c = new protocol.ProtocolDocumentOperation_Component();
+	if ( !attributes )
+		attributes = [ ];
+	c.delete_element_start = new protocol.ProtocolDocumentOperation_Component_ElementStart();
+	c.delete_element_start.type = element.type;
+	var attributes = [ ];
+	for( var a in element.attributes )	
+		attributes.push( protocol.ProtocolDocumentOperation.newKeyValuePair( a, element.attributes[a] ) );
 	c.delete_element_start.attribute = attributes;
 	return c;
 };
