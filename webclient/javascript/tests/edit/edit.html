@@ -347,24 +347,26 @@ DomIterator.prototype.deleteChars = function( count )
 			var t = this.current;
 			var p = t.parentNode;
 			this.index = 0;
-			var x = t.nextSibling;
+			this.current = t.previousSibling;
+			// Delete the text node
 			p.removeChild(t);
-			if ( x )
-				this.current = x;
-			else
+			if ( !this.current && p.tagName == "SPAN" )
 			{
-				if ( p.nodeName != "SPAN" )
-					throw "Expected a span in the DOM";
-				this.current = p.nextSibling;
-				// Is the span now empty? -> Remove it unless it is the last span in t he line
+				// There is no text node on the left. Go to the left sibling of the parent span
+				this.current = p.previousSibling;
+				// Is the SPAN itself empty
 				if ( !p.firstChild )
-				{
-					if ( this.current )
-						p.parentNode.removeChild(p);
-					else
-						this.current = p;
-				}
+					p.parentNode.removeChild(p);
 			}
+			if ( !this.current )
+				// There is nothing on the left. Go to the beginning of the line
+				this.current = this.line;
+			// On a SPAN? -> Go to the right end of the span
+			if ( this.current.nodeType == 1 && this.current.nodeName == "SPAN" )
+				this.current = this.current.lastChild;			
+			if ( this.current.nodeType == 3 )
+				// Go to the right end of the text node
+				this.index = this.current.data.length;
 			// Need to delete more?
 			if ( count > 0 )
 				this.deleteChars( count );
