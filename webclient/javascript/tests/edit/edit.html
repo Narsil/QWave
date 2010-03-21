@@ -107,8 +107,8 @@ DomIterator.prototype.skipChars = function( count )
 {
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
-	if ( this.current == this.line )
-		this.removeBr();
+//	if ( this.current == this.line )
+//		this.removeBr();
 	
 	if ( this.current.nodeType == 3 )
 	{
@@ -322,6 +322,7 @@ DomIterator.prototype.deleteLineBreak = function()
 		l.removeChild(f);
 		this.line.appendChild(f);
 	};
+	l.parentNode.removeChild(l);
 	if ( this.formatUpdate )
 		this.setStyle( this.formatUpdate );
 };
@@ -443,11 +444,18 @@ DomIterator.prototype.insertLineBreak = function(element)
 		before = this.splitTextNode( node, this.index );
 		node = node.parentNode;
 	}
+	else
+		before = this.current.firstChild;
 	if ( node.nodeName == "SPAN" )
 	{
-		before = this.splitNodeBefore( node, before );
-		before.class = "split";
-		this.copySpanStyle( before, node );
+		if ( !before )
+			before = node.nextSibling;
+		else
+		{
+			before = this.splitNodeBefore( node, before );
+			before.class = "split";
+			this.copySpanStyle( before, node );
+		}
 		node = node.parentNode;
 	}
 	if ( node.nodeName != "DIV" )
@@ -520,6 +528,29 @@ DomIterator.prototype.copySpanStyle = function( dest, source )
 DomIterator.prototype.compareStyles = function( span1, span2 )
 {
 	return span1.style.fontWeight == span2.style.fontWeight && span1.style.fontStyle == span2.style.fontStyle && span1.style.fontSize == span2.style.fontSize;
+};
+
+DomIterator.prototype.gotoEndOfLine = function()
+{
+	if ( !this.line )
+		return;
+	this.index = 0;
+	this.current = this.line.lastChild;
+	// The line is empty?
+	if ( !this.current || (this.current.nodeType == 1 && this.current.nodeName == "BR" ) )
+	{
+		this.current = this.line;
+		return;
+	}
+	// Currently on a span?
+	if( this.current.nodeType == 1 )
+	{
+		// Span is empty?
+		if ( !this.current.lastChild )
+			return;
+		this.current = this.current.lastChild;
+	}
+	this.index = this.current.data.length;
 };
 
 
@@ -642,8 +673,11 @@ function Editor(doc, dom)
 
 Editor.prototype.keydown = function(e)
 {
-	window.console.log("KeyDown = " + e.keyIdentifier);
+	window.console.log("KeyDown = " + e.keyIdentifier.toString() + " code=" + e.keyCode.toString());
 
+	if ( e.keyCode != 8 && e.keyCode != 46 )
+		return;
+	
 	var sel = window.getSelection();
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
@@ -688,14 +722,21 @@ Editor.prototype.keydown = function(e)
 				return;
 
 			var iter = new DomIterator( this.dom );
-			iter.line = line;
+			iter.line = line.previousSibling;
 			iter.lineno = lineno - 1;
-			iter.current = line.previousSibling;
+			iter.current = iter.line;
 			iter.index = 0;
 			iter.gotoEndOfLine();
 			iter.deleteLineBreak();
+			iter.finalizeLine();
 			
-			var pos = element.itemCountBefore() - 2;
+			// Position the cursor
+			if ( iter.current.nodeType == 1 )
+				sel.collapse( iter.current, 0 );
+			else
+				sel.collapse( iter.current, iter.index );
+			
+			var pos = element.itemCountBefore();
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
@@ -710,7 +751,7 @@ Editor.prototype.keydown = function(e)
 		{
 			var pos = element.itemCountBefore() + 2 + charCount - 1;
 			var ch = doc.getCharAt(pos);
-			window.console.log("Delete " + ch);
+			window.console.log("Backspace " + ch);
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
@@ -722,17 +763,28 @@ Editor.prototype.keydown = function(e)
 		}
 	}
 	// Delete?
-	else if ( e.keyCode == 127 )
+	else if ( e.keyCode == 46 )
 	{
+			var element = this.getElementByLineNo( lineno );
+			var pos = element.itemCountBefore() + 2 + charCount;
+			var ch = doc.getCharAt(pos);
+			window.console.log("Delete " + ch);
+			this.listener.setSuspend(true);
+			var ops = new protocol.ProtocolDocumentOperation();
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( ch ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 1 ) );
+			ops.applyTo( this.doc );
+			this.listener.setSuspend(false);
+			return;
 	}
+	else
+		throw "Unsupported keycode";
 };
 
 Editor.prototype.keypress = function(e)
 {
-	if ( e.keyCode == 8 || e.keyCode == 127 )
-		return;
-
-	window.console.log("Key = " + e.keyIdentifier);
+	window.console.log("Key Press = " + e.keyIdentifier);
 
 	var sel = window.getSelection();
 	var selDom = sel.anchorNode;
