@@ -6,6 +6,7 @@
 </head>
 <body>
 	<h1>Hello world</h1>
+	<div><input type="button" value="Update" onclick="var result = doc.toString(); document.getElementById('out').innerHTML = ''; document.getElementById('out').appendChild( document.createTextNode(result) );"></div>
 	<div id="out"></div>
 	<div><input type="button" value="Bold" onclick="editor.bold();"></div>
 	<div id="out2" contentEditable="true" style="border:1px solid black"></div>
@@ -21,16 +22,16 @@ function toDom( doc )
 	var lineEmpty = false;
 	var inline = false;
 	var lineno = 0;
-	for( var i = 0; i < doc.content.length; ++i )
+	for( var i = 0; i < editor.doc.content.length; ++i )
 	{
-		var c = doc.content[i];
+		var c = editor.doc.content[i];
 		if ( typeof(c) == "string" )
 		{
 			lineEmpty = false;
 			if ( inline || !line )
 				throw "Malformed doc, characters outside of line";
 			var t = document.createTextNode( c );
-			var f = doc.format[i];
+			var f = editor.doc.format[i];
 			if ( f )
 			{				
 				var span = document.createElement("span");
@@ -74,6 +75,7 @@ function DomIterator( dom )
 	this.current = dom;
 	this.index = 0;
 	this.formatUpdate = null;
+	this.format = null;
 }
 
 DomIterator.prototype.dispose = function()
@@ -101,7 +103,7 @@ DomIterator.prototype.skipLineBreak = function()
 	this.lineno++;
 	this.line.lineno = this.lineno;
 	if ( this.formatUpdate )
-		this.setStyle( this.formatUpdate );
+		this.setStyle( this.format, this.formatUpdate );
 };
 
 DomIterator.prototype.skipChars = function( count )
@@ -135,6 +137,8 @@ DomIterator.prototype.skipChars = function( count )
 	{
 		if ( this.current.childNodes.length == 0 )
 			throw "Did not expect an empty span";
+		if ( this.formatUpdate && this.current.nodeName == "SPAN" )
+			this.updateSpanStyle(this.current, this.formatUpdate);
 		this.current = this.current.firstChild;
 		this.skipChars( count );
 	}
@@ -197,41 +201,44 @@ DomIterator.prototype.insertChars = function( str )
 	}
 };
 
-DomIterator.prototype.setStyle = function( format )
+DomIterator.prototype.setStyle = function( format, update )
 {
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
 	if ( this.current == this.line )
 		this.removeBr();
 
-	this.formatUpdate = format;
+	this.formatUpdate = update;
+	this.format = format;
 	
+	// Changing the formatting inside a text node?
 	if ( this.current.nodeType == 3 )
 	{
+		// The text node itself is inside a SPAN?
 		if ( this.current.parentNode.nodeName == "SPAN" )
 		{
 			// Defensive programming. Should not happen
 			if ( this.index == 0 )
 			{
 				this.current = this.current.parentNode;
-				this.setStyle( format );
+				this.setStyle( format, update );
 				return;
 			}
-			// At the end of this span? Go to its sibling (if there is one)
+			// At the end of this span? Go to its next sibling (if there is one)
 			if ( this.index == this.current.data.length && !this.current.nextSibling && this.current.parentNode.nextSibling )
 			{
 				var next = this.current.parentNode.nextSibling;
-				// If this is the end of an annotation update then there is no need to do anything about the next span
+				
 				if ( format )
 				{
 					this.current = next;
 					this.index = 0;
-					this.setStyle( format );
+					this.setStyle( format, update );
 				}
 				else
 				{
 					// The next span has the same style? -> Join them
-					if ( this.compareStyles( this.current.parentNode, next ) )
+					if ( next.nodeType == 1 && this.compareStyles( this.current.parentNode, next ) )
 					{
 						while( next.firstChild )
 						{
@@ -243,6 +250,7 @@ DomIterator.prototype.setStyle = function( format )
 					}
 					else
 					{
+						// This is the end of an annotation update. There is no need to do anything about the next node
 						this.current = next;
 						this.index = 0;
 					}
@@ -270,7 +278,7 @@ DomIterator.prototype.setStyle = function( format )
 				span.appendChild(t);
 			}
 			this.current = span.firstChild;
-			this.setStyle( format );
+			this.setStyle( format, update );
 			return;
 		}
 	}
@@ -288,7 +296,7 @@ DomIterator.prototype.setStyle = function( format )
 				if ( this.current.firstChild )
 				{
 					this.current = this.current.firstChild;
-					this.setStyle( format );
+					this.setStyle( format, update );
 				}
 				else
 				{
@@ -325,7 +333,7 @@ DomIterator.prototype.deleteLineBreak = function()
 	};
 	l.parentNode.removeChild(l);
 	if ( this.formatUpdate )
-		this.setStyle( this.formatUpdate );
+		this.setStyle( this.format, this.formatUpdate );
 };
 
 DomIterator.prototype.deleteChars = function( count )
@@ -490,7 +498,7 @@ DomIterator.prototype.insertLineBreak = function(element)
 		this.current.class = null;
 	}
 	else if ( this.formatUpdate )
-		this.setStyle( this.formatUpdate );
+		this.setStyle( this.format, this.formatUpdate );
 };
 
 DomIterator.prototype.finalizeLine = function()
@@ -519,6 +527,16 @@ DomIterator.prototype.removeBr = function(l)
 		l.removeChild( l.firstChild );
 };
 
+DomIterator.prototype.updateSpanStyle = function( span, update )
+{
+	if ( !update )
+		return;
+	for( var key in update )
+	{
+		span.style[key] = update[key].new_value;
+	}
+};
+
 DomIterator.prototype.setSpanStyle = function( span, format )
 {
 	if ( format && format["font-weight"] )
@@ -532,7 +550,7 @@ DomIterator.prototype.setSpanStyle = function( span, format )
 	if ( format && format["font-size"] )
 		span.style.fontSize = format["font-size"];
 	else
-		span.style.fontSize = null;		
+		span.style.fontSize = null;
 };
 
 DomIterator.prototype.copySpanStyle = function( dest, source )
@@ -596,6 +614,16 @@ DomIterator.prototype.isEndOfLine = function()
 	return true;
 };
 
+DomIterator.prototype.isEndOfDocument = function()
+{
+	// Empty document?
+	if ( !this.line )
+		return true;
+	if ( line.nextSibling )
+		return false;
+	return this.isEndOfLine();
+};
+
 OTListener = function(dom)
 {
 	this.dom = dom;
@@ -610,81 +638,87 @@ OTListener.prototype.begin = function( doc )
 	this.it = new DomIterator( this.dom );
 }
 
-OTListener.prototype.retainElementStart = function( element )
+OTListener.prototype.retainElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
+	this.it.format = format;
 	if ( element.type == "line" )
 		this.it.skipLineBreak();
 };
 
-OTListener.prototype.retainElementEnd = function( element )
+OTListener.prototype.retainElementEnd = function( element, format )
 {
-	// Do nothing
+	this.it.format = format;
 };
 
-OTListener.prototype.insertElementStart = function( element )
+OTListener.prototype.insertElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
+	this.it.format = format;
 	if ( element.type == "line" )
 		this.it.insertLineBreak( element );
 };
 
-OTListener.prototype.insertElementEnd = function( element )
+OTListener.prototype.insertElementEnd = function( element, format )
 {
-	// Do nothing
+	this.it.format = format;
 };
 
-OTListener.prototype.deleteElementStart = function( element )
+OTListener.prototype.deleteElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
+	this.it.format = format;
 	if ( element.type == "line" )
 		this.it.deleteLineBreak();
 };
 
-OTListener.prototype.deleteElementEnd = function()
+OTListener.prototype.deleteElementEnd = function(format)
 {
-	// Do nothing
+	this.it.format = format;
 };
 
-OTListener.prototype.insertCharacters = function( chars )
+OTListener.prototype.insertCharacters = function( chars, format )
 {
 	if ( this.suspend )
 		return;
+	this.it.format = format;
 	this.it.insertChars( chars );
 };
 
-OTListener.prototype.deleteCharacters = function( chars )
+OTListener.prototype.deleteCharacters = function( chars, format )
 {
 	if ( this.suspend )
 		return;
+	this.it.format = format;
 	this.it.deleteChars( chars.length );
 };
 
-OTListener.prototype.retainCharacters = function( count )
+OTListener.prototype.retainCharacters = function( count, format )
 {
 	if ( this.suspend )
 		return;
+	this.it.format = format;
 	this.it.skipChars( count );
 };
 
-OTListener.prototype.updateAttributes = function( element )
+OTListener.prototype.updateAttributes = function( element, format )
 {
-	// Do nothing
+	this.it.format = format;
 };
 
-OTListener.prototype.replaceAttributes = function( element )
+OTListener.prototype.replaceAttributes = function( element, format )
 {
-	// Do nothing
+	this.it.format = format;
 };
 
-OTListener.prototype.annotationBoundary = function( format )
+OTListener.prototype.annotationBoundary = function( update, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.setStyle( format );
+	this.it.setStyle( format, update );
 };
 
 OTListener.prototype.end = function()
@@ -758,7 +792,7 @@ Editor.prototype.keydown = function(e)
 		this.deleteSelection();
 		return;
 	}
-	
+		
 	// Backspace?
 	if ( e.keyCode == 8 )
 	{
@@ -839,10 +873,14 @@ Editor.prototype.keydown = function(e)
 		iter.index = selOffset;
 		
 		if ( iter.isEndOfLine() )
-		{
+		{		  
 			e.stopPropagation();
 			e.preventDefault();
 
+			// End of document? -> Do nothing
+			if ( !iter.line.nextSibling )
+				return;
+			
 			iter.deleteLineBreak();
 			iter.finalizeLine();
 			
@@ -1048,7 +1086,7 @@ Editor.prototype.bold = function()
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
 	ops.applyTo( this.doc );
 	
-	sel.collapse( selDom, selOffset );
+	sel.collapse( sel.focusNode, sel.focusOffset );
 };
 
 Editor.prototype.deleteSelection = function()
