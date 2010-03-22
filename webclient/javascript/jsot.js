@@ -889,6 +889,11 @@ JSOT.Doc.prototype.getElementById = function(id)
 	return null;
 };
 
+JSOT.Doc.prototype.isEmpty = function()
+{
+	return this.content.length == 0;
+}
+
 /**
  * @return a simple string representation of the document.
  */
