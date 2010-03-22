@@ -1141,7 +1141,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].insertElementStart( currentElement );
+					doc.listeners[i].insertElementStart( currentElement, updatedAnnotation );
 				
 			if ( inContentIndex == 0 )
 			{
@@ -1167,7 +1167,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].insertElementEnd( currentElement );
+					doc.listeners[i].insertElementEnd( currentElement, updatedAnnotation );
 
 			currentElement.end_index = contentIndex;
 
@@ -1194,7 +1194,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( currentElementIndex == -1 )
 				currentElement = doc;
 			else
-				currentElement = doc.content[ currentElementIndex ];			
+				currentElement = doc.content[ currentElementIndex ];
 		}
 		else if ( op.characters )
 		{
@@ -1203,7 +1203,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].insertCharacters( op.characters );
+					doc.listeners[i].insertCharacters( op.characters, updatedAnnotation );
 
 			currentElement.has_new_text = true;
 			
@@ -1246,10 +1246,6 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			if ( !c )
 				break;
 			
-			if ( doc.listeners )
-				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].deleteCharacters( op.delete_characters );
-
 			currentElement.has_new_text = true;
 			
 			var count = op.delete_characters.length;
@@ -1258,6 +1254,11 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			{
 				if ( typeof(c) != "string" )
 					throw "Cannot delete characters here, because at this position there are no characters";
+
+				if ( doc.listeners )
+					for( var i = 0; i < doc.listeners.length; ++i )
+						doc.listeners[i].deleteCharacters( op.delete_characters, updatedAnnotation );
+
 				var i = Math.min( count, c.length - inContentIndex );
 				if ( c.substr( inContentIndex, i ) != op.delete_characters.substr( done, i ) )
 					throw "Cannot delete characters, because the characters in the document and operation differ.";
@@ -1325,7 +1326,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				 
 					if ( doc.listeners )
 						for( var i = 0; i < doc.listeners.length; ++i )
-							doc.listeners[i].retainElementStart( c );
+							doc.listeners[i].retainElementStart( c, updatedAnnotation );
 				 
 					// Skip the element
 					count--;
@@ -1343,7 +1344,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 
 					if ( doc.listeners )
 						for( var i = 0; i < doc.listeners.length; ++i )
-							doc.listeners[i].retainElementEnd( currentElement );
+							doc.listeners[i].retainElementEnd( currentElement, updatedAnnotation );
 
 					// Skip the element
 					count--;
@@ -1355,12 +1356,12 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					// How many characters can be retained?
 					var m = Math.min( count, c.length - inContentIndex );
 					// Skip characters
-					count -= m;					
+					count -= m;
 					inContentIndex += m;
 					
 					if ( doc.listeners )
 						for( var i = 0; i < doc.listeners.length; ++i )
-							doc.listeners[i].retainCharacters( m );
+							doc.listeners[i].retainCharacters( m, updatedAnnotation );
 
 					// Retained the entire string? -> Move to the next element
 					if ( inContentIndex == c.length )
@@ -1420,7 +1421,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].deleteElementStart( c );
+					doc.listeners[i].deleteElementStart( c, updatedAnnotation );
 	
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
@@ -1446,7 +1447,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].deleteElementEnd();
+					doc.listeners[i].deleteElementEnd(updatedAnnotation);
 
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
@@ -1502,8 +1503,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			inContentIndex = 0;
 
 			if ( doc.listeners )
-				for( var i = 0; i < doc.listeners.length; ++i )			
-					doc.listeners[i].updateAttributes( currentElement );
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].updateAttributes( currentElement, updatedAnnotation );
 		}
 		else if ( op.replace_attributes )
 		{
@@ -1535,7 +1536,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			{
 				docAnnotation = anno;
 				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-			}											
+			}
 			doc.format[contentIndex] = updatedAnnotation;
 			c.attributes = { }
 			for( var a in op.replace_attributes.new_attribute )
@@ -1544,11 +1545,11 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c.attributes[keyvalue.key] = keyvalue.value;
 			}
 			c = doc.content[++contentIndex];
-			inContentIndex = 0;					
+			inContentIndex = 0;
 
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].replaceAttributes( currentElement );			
+					doc.listeners[i].replaceAttributes( currentElement, updatedAnnotation );
 		}
 		else if ( op.annotation_boundary )
 		{
@@ -1576,12 +1577,13 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				doc.format.splice( contentIndex, 1, docAnnotation, docAnnotation );
 				contentIndex += 1;
 				c = doc.content[contentIndex];
-				inContentIndex = 0;								
+				inContentIndex = 0;
 			}
 			
 			if ( doc.listeners )
-				for( var i = 0; i < doc.listeners.length; ++i )		
-					doc.listeners[i].annotationBoundary( annotationUpdateCount == 0 ? null : updatedAnnotation );
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].annotationBoundary( annotationUpdateCount == 0 ? null : annotationUpdate, updatedAnnotation );
+					// doc.listeners[i].annotationBoundary( annotationUpdateCount == 0 ? null : updatedAnnotation );
 		}
 	}
 
