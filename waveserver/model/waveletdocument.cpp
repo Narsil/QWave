@@ -11,6 +11,8 @@ WaveletDocument::WaveletDocument(Wavelet* wavelet, const QString& name)
 
 void WaveletDocument::toDocumentOperation( protocol::ProtocolDocumentOperation* op )
 {
+    qDebug("DOC = %s", this->toString().toAscii().constData() );
+
     QString str;
 
     Annotation anno;
@@ -20,6 +22,12 @@ void WaveletDocument::toDocumentOperation( protocol::ProtocolDocumentOperation* 
         const Annotation& annotation = annotationAt(i);
         if ( annotation != anno )
         {
+            if ( !str.isEmpty() )
+            {
+                protocol::ProtocolDocumentOperation_Component* c = op->add_component();
+                c->set_characters( str.toStdString() );
+                str = "";
+            }
             protocol::ProtocolDocumentOperation_Component* c = op->add_component();
             protocol::ProtocolDocumentOperation_Component_AnnotationBoundary* b = c->mutable_annotation_boundary();
             foreach( QString key, annotation.keys() )
