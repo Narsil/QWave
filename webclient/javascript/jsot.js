@@ -815,6 +815,29 @@ JSOT.Doc.prototype.getItemAt = function(pos)
 	return null;
 };
 
+JSOT.Doc.prototype.getFormatAt = function(pos)
+{
+	var count = 0;
+	var i = 0;
+	while( i < this.content.length )
+	{
+		var c = this.content[i++];
+		if ( typeof(c) == "string" )
+		{
+			if ( count + c.length > pos )
+				return this.format[i];
+			count += c.length;
+		}
+		else
+		{
+			if ( pos == count )
+				return this.format[i];
+			count++;
+		}
+	}
+	return null;
+};
+
 JSOT.Doc.prototype.getElementByType = function(type)
 {
 	for( var i = 0; i < this.content.length; ++i )

@@ -68,13 +68,40 @@ function toDom( doc )
 	}
 }
 
+/**
+ * @param {HTMLElement} dom is the HTML element that is contentEditable=true.
+ *
+ * @constructor
+ */
 function DomIterator( dom )
 {
+	/**
+	 * Number of the current line.
+	 */
 	this.lineno = -1;
+	/**
+	 * A HTMLElementDiv.
+	 */
 	this.line = null;
+	/**
+	 * Number of characters inside the line
+	 */
+	this.charCount;
+	/**
+	 * A div, span or text node.
+	 */
 	this.current = dom;
+	/**
+	 * Position inside a text node. Only relevant when this,current is a text node.
+	 */
 	this.index = 0;
+	/**
+	 * List of KeyValueUpdate objects.
+	 */
 	this.formatUpdate = null;
+	/**
+	 * A dictionary mapping style keys to their value.
+	 */
 	this.format = null;
 }
 
@@ -82,9 +109,13 @@ DomIterator.prototype.dispose = function()
 {
 	delete this.current;
 	delete this.formatUpdate;
+	delete this.format;
 	delete this.line;
 };
 
+/**
+ * Move the iterator over a linebreak.
+ */
 DomIterator.prototype.skipLineBreak = function()
 {
 	if ( this.lineno == -1 )
@@ -100,23 +131,27 @@ DomIterator.prototype.skipLineBreak = function()
 		throw "There is no more line to go to";
 	this.current = this.line; //.firstChild;
 	this.index = 0;
+	this.charCount = 0;
 	this.lineno++;
 	this.line.lineno = this.lineno;
 	if ( this.formatUpdate )
 		this.setStyle( this.format, this.formatUpdate );
 };
 
+/**
+ * Moves the iterator over a number of characters inside a line.
+ */
 DomIterator.prototype.skipChars = function( count )
 {
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
-//	if ( this.current == this.line )
-//		this.removeBr();
 	
+	// Inside a text node?
 	if ( this.current.nodeType == 3 )
 	{
 		var min = Math.min( this.current.data.length - this.index, count );
 		this.index += min;
+		this.charCount += min;
 		count -= min;
 		if ( count > 0 )
 		{
@@ -133,10 +168,12 @@ DomIterator.prototype.skipChars = function( count )
 			this.skipChars( count );
 		}
 	}
+	// Inside a HTML element?
 	else if ( this.current.nodeType == 1 )
 	{
 		if ( this.current.childNodes.length == 0 )
 			throw "Did not expect an empty span";
+		// Reformat the span if we are supposed to perform a format update.
 		if ( this.formatUpdate && this.current.nodeName == "SPAN" )
 			this.updateSpanStyle(this.current, this.formatUpdate);
 		this.current = this.current.firstChild;
@@ -146,6 +183,9 @@ DomIterator.prototype.skipChars = function( count )
 		throw "There are no more characters in the line to skip";
 };
 
+/**
+ * Inserts characters at the current position. Uses the current format for these characters.
+ */
 DomIterator.prototype.insertChars = function( str )
 {
 	if ( this.lineno == -1 )
@@ -156,13 +196,14 @@ DomIterator.prototype.insertChars = function( str )
 	{
 		this.current.insertData( this.index, str );
 		this.index += str.length;
+		this.charCount += str.length;
 		return;
 	}
 	// At the beginning of a line?
 	else if ( this.current.nodeName == "DIV" )
 	{
 		if ( this.current == this.line )
-			this.removeBr();	  
+			this.removeBr();
 		// Insert a new span at the beginning of the document
 		if ( !this.current.firstChild || this.formatUpdate || this.current.firstChild.nodeType != 3 )
 		{
@@ -173,6 +214,7 @@ DomIterator.prototype.insertChars = function( str )
 			this.current.insertBefore( span, this.current.firstChild );
 			this.current = t;
 			this.index += str.length;
+			this.charCount += str.length;
 			return;
 		}
 		// Prepend to the existing text node
@@ -180,6 +222,7 @@ DomIterator.prototype.insertChars = function( str )
 		t.insertData( 0, str );
 		this.current = t;
 		this.index = str.length;
+		this.charCount += str.length;
 		return;
 	}
 	// At the beginning of a span
@@ -198,9 +241,17 @@ DomIterator.prototype.insertChars = function( str )
 		this.current.appendChild( t );
 		this.current = t;
 		this.index = str.length;
+		this.charCount += str.length;
 	}
 };
 
+/**
+ * Sets the style for all characters which are inserted from here on. The update
+ * will be applied to all skipped items.
+ *
+ * @param {object} format is a dictionary mapping style keys to their value.
+ * @param {KeyValueUpdate[]} update is a list of style updates or null if nothing needs updating.
+ */
 DomIterator.prototype.setStyle = function( format, update )
 {
 	if ( this.lineno == -1 )
@@ -459,6 +510,7 @@ DomIterator.prototype.insertLineBreak = function(element)
 		this.index = 0;
 		this.lineno = 0;
 		this.line.lineno = this.lineno;
+		this.charCount = 0;
 		return;
 	}
 	
@@ -492,6 +544,7 @@ DomIterator.prototype.insertLineBreak = function(element)
 	this.index = 0;
 	this.lineno++;
 	this.line.lineno = this.lineno;
+	this.charCount = 0;
 	if ( this.line.firstChild && this.line.firstChild.nodeType == 1 && this.line.firstChild.class == "split" )
 	{
 		this.current = this.line.firstChild;
@@ -533,24 +586,59 @@ DomIterator.prototype.updateSpanStyle = function( span, update )
 		return;
 	for( var key in update )
 	{
-		span.style[key] = update[key].new_value;
+		if ( key == "style/backgroundColor" )
+			span.backgroundColor = update[key].new_value;
+		if ( key == "style/color" )
+			span.color = update[key].new_value;
+		if ( key == "style/fontFamily" )
+			span.fontFamily = update[key].new_value;
+		if ( key == "style/fontSize" )
+			span.fontSize = update[key].new_value;
+		if ( key == "style/fontStyle" )
+			span.fontStyle = update[key].new_value;
+		if ( key == "style/fontWeight" )
+			span.fontWeight = update[key].new_value;
+		if ( key == "style/textDecoration" )
+			span.textDecoration = update[key].new_value;
+		if ( key == "style/verticalAlign" )
+			span.verticalAlign = update[key].new_value;
 	}
 };
 
 DomIterator.prototype.setSpanStyle = function( span, format )
 {
-	if ( format && format["font-weight"] )
-		span.style.fontWeight = format["font-weight"];
+	if ( format && format["style/backgroundColor"] )
+		span.style.backgroundColor = format["style/backgroundColor"];
+	else
+		span.style.backgroundColor = null;
+	if ( format && format["style/color"] )
+		span.style.color = format["style/color"];
+	else
+		span.style.color = null;
+	if ( format && format["style/fontFamily"] )
+		span.style.fontFamily = format["style/fontFamily"];
+	else
+		span.style.fontFamily = null;	
+	if ( format && format["style/fontWeight"] )
+		span.style.fontWeight = format["style/fontWeight"];
 	else
 		span.style.fontWeight = null;
-	if ( format && format["font-style"] )
-		span.style.fontStyle = format["font-style"];
+	if ( format && format["style/fontStyle"] )
+		span.style.fontStyle = format["style/fontStyle"];
 	else
 		span.style.fontStyle = null;
-	if ( format && format["font-size"] )
-		span.style.fontSize = format["font-size"];
+	if ( format && format["style/fontSize"] )
+		span.style.fontSize = format["style/fontSize"];
 	else
 		span.style.fontSize = null;
+	if ( format && format["style/textDecoration"] )
+		span.style.textDecoration = format["style/textDecoration"];
+	else
+		span.style.textDecoration = null;	
+	if ( format && format["style/verticalAlign"] )
+		span.style.verticalAlign = format["style/verticalAlign"];
+	else
+		span.style.verticalAlign = null;
 };
 
 DomIterator.prototype.copySpanStyle = function( dest, source )
@@ -624,16 +712,23 @@ DomIterator.prototype.isEndOfDocument = function()
 	return this.isEndOfLine();
 };
 
-OTListener = function(dom)
+OTListener = function(dom, session, jid)
 {
 	this.dom = dom;
 	this.suspend = false;
+	this.cursorAnnoKey = "user/e/" + session;
+	this.cursorAnnoValue = jid;
+	this.hasSelection = false;
 };
 
 OTListener.prototype.begin = function( doc )
 {
 	if ( this.suspend )
 		return;
+//	this.suspend = true;
+//	this.hasSelection = this.editor.markSelection();
+//	this.suspend = false;
+	delete this.cursor;
 	this.doc = doc;
 	this.it = new DomIterator( this.dom );
 }
@@ -649,6 +744,8 @@ OTListener.prototype.retainElementStart = function( element, format )
 
 OTListener.prototype.retainElementEnd = function( element, format )
 {
+	if ( this.suspend )
+		return;
 	this.it.format = format;
 };
 
@@ -657,12 +754,15 @@ OTListener.prototype.insertElementStart = function( element, format )
 	if ( this.suspend )
 		return;
 	this.it.format = format;
+	this.checkForCursor( format );
 	if ( element.type == "line" )
 		this.it.insertLineBreak( element );
 };
 
 OTListener.prototype.insertElementEnd = function( element, format )
 {
+	if ( this.suspend )
+		return;
 	this.it.format = format;
 };
 
@@ -671,12 +771,15 @@ OTListener.prototype.deleteElementStart = function( element, format )
 	if ( this.suspend )
 		return;
 	this.it.format = format;
+	this.checkForCursor( format );
 	if ( element.type == "line" )
 		this.it.deleteLineBreak();
 };
 
 OTListener.prototype.deleteElementEnd = function(format)
 {
+	if ( this.suspend )
+		return;
 	this.it.format = format;
 };
 
@@ -685,6 +788,7 @@ OTListener.prototype.insertCharacters = function( chars, format )
 	if ( this.suspend )
 		return;
 	this.it.format = format;
+	this.checkForCursor( format );
 	this.it.insertChars( chars );
 };
 
@@ -693,6 +797,7 @@ OTListener.prototype.deleteCharacters = function( chars, format )
 	if ( this.suspend )
 		return;
 	this.it.format = format;
+	this.checkForCursor( format );
 	this.it.deleteChars( chars.length );
 };
 
@@ -701,31 +806,46 @@ OTListener.prototype.retainCharacters = function( count, format )
 	if ( this.suspend )
 		return;
 	this.it.format = format;
+	this.checkForCursor( format );
 	this.it.skipChars( count );
 };
 
 OTListener.prototype.updateAttributes = function( element, format )
 {
+	if ( this.suspend )
+		return;
 	this.it.format = format;
+	this.checkForCursor( format );
 };
 
 OTListener.prototype.replaceAttributes = function( element, format )
 {
+	if ( this.suspend )
+		return;
 	this.it.format = format;
+	this.checkForCursor( format );
 };
 
 OTListener.prototype.annotationBoundary = function( update, format )
 {
 	if ( this.suspend )
 		return;
+	this.checkForCursor( format );
 	this.it.setStyle( format, update );
 };
 
 OTListener.prototype.end = function()
 {
 	if ( this.suspend )
-		return;
+		return;	
 	this.it.finalizeLine();
+	
+	if ( !this.cursor )
+		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
+
+	if ( this.hasSelection )
+		this.editor.showSelection();
+	
 	this.it.dispose();
 	delete this.it;
 };
@@ -735,15 +855,26 @@ OTListener.prototype.setSuspend = function( suspend )
 	this.suspend = suspend;
 };
 
-function Editor(doc, dom)
+OTListener.prototype.checkForCursor = function(format)
+{
+	if ( !this.cursor && format && format[ this.cursorAnnoKey ] == this.cursorAnnoValue )
+		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
+}
+
+
+
+function Editor(doc, dom, session, jid)
 {
 	this.dom = dom;
 	this.doc = doc;
+	this.session = session;
+	this.jid = jid;
 	var self = this;
 	dom.onkeypress = function(e) { self.keypress(e); }
 	dom.onkeydown = function(e) { self.keydown(e); }
 	
-	this.listener = new OTListener( this.dom );
+	this.listener = new OTListener( this.dom, session, jid );
+	this.listener.editor = this;
 	this.doc.addListener( this.listener );
 }
 
@@ -1056,6 +1187,8 @@ Editor.prototype.isEmptyElement = function(node)
 
 Editor.prototype.bold = function()
 {
+	this.markSelection();
+	
 	var sel = window.getSelection();
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
@@ -1073,20 +1206,41 @@ Editor.prototype.bold = function()
 		pos1 = tmp;
 	}
 	
-	var element1 = this.getElementByLineNo( pos1.lineno );
-	var docpos1 = element1.itemCountBefore() + 2 + pos1.charCount;
-	var element2 = this.getElementByLineNo( pos2.lineno );
-	var docpos2 = element2.itemCountBefore() + 2 + pos2.charCount;
+	var docpos1 = this.getDocPosition( pos1.lineno, pos1.charCount );
+	var docpos2 = this.getDocPosition( pos2.lineno, pos2.charCount );
+
+	var style = false;
 
 	var ops = new protocol.ProtocolDocumentOperation();
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos1 ) );
-	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-weight", null, "bold" ) ] ) );	
-	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos2 - docpos1 ) );
-	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-weight" ], [ ] ) );
+	for( var i = docpos1; i < docpos2; ++i )
+	{
+		var format = this.doc.getFormatAt( i );
+		var s = ( format && format["style/fontWeight"] == "bold" );
+		if ( (s && style) || (!s && !style) )
+		{
+			var ends = [];
+			var begins = [];
+			if ( s && style )
+			{
+				ends.push( "style/fontWeight" );
+				style = false;
+			}
+			else if ( !s && !style )
+			{
+				begins.push( protocol.ProtocolDocumentOperation.newKeyValueUpdate( "style/fontWeight", null, "bold" ) );
+				style = true;
+			}
+			ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( ends, begins ) );
+		}
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 1 ) );
+	}
+	if ( style )
+		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "style/fontWeight" ], [  ] ) );
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
 	ops.applyTo( this.doc );
 	
-	sel.collapse( sel.focusNode, sel.focusOffset );
+	this.showSelection();
 };
 
 Editor.prototype.deleteSelection = function()
@@ -1098,6 +1252,8 @@ Editor.prototype.deleteSelection = function()
 	if ( sel.isCollapsed )
 		return;
 
+	this.markSelection();
+	
 	var pos1 = this.getLinePosition( sel.anchorNode, sel.anchorOffset );
 	var pos2 = this.getLinePosition( sel.focusNode, sel.focusOffset );
 	
@@ -1127,10 +1283,15 @@ Editor.prototype.deleteSelection = function()
 	}
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
 	ops.applyTo( this.doc );
-	
-	sel.collapse( selDom, selOffset );
+
+	this.showSelection();
 };
 
+/**
+ * Determines the line number and character position inside the line
+ * from a given HTML node and offset. This helps in mapping HTML cursor positions
+ * to a position in JSOT.Doc.
+ */
 Editor.prototype.getLinePosition = function(selDom, selOffset)
 {
 	var charCount = selDom.nodeType == 3 ? selOffset : 0;
@@ -1158,10 +1319,82 @@ Editor.prototype.getLinePosition = function(selDom, selOffset)
 	return { line : line, lineno : lineno, charCount : charCount };
 };
 
+Editor.prototype.getDocPosition = function( lineno, charCount )
+{
+	var element = this.getElementByLineNo( lineno );
+	return element.itemCountBefore() + 2 + charCount;
+};
+
+Editor.prototype.getDomPosition = function( line, lineno, charCount )
+{
+	var it = new DomIterator(this.dom);
+	it.line = line;
+	it.current = line;
+	it.lineno = lineno;
+	it.skipChars( charCount );
+	return { node : it.current, offset : it.index };
+};
+
+Editor.prototype.markSelection = function()
+{
+	this.listener.setSuspend( true );
+	
+	// Delete the old selection
+	if ( this.listener.cursor )
+	{
+		var cursorpos = this.getDocPosition( this.listener.cursor.lineno, this.listener.cursor.charCount );
+		var ops = new protocol.ProtocolDocumentOperation();
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( cursorpos ) );
+	  	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, this.listener.cursorAnnoValue, null ) ] ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - cursorpos ) );
+		ops.applyTo( this.doc );
+	}
+	
+	var sel = window.getSelection();
+	var selDom = sel.focusNode;
+	var selOffset = sel.focusOffset;
+	
+	// Is the current selection in this editor?
+	var found = false;
+	var x = selDom;
+	while( x )
+	{
+		if ( x == this.dom )
+		{
+			found = true;
+			break;
+		}
+		x = x.parentNode;
+	}
+	
+	if ( found )
+	{
+		var pos = this.getLinePosition( selDom, selOffset );
+		var cursorpos = this.getDocPosition( pos.lineno, pos.charCount );
+		var ops = new protocol.ProtocolDocumentOperation();
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( cursorpos ) );
+	  	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, null, this.listener.cursorAnnoValue ) ] ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - cursorpos ) );
+		ops.applyTo( this.doc );		
+	}
+	
+	this.listener.setSuspend( false );
+};
+
+Editor.prototype.showSelection = function()
+{
+	var sel = window.getSelection();
+	var cursorPos = this.getDomPosition( this.listener.cursor.line, this.listener.cursor.lineno, this.listener.cursor.charCount );
+	sel.collapse( cursorPos.node, cursorPos.offset );
+};
+
+
+
+
 var doc = new JSOT.Doc();
 
-var editor = new Editor( doc, document.getElementById("out2") );
-var editor2 = new Editor( doc, document.getElementById("out3") );
+var editor = new Editor( doc, document.getElementById("out2"), "123", "Torben" );
+var editor2 = new Editor( doc, document.getElementById("out3"), "789", "Horst" );
 
 var ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
@@ -1171,22 +1404,22 @@ ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") )
 ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-weight", null, "bold" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "style/fontWeight", null, "bold" ) ] ) );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("This is bold") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-weight" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "style/fontWeight" ], [ ] ) );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" ") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "style/fontStyle", null, "italic" ) ] ) );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("and italic") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "style/fontStyle" ], [ ] ) );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("A second line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("An ") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "font-style", null, "italic" ) ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "style/fontStyle", null, "italic" ) ] ) );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("italic") );
-ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "font-style" ], [ ] ) );
+ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "style/fontStyle" ], [ ] ) );
 ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
@@ -1202,60 +1435,6 @@ ops.applyTo(doc);
 var result = doc.toString();
 document.getElementById("out").appendChild( document.createTextNode(result) );
 
-//toDom( doc );
-
-/*
-
-var it = new DomIterator( document.getElementById("out2") );
-it.skipLineBreak();
-it.skipChars(5);
-it.skipLineBreak();
-it.insertChars("Neu");
-it.skipLineBreak();
-it.insertChars("New! ");
-it.skipChars(5);
-it.insertChars("was");
-it.skipChars(8);
-it.insertChars("est");
-it.skipChars(10);
-it.skipLineBreak();
-it.skipChars(2);
-it.setStyle( { "font-size" : "20pt" } );
-it.insertChars("large ");
-it.setStyle( null );
-it.skipChars(11);
-it.skipLineBreak();
-it.setStyle( { "font-style" : "italic" } );
-it.skipChars(3);
-it.setStyle( null );
-it.skipChars(11);
-it.skipLineBreak();
-it.skipChars(4);
-it.setStyle( { "font-weight" : "bold" } );
-it.skipChars(3);
-it.skipLineBreak();
-it.skipChars(3);
-it.setStyle( null );
-it.skipChars(3);
-it.setStyle( { "font-size" : "20pt" } );
-it.skipChars(1);
-it.deleteLineBreak();
-it.skipChars(2);
-it.setStyle( null );
-//it.deleteChars(5);
-it.deleteChars(3);
-it.skipChars(2);
-it.setStyle( { "font-style" : "italic" } );
-it.insertChars("[NewText]");
-it.insertLineBreak();
-it.insertChars("Neue Zeile");
-it.setStyle( null );
-it.insertLineBreak();
-it.insertLineBreak();
-it.insertChars("Nach Leerzeile");
-it.finalizeLine();
-
-*/
 	</script>
 </body>
 </html>
