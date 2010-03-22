@@ -32,6 +32,8 @@ void WaveletDocument::toDocumentOperation( protocol::ProtocolDocumentOperation* 
             protocol::ProtocolDocumentOperation_Component_AnnotationBoundary* b = c->mutable_annotation_boundary();
             foreach( QString key, annotation.keys() )
             {
+                if ( anno.contains( key ) && anno.value(key) == annotation.value(key) )
+                    continue;
                 protocol::ProtocolDocumentOperation_Component_KeyValueUpdate* k = b->add_change();
                 k->set_key( key.toStdString() );
                 k->set_new_value( annotation.value(key).toStdString() );
