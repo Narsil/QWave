@@ -231,7 +231,7 @@ JSOT.Rpc.sendNextSubmitRequest = function()
 
 JSOT.Rpc.applyUpdate = function( update )
 {
-	try
+	//try
 	{
 		var url = new JSOT.WaveUrl( update.wavelet_name );
 		var wave = JSOT.Wave.getWave( url.waveId, url.waveDomain );
@@ -272,11 +272,11 @@ JSOT.Rpc.applyUpdate = function( update )
 			}
 		}
 	}
-	catch( e )
-	{
-		if ( window.console )
-		  window.console.log(e.toString());
-	}
+	//catch( e )
+	//{
+	//	if ( window.console )
+	//	  window.console.log(e.toString());
+	//}
 };
 
 JSOT.Rpc.callServer = function(jsonData, callback)
@@ -332,15 +332,15 @@ JSOT.Rpc.callServer = function(jsonData, callback)
 	  
 				if( callback )
 				{
-					try
+					//try
 					{
 						callback(xmlHttp.responseText);						
 					}
-					catch( e )
-					{
-						if ( window.console )
-							window.console.log(e.toString());
-					}
+					//catch( e )
+					//{
+					//	if ( window.console )
+					//		window.console.log(e.toString());
+					//}
 				}
 			}
 		};

@@ -1259,11 +1259,20 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			else if ( typeof(c) == "string" )
 			{
 				// Insert the first character? Set its annotation.
-				if ( inContentIndex == 0 )
+				if ( inContentIndex == 0 &&  updatedAnnotation != doc.format[contentIndex] )
+				{
+					doc.content.splice( contentIndex, 0, op.characters );
+					doc.format.splice( contentIndex, 0, updatedAnnotation );
+					c = doc.content[contentIndex];
+					inContentIndex = c.length;
+				}
+				else
+				{
 					doc.format[contentIndex] = updatedAnnotation;
-				c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
-				doc.content[contentIndex] = c;
-				inContentIndex += op.characters.length;
+					c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
+					doc.content[contentIndex] = c;
+					inContentIndex += op.characters.length;
+				}
 /*
 				// If the annotation does not change here or if it has already been changed, simply insert some text
 				if ( annotationUpdateCount == 0 || inContentIndex > 0 )
@@ -1387,14 +1396,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				// Check for annotation changes in the document
 				if ( inContentIndex == 0 )
 				{
-					var anno = doc.format[contentIndex];
-					// Something changed?
-					if ( anno != docAnnotation )
-					{
-						// Get the document annotation and update it
-						docAnnotation = anno;
-						updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-					}
+					docAnnotation = doc.format[contentIndex];
+					updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 					// Update the annotation
 					doc.format[contentIndex] = updatedAnnotation;
 				}
@@ -1671,7 +1674,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			else if ( inContentIndex > 0 )
 			{
 				doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), c.substring( inContentIndex, c.length ) );
-				doc.format.splice( contentIndex, 0, doc.format[contentIndex] );
+				doc.format.splice( contentIndex, 0, docAnnotation );
 				c = doc.content[++contentIndex];
 				inContentIndex = 0;
 			}

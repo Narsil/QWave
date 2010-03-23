@@ -12,6 +12,7 @@ JSOT.OTListener = function(editor)
 	this.cursorAnnoKey = "user/e/" + editor.session;
 	this.cursorAnnoValue = editor.jid;
 	this.hasSelection = false;
+	this.format = null;
 };
 
 JSOT.OTListener.prototype.begin = function( doc )
@@ -28,7 +29,7 @@ JSOT.OTListener.prototype.retainElementStart = function( element, format )
 	if ( this.suspend )
 		return;
 	this.checkForCursor( format );
-	// this.it.format = format;
+	this.format = format;
 	if ( element.type == "line" )
 		this.it.skipLineBreak();
 };
@@ -37,7 +38,7 @@ JSOT.OTListener.prototype.retainElementEnd = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
+	this.format = format;
 };
 
 JSOT.OTListener.prototype.insertElementStart = function( element, format )
@@ -45,8 +46,8 @@ JSOT.OTListener.prototype.insertElementStart = function( element, format )
 	if ( this.suspend )
 		return;
 	// this.it.setStyle( format, this.it.formatUpdate );
-	// this.it.format = format;
 	this.checkForCursor( format );
+	this.format = format;
 	if ( element.type == "line" )
 		this.it.insertLineBreak( element );
 };
@@ -57,7 +58,7 @@ JSOT.OTListener.prototype.insertElementEnd = function( element, format )
 		return;
 	// this.it.setStyle( format, this.it.formatUpdate );
 	this.checkForCursor( format );
-	this.it.format = format;
+	this.format = format;
 };
 
 JSOT.OTListener.prototype.deleteElementStart = function( element, format )
@@ -65,7 +66,7 @@ JSOT.OTListener.prototype.deleteElementStart = function( element, format )
 	if ( this.suspend )
 		return;
 	// this.it.setStyle( format, this.it.formatUpdate );
-	// this.it.format = format;
+	this.format = format;
 	// this.checkForCursor( format );
 	if ( element.type == "line" )
 		this.it.deleteLineBreak();
@@ -83,8 +84,8 @@ JSOT.OTListener.prototype.insertCharacters = function( chars, format )
 	if ( this.suspend )
 		return;
 	// this.it.setStyle( format, this.it.formatUpdate );
-	// this.it.format = format;
 	this.checkForCursor( format );
+	this.format = format;
 	this.it.insertChars( chars, format );
 };
 
@@ -92,7 +93,7 @@ JSOT.OTListener.prototype.deleteCharacters = function( chars, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.format = format;
+	this.format = format;
 	// this.checkForCursor( format );
 	this.it.deleteChars( chars.length );
 };
@@ -101,32 +102,33 @@ JSOT.OTListener.prototype.retainCharacters = function( count, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.format = format;
-	// this.checkForCursor( format );
-	this.it.skipChars( count );
+	this.checkForCursor( format );
+	this.it.skipChars( count, format );
+	this.format = format;
 };
 
 JSOT.OTListener.prototype.updateAttributes = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.format = format;
 	this.checkForCursor( format );
+	this.format = format;
 };
 
 JSOT.OTListener.prototype.replaceAttributes = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.format = format;
 	this.checkForCursor( format );
+	this.format = format;
 };
 
 JSOT.OTListener.prototype.annotationBoundary = function( update, format )
 {
 	if ( this.suspend )
 		return;
-	// this.checkForCursor( format );
+	this.checkForCursor( format );
+	this.format = format;
 	this.it.setStyle( this.format, update );
 };
 
@@ -154,7 +156,7 @@ JSOT.OTListener.prototype.setSuspend = function( suspend )
 JSOT.OTListener.prototype.checkForCursor = function(format)
 {
 	if ( !this.cursor && format && format[ this.cursorAnnoKey ] == this.cursorAnnoValue )
-		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
+		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount, format : this.format };
 }
 
 
