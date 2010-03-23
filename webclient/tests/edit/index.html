@@ -25,6 +25,7 @@ body { font-family:aria,sans-serif; }
 	</div>
 	<div id="app" style="visibility:hidden">
 		<h1>Concurrent editor</h1>
+		<div><input id="bold" type="button" value="Bold" > <input id="italic" type="button" value="Italic" ></div>
 		<div id="editor" contentEditable="true" style="border:1px solid black; margin:3px"></div>
 	</div>
 	<script type="text/javascript">
@@ -54,6 +55,8 @@ function onLogin()
 
 	// Connect the editor with the wavelet document
 	var editor = new JSOT.Editor( mainDoc, document.getElementById("editor") );
+	document.getElementById( 'bold' ).onclick = function() { editor.setStyle( "style/fontWeight", "bold"); };
+	document.getElementById( 'italic' ).onclick = function() { editor.setStyle( "style/fontStyle", "italic"); };
 	
 	// Open the wave
 	JSOT.Rpc.openWavelet( wavelet.url() );

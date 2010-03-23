@@ -27,7 +27,8 @@ JSOT.OTListener.prototype.retainElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
+	this.checkForCursor( format );
+	// this.it.format = format;
 	if ( element.type == "line" )
 		this.it.skipLineBreak();
 };
@@ -43,7 +44,8 @@ JSOT.OTListener.prototype.insertElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
+	// this.it.setStyle( format, this.it.formatUpdate );
+	// this.it.format = format;
 	this.checkForCursor( format );
 	if ( element.type == "line" )
 		this.it.insertLineBreak( element );
@@ -53,6 +55,8 @@ JSOT.OTListener.prototype.insertElementEnd = function( element, format )
 {
 	if ( this.suspend )
 		return;
+	// this.it.setStyle( format, this.it.formatUpdate );
+	this.checkForCursor( format );
 	this.it.format = format;
 };
 
@@ -60,34 +64,36 @@ JSOT.OTListener.prototype.deleteElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
-	this.checkForCursor( format );
+	// this.it.setStyle( format, this.it.formatUpdate );
+	// this.it.format = format;
+	// this.checkForCursor( format );
 	if ( element.type == "line" )
 		this.it.deleteLineBreak();
 };
 
 JSOT.OTListener.prototype.deleteElementEnd = function(format)
 {
-	if ( this.suspend )
-		return;
-	this.it.format = format;
+	// if ( this.suspend )
+ 		// return;
+	// this.it.format = format;
 };
 
 JSOT.OTListener.prototype.insertCharacters = function( chars, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
+	// this.it.setStyle( format, this.it.formatUpdate );
+	// this.it.format = format;
 	this.checkForCursor( format );
-	this.it.insertChars( chars );
+	this.it.insertChars( chars, format );
 };
 
 JSOT.OTListener.prototype.deleteCharacters = function( chars, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
-	this.checkForCursor( format );
+	// this.it.format = format;
+	// this.checkForCursor( format );
 	this.it.deleteChars( chars.length );
 };
 
@@ -95,8 +101,8 @@ JSOT.OTListener.prototype.retainCharacters = function( count, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
-	this.checkForCursor( format );
+	// this.it.format = format;
+	// this.checkForCursor( format );
 	this.it.skipChars( count );
 };
 
@@ -104,7 +110,7 @@ JSOT.OTListener.prototype.updateAttributes = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
+	// this.it.format = format;
 	this.checkForCursor( format );
 };
 
@@ -112,7 +118,7 @@ JSOT.OTListener.prototype.replaceAttributes = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	this.it.format = format;
+	// this.it.format = format;
 	this.checkForCursor( format );
 };
 
@@ -120,8 +126,8 @@ JSOT.OTListener.prototype.annotationBoundary = function( update, format )
 {
 	if ( this.suspend )
 		return;
-	this.checkForCursor( format );
-	this.it.setStyle( format, update );
+	// this.checkForCursor( format );
+	this.it.setStyle( this.format, update );
 };
 
 JSOT.OTListener.prototype.end = function()
@@ -431,13 +437,15 @@ JSOT.Editor.prototype.keypress = function(e)
 			
 		var element = this.getElementByLineNo( lineno );
 		var pos = element.itemCountBefore() + 2 + charCount;
-	
+		var count = this.doc.itemCount();
+		
 		this.listener.setSuspend(true);
 		var ops = new protocol.ProtocolDocumentOperation();
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos ) );
+		if ( count - pos > 0 )
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - pos ) );
 		this.submit( ops );
 		// ops.applyTo( this.doc );
 		this.listener.setSuspend(false);
@@ -447,11 +455,13 @@ JSOT.Editor.prototype.keypress = function(e)
 	this.listener.setSuspend(true);
 	var element = this.getElementByLineNo( lineno );
 	var pos = element.itemCountBefore() + 2 + charCount;
-	// window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
+	var count = this.doc.itemCount();
+	window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
 	var ops = new protocol.ProtocolDocumentOperation();
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
 	ops.component.push( protocol.ProtocolDocumentOperation.newCharacters( String.fromCharCode(e.keyCode) ) );
-	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos ) );
+	if ( count - pos > 0 )
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - pos ) );
 	this.submit( ops );
 	// ops.applyTo( this.doc );
 	this.listener.setSuspend(false);
@@ -502,7 +512,13 @@ JSOT.Editor.prototype.isEmptyElement = function(node)
 	return true;
 };
 
-JSOT.Editor.prototype.bold = function()
+/**
+ * Changes the style of the current selection.
+ *
+ * @param {string} styleKey defines the style, e.g. "style/fontWeight"
+ * @param {string} styleValue defines the value for the style, e.g. "bold".
+ */
+JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 {
 	this.markSelection();
 	
@@ -533,19 +549,19 @@ JSOT.Editor.prototype.bold = function()
 	for( var i = docpos1; i < docpos2; ++i )
 	{
 		var format = this.doc.getFormatAt( i );
-		var s = ( format && format["style/fontWeight"] == "bold" );
+		var s = ( format && format[ styleKey ] == styleValue );
 		if ( (s && style) || (!s && !style) )
 		{
 			var ends = [];
 			var begins = [];
 			if ( s && style )
 			{
-				ends.push( "style/fontWeight" );
+				ends.push( styleKey );
 				style = false;
 			}
 			else if ( !s && !style )
 			{
-				begins.push( protocol.ProtocolDocumentOperation.newKeyValueUpdate( "style/fontWeight", null, "bold" ) );
+				begins.push( protocol.ProtocolDocumentOperation.newKeyValueUpdate( styleKey, format ? format[ styleKey ] : null , styleValue ) );
 				style = true;
 			}
 			ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( ends, begins ) );
@@ -553,7 +569,7 @@ JSOT.Editor.prototype.bold = function()
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( 1 ) );
 	}
 	if ( style )
-		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ "style/fontWeight" ], [  ] ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ styleKey ], [  ] ) );
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
 	this.submit( ops );
 	// ops.applyTo( this.doc );
@@ -662,12 +678,18 @@ JSOT.Editor.prototype.markSelection = function()
 	if ( this.listener.cursor )
 	{
 		var cursorpos = this.getDocPosition( this.listener.cursor.lineno, this.listener.cursor.charCount );
-		var ops = new protocol.ProtocolDocumentOperation();
-		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( cursorpos ) );
-	  	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, this.listener.cursorAnnoValue, null ) ] ) );
-		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - cursorpos ) );
-		// ops.applyTo( this.doc );
-		this.submit( ops );
+		var itemcount = this.doc.itemCount();
+		// The cursor is currently at the end of the document -> it has no annotationBoundary -> nothing to do. Otherwise remove the annoation of the cursor
+		if ( cursorpos < itemcount )
+		{
+		  var ops = new protocol.ProtocolDocumentOperation();
+		  ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( cursorpos ) );
+		  ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], 
+				[ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, this.listener.cursorAnnoValue, null ) ] ) );
+		  ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( itemcount - cursorpos ) );
+		  // ops.applyTo( this.doc );
+		  this.submit( ops );
+		}
 	}
 	
 	var sel = window.getSelection();
@@ -693,7 +715,8 @@ JSOT.Editor.prototype.markSelection = function()
 		var cursorpos = this.getDocPosition( pos.lineno, pos.charCount );
 		var ops = new protocol.ProtocolDocumentOperation();
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( cursorpos ) );
-	  	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, null, this.listener.cursorAnnoValue ) ] ) );
+	  	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ],
+				[ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, null, this.listener.cursorAnnoValue ) ] ) );
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - cursorpos ) );
 		// ops.applyTo( this.doc );
  		this.submit( ops );

@@ -122,11 +122,15 @@ JSOT.DomIterator.prototype.skipChars = function( count )
 /**
  * Inserts characters at the current position. Uses the current format for these characters.
  */
-JSOT.DomIterator.prototype.insertChars = function( str )
+JSOT.DomIterator.prototype.insertChars = function( str, format )
 {
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
 
+	// The formatting has changed?
+	if ( format != this.format )
+		this.setStyle( format, this.formatUpdate );
+	
 	// Insert inside a text node?
 	if ( this.current.nodeType == 3 )
 	{
@@ -144,7 +148,7 @@ JSOT.DomIterator.prototype.insertChars = function( str )
 		if ( !this.current.firstChild || this.formatUpdate || this.current.firstChild.nodeType != 3 )
 		{
 			var span = document.createElement("span");
-			this.setSpanStyle( span, this.formatUpdate );
+			this.setSpanStyle( span, this.format );
 			var t = document.createTextNode( str );
 			span.appendChild(t);
 			this.current.insertBefore( span, this.current.firstChild );
