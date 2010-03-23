@@ -1063,7 +1063,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			while( count > 0 )
 			{
 				if ( !c )
-					throw "document op is larger than doc";	
+					throw "document op is larger than doc /1";	
 				if ( c.element_start || c.element_end )
 				{
 					count--;
@@ -1127,12 +1127,14 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 	var inContentIndex = 0;
 	// Increased by one whenever a delete_element_start is encountered and decreased by 1 upon delete_element_end
 	var deleteDepth = 0;
+	var insertDepth = 0;
 	
-	// The annotation that applies to the left of the current document position
+	// The annotation that applies to the left of the current document position, type is a dict
 	var docAnnotation = null;
 	var updatedAnnotation = null;
 	// The annotation update that applies to the right of the current document position	
 	var annotationUpdate = { };
+	// The number if keys in annotationUpdate
 	var annotationUpdateCount = 0;
 	
 	var currentElement = doc;
@@ -1166,130 +1168,177 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			currentElement.parent_index = currentElementIndex;
 			currentElementIndex = contentIndex;
 			currentElement.is_new = true;
+		  
+			updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+
+			// Insert at the end of a string? -> Go to the beginning of the next one
+			if ( typeof(c) == "string" && inContentIndex == c.length )
+			{
+				inContentIndex = 0;
+				contentIndex++;
+				currentElement.start_index++;
+			}
 			
-			if ( doc.listeners )
-				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].insertElementStart( currentElement, updatedAnnotation );
-				
+			// Insert in front of another item?
 			if ( inContentIndex == 0 )
 			{
 				doc.content.splice( contentIndex, 0, currentElement );
 				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 			}
+			// Insert in the middle (not the end!) of a string?
 			else
 			{
 				currentElement.start_index++;
 				doc.content.splice( contentIndex + 1, 0, currentElement, c.substring(inContentIndex, c.length) );
-				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
+				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, doc.format[contentIndex] );
 				doc.content[contentIndex] = c.slice(0, inContentIndex);
 				contentIndex += 2;
 				c = doc.content[contentIndex];
 				inContentIndex = 0;
 			}
+			
+			insertDepth++;
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].insertElementStart( currentElement, updatedAnnotation );
 		}
 		else if ( op.element_end )
 		{
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
-
-			if ( doc.listeners )
-				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].insertElementEnd( currentElement, updatedAnnotation );
-
-			currentElement.end_index = contentIndex;
-
-			if ( inContentIndex == 0 )
-			{
-				doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementEnd() );
-				doc.format.splice( contentIndex, 0, updatedAnnotation );
-				c = doc.content[++contentIndex];
-			}
-			else
-			{
-				currentElement.end_index++
-				if ( updatedAnnotation )
-					doc.format[contentIndex+1] = updatedAnnotation;
-				doc.content.splice( contentIndex + 1, 0, new JSOT.Doc.ElementEnd(), c.substring(inContentIndex, c.length) );
-				doc.format.splice( contentIndex + 1, 0, updatedAnnotation, docAnnotation );
-				doc.content[contentIndex] = c.slice(0, inContentIndex);
-				contentIndex += 2;
-				c = doc.content[contentIndex];
-				inContentIndex = 0;
-			}
+			if ( insertDepth == 0 )
+				throw "Cannot delete element end without deleting element start";
+			insertDepth--;
 			
+			if ( inContentIndex > 0 )
+			{
+				if ( typeof(c) != "string" || inContentIndex != c.length )
+					throw "Cannot insert element in the middle of a string. This cannot be a valid docop.";
+				inContentIndex = 0;
+				++contentIndex;
+			}
+
+			updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+
+			doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementEnd() );
+			doc.format.splice( contentIndex, 0, updatedAnnotation );
+			c = doc.content[++contentIndex];
+			
+			currentElement.end_index = contentIndex - 1;
 			currentElementIndex = stack.pop();
 			if ( currentElementIndex == -1 )
 				currentElement = doc;
 			else
 				currentElement = doc.content[ currentElementIndex ];
+			
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].insertElementEnd( currentElement, updatedAnnotation );
 		}
 		else if ( op.characters )
 		{
 			if ( deleteDepth > 0 )
 				throw "Cannot insert inside a delete sequence";
-
-			if ( doc.listeners )
-				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].insertCharacters( op.characters, updatedAnnotation );
-
-			currentElement.has_new_text = true;
+			if ( op.characters.length == 0 )
+				continue;
 			
-			if ( typeof(c) == "string" )
+			currentElement.has_new_text = true;
+
+			updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+		
+			// Insert at the end of the document?
+			if ( !c )
 			{
-				// If the annotation does not change here, simply insert some text
-				if ( docAnnotation == updatedAnnotation )
+				doc.format[contentIndex] = updatedAnnotation;
+				doc.content[contentIndex] = op.characters;
+				c = doc.content[contentIndex];
+				inContentIndex = c.length;
+			}
+			// Insert text in a string?
+			else if ( typeof(c) == "string" )
+			{
+				// Insert the first character? Set its annotation.
+				if ( inContentIndex == 0 )
+					doc.format[contentIndex] = updatedAnnotation;
+				c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
+				doc.content[contentIndex] = c;
+				inContentIndex += op.characters.length;
+/*
+				// If the annotation does not change here or if it has already been changed, simply insert some text
+				if ( annotationUpdateCount == 0 || inContentIndex > 0 )
 				{
 					c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
 					doc.content[contentIndex] = c;
 					inContentIndex += op.characters.length;
 				}
-				else if ( inContentIndex == 0 )
-				{
-					doc.content.splice( contentIndex, 0, op.characters );
-					doc.format.splice( contentIndex, 0, updatedAnnotation );
-					contentIndex += 1;
-					c = doc.content[contentIndex];
-					inContentIndex = 0;
-				}
+				// Need to insert a new string in doc.content
 				else
 				{
-					doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), op.characters, c.substring( inContentIndex, c.length ) );
-					doc.format.splice( contentIndex, 1, docAnnotation, updatedAnnotation, docAnnotation );
-					contentIndex += 2;
-					c = doc.content[contentIndex];
-					inContentIndex = 0;				
+					// At the end of a string? -> Go to the next item.
+					if ( inContentIndex == c.length )
+					{
+						c = doc.content[++contentIndex];
+						inContentIndex = 0;
+					}
+					// Insert in front of a text, but with a new formatting
+					if ( inContentIndex == 0 )
+					{
+						doc.content.splice( contentIndex, 0, op.characters );
+						doc.format.splice( contentIndex, 0, updatedAnnotation );
+						// contentIndex += 1;
+						// c = doc.content[contentIndex];
+						inContentIndex = op.characters.length;
+					}
+					// Insert in the middle (not at the end!) of a string?
+					else
+					{
+						doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), op.characters, c.substring( inContentIndex, c.length ) );
+						doc.format.splice( contentIndex, 1, doc.format[contentIndex], updatedAnnotation, doc.format[contentIndex] );
+						// contentIndex += 2;
+						c = doc.content[++contentIndex];
+						inContentIndex = c.length;
+						// inContentIndex = 0;
+					}
 				}
+				*/
 			}
+			// Insert text in front of an element or at the end of the document
 			else
 			{
 				doc.content.splice( contentIndex, 0, op.characters );
 				doc.format.splice( contentIndex, 0, updatedAnnotation );
 				c = doc.content[++contentIndex];
 				inContentIndex = 0;
-			}			
+			}
+			
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].insertCharacters( op.characters, updatedAnnotation );
 		}
 		else if ( op.delete_characters )
-		{
+		{		  
+			if ( insertDepth > 0 )
+				throw "Cannot delete inside an insertion sequence";
 			if ( !c )
-				break;
-			
+				break; // Results in an exception outside the loop
+			var count = op.delete_characters.length;
+			if ( count == 0 )
+				continue;
+	
 			currentElement.has_new_text = true;
 			
-			var count = op.delete_characters.length;
 			var done = 0;
 			while( count > 0 )
 			{
 				if ( typeof(c) != "string" )
 					throw "Cannot delete characters here, because at this position there are no characters";
 
-				if ( doc.listeners )
-					for( var i = 0; i < doc.listeners.length; ++i )
-						doc.listeners[i].deleteCharacters( op.delete_characters, updatedAnnotation );
-
+				// How many characters can be deleted in this string?
 				var i = Math.min( count, c.length - inContentIndex );
 				if ( c.substr( inContentIndex, i ) != op.delete_characters.substr( done, i ) )
 					throw "Cannot delete characters, because the characters in the document and operation differ.";
+				// Delete the characters
 				c = c.substring(0, inContentIndex).concat( c.substring(inContentIndex + i, c.length ) );
 				done += i;
 				count -= i;
@@ -1297,12 +1346,6 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				if ( c.length == 0 )
 				{
 					// If there is an annotation boundary change in the deleted characters,, this change must be applied
-					var anno = doc.format[contentIndex];
-					if ( anno != docAnnotation )
-					{
-						docAnnotation = anno;
-						updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-					}					
 					doc.content.splice( contentIndex, 1 );
 					doc.format.splice( contentIndex, 1 );
 					c = doc.content[contentIndex];
@@ -1311,21 +1354,32 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				else
 				{
 					doc.content[contentIndex] = c;
-					if ( c.length == inContentIndex )
-					{
-						c = doc.content[++contentIndex];
-						inContentIndex = 0;
-					}
+//					// Position is at the end of a string?
+//					if ( c.length == inContentIndex )
+//					{
+//						c = doc.content[++contentIndex];
+//						inContentIndex = 0;
+//					}
 				}
 			}
+			
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].deleteCharacters( op.delete_characters, updatedAnnotation );
 		}
 		else if ( op.retain_item_count )
 		{
+			if ( insertDepth > 0 )
+				throw "Cannot retain inside an insertion sequence";
 			if ( !c )
-				break;
+				throw "document op is larger than doc";
 			if ( deleteDepth > 0 )
 				throw "Cannot retain inside a delete sequence";
+			
 			var count = op.retain_item_count;
+			if ( count == 0 )
+				continue;
+			
 			while( count > 0 )
 			{
 				if ( !c )
@@ -1344,6 +1398,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					// Update the annotation
 					doc.format[contentIndex] = updatedAnnotation;
 				}
+				// Retaining an element start?
 				if ( c.element_start )
 				{
 					stack.push( currentElementIndex );
@@ -1361,6 +1416,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					c = doc.content[++contentIndex];
 					inContentIndex = 0;
 				}
+				// Retaining an element end?
 				else if ( c.element_end )
 				{
 					currentElement.end_index = contentIndex;
@@ -1379,8 +1435,18 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					c = doc.content[++contentIndex];
 					inContentIndex = 0;
 				}
-				else  // Characters
+				// Retaining characters
+				else  
 				{
+					// At the end of a string? -> Go to the beginning of the next one and repeat
+					if ( inContentIndex == c.length )
+					{						
+						// Go to the next content entry
+						c = doc.content[++contentIndex];
+						inContentIndex = 0;
+						continue;
+					}
+
 					// How many characters can be retained?
 					var m = Math.min( count, c.length - inContentIndex );
 					// Skip characters
@@ -1390,120 +1456,106 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					if ( doc.listeners )
 						for( var i = 0; i < doc.listeners.length; ++i )
 							doc.listeners[i].retainCharacters( m, updatedAnnotation );
-
-					// Retained the entire string? -> Move to the next element
-					if ( inContentIndex == c.length )
-					{						
-						// Go to the next content entry
-						c = doc.content[++contentIndex];
-						inContentIndex = 0;
-						if ( !c )
-							break;
-					}
-					// There is an annotation update and we just re-annotated some characters in 'c' but not all -> split c in the treated part and the to-be-treated part
-					else if ( updatedAnnotation != docAnnotation )
-					{
-						doc.content.splice( contentIndex, 1, c.substr( 0, inContentIndex ), c.substring(inContentIndex, c.length) );
-						doc.format.splice( contentIndex + 1, 0, docAnnotation );
-						c = doc.content[++contentIndex];
-						inContentIndex = 0;
-					}
 				}
 			}
 		}
 		else if ( op.delete_element_start )
 		{
+			if ( insertDepth > 0 )
+				throw "Cannot delete inside an insertion sequence";
 			if ( !c )
-				break;
-			// If there is an annotation boundary change in the deleted characters,, this change must be applied
-			var anno = doc.format[contentIndex];
-			if ( anno != docAnnotation )
-			{
-				docAnnotation = anno;
-				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-			}
-			
-			// Count how many opening elements have been deleted. The corresponding closing elements must be deleted, too.
-			deleteDepth++;
+				break; // Results in an exception outside the loop			
 			if ( !c.element_start )
 				throw "Cannot delete element start at this position, because in the document there is none";
 			if ( c.type != op.delete_element_start.type )
 				throw "Cannot delete element start because Op and Document have different element type";
+			// Count how many opening elements have been deleted. The corresponding closing elements must be deleted, too.
+			deleteDepth++;
+
+			// How many attributes does the element in the doc have?
 			var acount = 0;
 			for( var a in c.attributes )
 				++acount;			
 			if ( acount != op.delete_element_start.attribute.length )
 				throw "Cannot delete element start because the attributes of Op and Doc differ";
-		
+			// Create a dictionary of attributes
 			var attribs = { };
 			for( var a in op.delete_element_start.attribute )
 			{
 				var v = op.delete_element_start.attribute[a];
 				attribs[v.key] = v.value;
 			}
+			// Compare attributes from the doc and docop. They should be equal
 			for( var a in c.attributes )
 			{
 				if ( c.attributes[a] != attribs[a] )
 					throw "Cannot delete element start because attribute values differ";
 			}
+				
+			doc.content.splice( contentIndex, 1 );
+			doc.format.splice( contentIndex, 1 );
+			c = doc.content[contentIndex];
+			inContentIndex = 0;
 			
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
 					doc.listeners[i].deleteElementStart( c, updatedAnnotation );
-	
-			doc.content.splice( contentIndex, 1 );
-			doc.format.splice( contentIndex, 1 );
-			c = doc.content[contentIndex];
-			inContentIndex = 0;			
 		}
 		else if ( op.delete_element_end )
 		{
+			if ( insertDepth > 0 )
+				throw "Cannot delete inside an insertion sequence";
 			if ( !c )
-				break;
+				break; // Results in an exception outside the loop		  
 			// If there is an annotation boundary change in the deleted characters, this change must be applied
 			var anno = doc.format[contentIndex];
 			if ( anno != docAnnotation )
 			{
 				docAnnotation = anno;
 				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-			}				
+			}
 			// Is there a matching openeing element?
 			if ( deleteDepth == 0 )
 				throw "Cannot delete element end, because matching delete element start is missing";
 			if ( !c.element_end )
 				throw "Cannot delete element end at this position, because in the document there is none";
-				
-			if ( doc.listeners )
-				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].deleteElementEnd(updatedAnnotation);
 
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
 			c = doc.content[contentIndex];
 			inContentIndex = 0;
-			deleteDepth--;		
+			deleteDepth--;
+			
+			if ( doc.listeners )
+				for( var i = 0; i < doc.listeners.length; ++i )
+					doc.listeners[i].deleteElementEnd(updatedAnnotation);
 		}
 		else if ( op.update_attributes )
-		{		
+		{
+			if ( insertDepth > 0 )
+				throw "Cannot update attributes inside an insertion sequence";
 			if ( !c )
-				break;
+				break; // Results in an exception outside the loop
 			if ( !c.element_start )
 				throw "Cannot update attributes at this position, because in the document there is no start element";
 			
+			// Construct the element tree
 			stack.push( currentElementIndex );
 			currentElement = c;
 			currentElement.start_index = contentIndex;
 			currentElement.parent_index = currentElementIndex;
 			currentElementIndex = contentIndex;
 
-			// If there is an annotation boundary change in the deleted characters, this change must be applied
+			// Compute the annotation for this element start
 			var anno = doc.format[contentIndex];
 			if ( anno != docAnnotation )
 			{
 				docAnnotation = anno;
 				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-			}								
+			}
 			doc.format[contentIndex] = updatedAnnotation;
+			
+			// Update the attributes
 			for( var a in op.update_attributes.attribute_update )
 			{
 				var update = op.update_attributes.attribute_update[a];
@@ -1527,6 +1579,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 						c.attributes[update.key] = update.new_value;
 				}
 			}
+			// Go to the next item
 			c = doc.content[++contentIndex];
 			inContentIndex = 0;
 
@@ -1536,17 +1589,21 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		}
 		else if ( op.replace_attributes )
 		{
+			if ( insertDepth > 0 )
+				throw "Cannot replace attributes inside an insertion sequence";
 			if ( !c )
-				break;
+				break; // Results in an exception outside the loop		  
 			if ( !c.element_start )
 				throw "Cannot replace attributes at this position, because in the document there is no start element";
 			
+			// Construct the element tree
 			stack.push( currentElementIndex );
 			currentElement = c;
 			currentElement.start_index = contentIndex;
 			currentElement.parent_index = currentElementIndex;
 			currentElementIndex = contentIndex;
 
+			// Compare the attributes from the docop and the doc. They must be equal
 			var acount = 0;
 			for( var a in c.attributes )
 				++acount;
@@ -1558,7 +1615,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			}
 			if ( acount != op.replace_attributes.old_attribute.length )
 				throw "Cannot replace attributes because the old attributes do not match";
-			// If there is an annotation boundary change in the deleted characters, this change must be applied
+			
+			// Compute the annotation for this element start
 			var anno = doc.format[contentIndex];
 			if ( anno != docAnnotation )
 			{
@@ -1566,12 +1624,15 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 			}
 			doc.format[contentIndex] = updatedAnnotation;
+			
+			// Change the attributes of the element
 			c.attributes = { }
 			for( var a in op.replace_attributes.new_attribute )
 			{
 			   var keyvalue = op.replace_attributes.new_attribute[a];
 				c.attributes[keyvalue.key] = keyvalue.value;
 			}
+			// Go to the next item
 			c = doc.content[++contentIndex];
 			inContentIndex = 0;
 
@@ -1581,6 +1642,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		}
 		else if ( op.annotation_boundary )
 		{
+			// Change the 'annotationUpdate' and find out when the annotation update becomes empty.
 			for( var a in op.annotation_boundary.end )
 			{				
 				var key = op.annotation_boundary.end[a];
@@ -1589,6 +1651,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				delete annotationUpdate[key];
 				annotationUpdateCount--;
 			}
+			// Change the 'annotationUpdate' and find out when the annotation update becomes empty.
 			for( var a in op.annotation_boundary.change )
 			{
 				var change = op.annotation_boundary.change[a];
@@ -1596,22 +1659,26 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					annotationUpdateCount++;
 				annotationUpdate[change.key] = change;
 			}
-			updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+//			updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 			
-			// If in the middle of a string -> break it because the annotation of the following characters is different
-			if ( inContentIndex > 0 )
+			// If at the end of a string, go to the next item
+			if ( typeof(c) == "string" && inContentIndex == c.length )
+			{
+				c = doc.content[++contentIndex];
+				inContentIndex = 0;
+			}
+			// If in the middle of a string -> break it because the annotation of the following characters is different			
+			else if ( inContentIndex > 0 )
 			{
 				doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), c.substring( inContentIndex, c.length ) );
-				doc.format.splice( contentIndex, 1, docAnnotation, docAnnotation );
-				contentIndex += 1;
-				c = doc.content[contentIndex];
+				doc.format.splice( contentIndex, 0, doc.format[contentIndex] );
+				c = doc.content[++contentIndex];
 				inContentIndex = 0;
 			}
 			
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
 					doc.listeners[i].annotationBoundary( annotationUpdateCount == 0 ? null : annotationUpdate, updatedAnnotation );
-					// doc.listeners[i].annotationBoundary( annotationUpdateCount == 0 ? null : updatedAnnotation );
 		}
 	}
 
@@ -1624,6 +1691,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 	// Should be impossible if the document is well formed ... Paranoia
 	if ( deleteDepth != 0 )
 		throw "Not all delete element starts have been matched with a delete element end";
+	if ( insertDepth != 0 )
+		throw "Not all opened elements have been closed";
+	if ( typeof(c) == "string" && inContentIndex == c.length )
+		++contentIndex;
 	if ( contentIndex < doc.content.length )
 		throw "op is too small for document";
 };
@@ -1650,7 +1721,20 @@ protocol.ProtocolDocumentOperation.prototype.computeAnnotation = function(docAnn
 	// Update
 	for( var a in annotationUpdate )
 	{
-		var change = annotationUpdate[a];		
+		var change = annotationUpdate[a];
+		
+		// Tests
+		if ( !change.old_value )
+		{
+			if ( docAnnotation && docAnnotation[a] )
+				throw "Annotation update " + change.old_value + "and current annotation do not match";
+		}
+		else
+		{
+			if ( !docAnnotation || docAnnotation[a] != change.old_value )
+				throw "Annotation update " + change.old_value + "and current annotation do not match";
+		}
+		
 		if ( change.new_value == null )
 		{
 			count--;
@@ -1663,8 +1747,6 @@ protocol.ProtocolDocumentOperation.prototype.computeAnnotation = function(docAnn
 		}
 		else
 		{
-			if ( !docAnnotation || docAnnotation[a] != change.old_value )
-				throw "Annotation update and current annotation do not match";
 			anno[a] = change.new_value;
 		}
 	}
