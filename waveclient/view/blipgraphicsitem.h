@@ -40,31 +40,6 @@ public:
       */
     void setWidth(qreal width);
 
-//    /**
-//      * Called from the GUI.
-//      */
-//    void toggleBold();
-//    /**
-//      * Called from the GUI.
-//      */
-//    void toggleItalic();
-//    /**
-//      * Called from the GUI.
-//      */
-//    void toggleUnderline();
-//    /**
-//      * Called from the GUI.
-//      */
-//    void toggleStrikeout();
-//    /**
-//      * Called from the GUI.
-//      */
-//    void insertImage( const QUrl& url, const QImage& image, const QImage& thumbnail, const QString& caption );
-//    /**
-//      * Called from the GUI.
-//      */
-//    void insertGadget( const QUrl& url );
-
 signals:
     /**
       * Called from GraphicsTextItem when it receives keyboard focus, i.e. this
@@ -134,10 +109,6 @@ private:
       * When a new width is set (setWidth) this value is used to check whether any updates are required.
       */
     qreal m_lastWidth;
-//    /**
-//      * Connects this graphics item with the OT mechanisms.
-//      */
-//    OTAdapter* m_adapter;
 };
 
 /**
