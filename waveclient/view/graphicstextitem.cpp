@@ -45,6 +45,9 @@ void GraphicsTextItem::mousePressEvent( QGraphicsSceneMouseEvent * event )
 
 void GraphicsTextItem::keyPressEvent( QKeyEvent * event )
 {
+    if ((event->key() == Qt::Key_Backspace  and textCursor().position()<=m_forbiddenTextRange)
+        or ( event->key() == Qt::Key_Delete and textCursor().position()<m_forbiddenTextRange) )
+        return;
     QGraphicsTextItem::keyPressEvent(event);
     checkCursor();
 }
