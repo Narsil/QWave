@@ -477,73 +477,6 @@ JSOT.DomIterator.prototype.goRightUp = function()
 	return false;
 };
 
-/*
-JSOT.DomIterator.prototype.goLeftDown = function()
-{
-	if ( this.index > 0 )
-		return;
-	while( this.current.firstChild )
-		this.current = this.current.firstChild;
-};
-*/
-
-/*
-JSOT.DomIterator.prototype.insertLineBreak = function(element)
-{
-	// The document is empty?
-	if ( !this.line )
-	{
-		this.line = document.createElement("div");
-		this.current.appendChild(this.line);
-		this.current = this.line;
-		this.index = 0;
-		this.lineno = 0;
-		this.line.lineno = this.lineno;
-		this.charCount = 0;
-		return;
-	}
-	
-	var node = this.current;
-	var before;
-	if ( this.current.nodeType == 3 )
-	{
-		before = this.splitTextNode( node, this.index );
-		node = node.parentNode;
-	}
-	else
-		before = this.current.firstChild;
-	if ( node.nodeName == "SPAN" )
-	{
-		if ( !before )
-			before = node.nextSibling;
-		else
-		{
-			before = this.splitNodeBefore( node, before );
-			before.class = "split";
-			this.copySpanStyle( before, node );
-		}
-		node = node.parentNode;
-	}
-	if ( node.nodeName != "DIV" )
-		throw "Expected DIV";
-	before = this.splitNodeBefore( node, before );
-	this.finalizeLine();
-	this.line = before;
-	this.current = this.line;
-	this.index = 0;
-	this.lineno++;
-	this.line.lineno = this.lineno;
-	this.charCount = 0;
-	if ( this.line.firstChild && this.line.firstChild.nodeType == 1 && this.line.firstChild.class == "split" )
-	{
-		this.current = this.line.firstChild;
-		this.current.class = null;
-	}
-	// else if ( this.formatUpdate )
-	//	this.setStyle( this.format, this.formatUpdate );
-};
-*/
-
 JSOT.DomIterator.prototype.finalizeLine = function()
 {
 	if ( !this.line )
@@ -675,15 +608,19 @@ JSOT.DomIterator.prototype.isEndOfLine = function()
 	var node = this.current;
 	do
 	{
+		// Inside text?
 		if ( node.nodeType == 3 )
 		{
 			if ( this.index < node.data.length )
 				return false;
 		}
+		// The element has a child (which is NOT <br>)
 		else if ( node.firstChild && !(node.firstChild.nodeType == 1 && node.firstChild.nodeName == "BR" ) )
 			return false;
+		// Empty line?
 		if ( node.nodeName == "DIV" )
 			return true;
+		// Sibling -> not end of line
 		if ( node.nextSibling )
 			return false;
 		node = node.parentNode.nextSibling;

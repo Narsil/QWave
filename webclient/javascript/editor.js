@@ -631,7 +631,6 @@ JSOT.Editor.prototype.deleteSelection = function()
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
 	}
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
-	// ops.applyTo( this.doc );
 	this.submit( ops );
 	
 	this.showSelection();

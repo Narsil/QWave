@@ -1343,6 +1343,14 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				if ( typeof(c) != "string" )
 					throw "Cannot delete characters here, because at this position there are no characters";
 
+				// Position is at the end of a string? -> Go to the next item
+				if ( c.length == inContentIndex )
+				{
+					c = doc.content[++contentIndex];
+					inContentIndex = 0;
+					continue;
+				}
+
 				// How many characters can be deleted in this string?
 				var i = Math.min( count, c.length - inContentIndex );
 				if ( c.substr( inContentIndex, i ) != op.delete_characters.substr( done, i ) )
@@ -1361,15 +1369,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					inContentIndex = 0;
 				}
 				else
-				{
+					// Only some characters of this string have been deleted
 					doc.content[contentIndex] = c;
-//					// Position is at the end of a string?
-//					if ( c.length == inContentIndex )
-//					{
-//						c = doc.content[++contentIndex];
-//						inContentIndex = 0;
-//					}
-				}
 			}
 			
 			if ( doc.listeners )
