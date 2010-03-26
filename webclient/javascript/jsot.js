@@ -825,13 +825,13 @@ JSOT.Doc.prototype.getFormatAt = function(pos)
 		if ( typeof(c) == "string" )
 		{
 			if ( count + c.length > pos )
-				return this.format[i];
+				return this.format[i-1];
 			count += c.length;
 		}
 		else
 		{
 			if ( pos == count )
-				return this.format[i];
+				return this.format[i-1];
 			count++;
 		}
 	}
@@ -1662,7 +1662,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					annotationUpdateCount++;
 				annotationUpdate[change.key] = change;
 			}
-//			updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+			// The line below is WRONG because the update cannot be applied to the format on the left side of the cursor.
+			// updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 			
 			// If at the end of a string, go to the next item
 			if ( typeof(c) == "string" && inContentIndex == c.length )

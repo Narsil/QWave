@@ -123,12 +123,25 @@ JSOT.OTListener.prototype.replaceAttributes = function( element, format )
 	this.format = format;
 };
 
+/**
+ * ATTENTION: There is little one can really do in this function. The annotation update
+ * applies to the items on the right side of the cursor which are not yet run through.
+ * DO NOT attempt to combine the update with the format passed as parametere here, because
+ * the format is the one left to the cursor.
+ *
+ * Typical implementations store the update for later reference and the format parameter can be ignored.
+ *
+ * @param {object} update is the new annotation update.
+ * @param {object} format is the current annotation to the left of the cursor.
+ *                 This does NOT include the changed update. It is the format of the
+ *                 last item to the left of the boundary.
+ */
 JSOT.OTListener.prototype.annotationBoundary = function( update, format )
 {
 	if ( this.suspend )
 		return;
-	this.checkForCursor( format );
-	this.format = format;
+	// this.checkForCursor( format );
+	// this.format = format;
 	this.it.setStyle( this.format, update );
 };
 
@@ -572,9 +585,9 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 	}
 	if ( style )
 		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ styleKey ], [  ] ) );
-	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
+	if ( this.doc.itemCount() - docpos2 > 0 )
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
 	this.submit( ops );
-	// ops.applyTo( this.doc );
 	
 	this.showSelection();
 };

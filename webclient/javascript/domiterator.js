@@ -39,6 +39,10 @@ JSOT.DomIterator = function( dom )
 	 * A dictionary mapping style keys to their value.
 	 */
 	this.format = null;
+	/**
+	 * @type bool
+	 */
+	this.styleChanged = false;
 }
 
 JSOT.DomIterator.prototype.dispose = function()
@@ -56,7 +60,7 @@ JSOT.DomIterator.prototype.skipLineBreak = function()
 {
 	if ( this.lineno == -1 )
 	{
-		this.line = this.current.childNodes[0];
+		this.line = this.current.firstChild;
 	}
 	else
 	{
@@ -70,6 +74,7 @@ JSOT.DomIterator.prototype.skipLineBreak = function()
 	this.charCount = 0;
 	this.lineno++;
 	this.line.lineno = this.lineno;
+	this.styleChanged = false;
 };
 
 /**
@@ -81,7 +86,7 @@ JSOT.DomIterator.prototype.skipChars = function( count, format )
 		return;
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
-	
+		
 	// Go down in the tree without skipping a character.
 	// This will either lead to a text node or an empty span
 	while( this.current.firstChild )
@@ -105,14 +110,17 @@ JSOT.DomIterator.prototype.skipChars = function( count, format )
 	if ( this.current.nodeType != 3 )
 		throw "Expeccted a text node"
 	  
-	if ( this.index == 0 && this.formatUpdate )
+	if ( this.index == 0 && (this.formatUpdate || this.styleChanged ) )
+	{
 		this.setTextNodeStyle( this.current, format );
-	
+		this.styleChanged = false;
+	}
+		
 	var min = Math.min( this.current.data.length - this.index, count );
 	this.index += min;
 	this.charCount += min;
 	count -= min;
-	
+
 	// Need to skip more characters?
 	if ( count > 0 )
 	{
@@ -131,6 +139,8 @@ JSOT.DomIterator.prototype.skipChars = function( count, format )
  */
 JSOT.DomIterator.prototype.insertLineBreak = function(element)
 {
+	this.styleChanged = false;
+  
 	// The document is empty?
 	if ( !this.line )
 	{
@@ -208,6 +218,8 @@ JSOT.DomIterator.prototype.setTextNodeStyle = function( node, format )
  */
 JSOT.DomIterator.prototype.insertChars = function( str, format )
 {
+	this.styleChanged = false;
+
 	if ( str.length == 0 )
 		return;
 	if ( this.lineno == -1 )
@@ -274,12 +286,14 @@ JSOT.DomIterator.prototype.setStyle = function( format, update )
 
 	this.formatUpdate = update;
 	this.format = format;
-	
-	if ( this.current.nodeType == 1 || this.index == this.current.data.length )
+	this.styleChanged = true;
+
+	// Cursor is at the end of a text node. Try to go right up to the next text node or the next span
+	if ( this.current.nodeType == 3 && this.index == this.current.data.length )
 	{
 		var ok = this.goRightUp();
 	
-		// At end of the line. Could not go right up.
+		// At end of the line? Could not go right up.
 		if ( !ok )
 		{
 			var span = document.createElement("span");
@@ -463,6 +477,7 @@ JSOT.DomIterator.prototype.goRightUp = function()
 	return false;
 };
 
+/*
 JSOT.DomIterator.prototype.goLeftDown = function()
 {
 	if ( this.index > 0 )
@@ -470,7 +485,9 @@ JSOT.DomIterator.prototype.goLeftDown = function()
 	while( this.current.firstChild )
 		this.current = this.current.firstChild;
 };
+*/
 
+/*
 JSOT.DomIterator.prototype.insertLineBreak = function(element)
 {
 	// The document is empty?
@@ -525,6 +542,7 @@ JSOT.DomIterator.prototype.insertLineBreak = function(element)
 	// else if ( this.formatUpdate )
 	//	this.setStyle( this.format, this.formatUpdate );
 };
+*/
 
 JSOT.DomIterator.prototype.finalizeLine = function()
 {
