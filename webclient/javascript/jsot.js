@@ -1077,7 +1077,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					// Skip characters
 					count -= m;
 					inContentIndex += m;
-					// Retained/Deleted the entire string? -> Move to the next element
+					// Reached end of the entire string? -> Move to the next element
 					if ( c.length == inContentIndex )
 					{
 						// Go to the next content entry
@@ -1467,8 +1467,13 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 		{
 			if ( insertDepth > 0 )
 				throw "Cannot delete inside an insertion sequence";
+			if ( typeof(c) == "string" && inContentIndex == c.length )
+			{
+				c = doc.content[++contentIndex];
+				inContentIndex = 0;
+			}
 			if ( !c )
-				break; // Results in an exception outside the loop			
+				break; // Results in an exception outside the loop
 			if ( !c.element_start )
 				throw "Cannot delete element start at this position, because in the document there is none";
 			if ( c.type != op.delete_element_start.type )
@@ -1511,6 +1516,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				throw "Cannot delete inside an insertion sequence";
 			if ( !c )
 				break; // Results in an exception outside the loop		  
+			if ( !c.element_end )
+				throw "Cannot delete element end at this position, because in the document there is none";
 			// If there is an annotation boundary change in the deleted characters, this change must be applied
 			var anno = doc.format[contentIndex];
 			if ( anno != docAnnotation )

@@ -15,12 +15,47 @@ JSOT.OTListener = function(editor)
 	this.format = null;
 };
 
+/**
+ * Tells where the cursor should be according to document and its annotations.
+ */
+JSOT.OTListener.prototype.getDocCursor = function()
+{
+	if ( this.it )
+		return this.it;
+	
+	var lineno = -1;
+	var charCount = 0;
+	
+	for( var i = 0; i < this.editor.doc.content.length; ++i )
+	{
+		var f = this.editor.doc.format[i];
+		// Found the first item that has the cursor annotation
+		if ( f && f[this.cursorAnnoKey] == this.cursorAnnoValue )
+			return { lineno : lineno, charCount : charCount, isEndOfDocument : false };
+		
+		var c = this.editor.doc.content[i];
+		if ( typeof(c) == "string" )
+		{
+			charCount += c.length;
+		}
+		else if ( c.element_start )
+		{
+			if ( c.type == "line" )
+				lineno++;
+			charCount = 0;
+		}
+	}
+	
+	// End of document
+	return { lineno : lineno, charCount : charCount, isEndOfDocument : true };
+};
+
 JSOT.OTListener.prototype.begin = function( doc )
 {
-	if ( this.suspend )
-		return;
 	delete this.cursor;
 	this.doc = doc;
+	if ( this.suspend )
+		return;
 	this.it = new JSOT.DomIterator( this.dom );
 }
 
@@ -45,7 +80,6 @@ JSOT.OTListener.prototype.insertElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.setStyle( format, this.it.formatUpdate );
 	this.checkForCursor( format );
 	this.format = format;
 	if ( element.type == "line" )
@@ -56,7 +90,6 @@ JSOT.OTListener.prototype.insertElementEnd = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.setStyle( format, this.it.formatUpdate );
 	this.checkForCursor( format );
 	this.format = format;
 };
@@ -65,25 +98,19 @@ JSOT.OTListener.prototype.deleteElementStart = function( element, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.setStyle( format, this.it.formatUpdate );
 	this.format = format;
-	// this.checkForCursor( format );
 	if ( element.type == "line" )
 		this.it.deleteLineBreak();
 };
 
 JSOT.OTListener.prototype.deleteElementEnd = function(format)
 {
-	// if ( this.suspend )
- 		// return;
-	// this.it.format = format;
 };
 
 JSOT.OTListener.prototype.insertCharacters = function( chars, format )
 {
 	if ( this.suspend )
 		return;
-	// this.it.setStyle( format, this.it.formatUpdate );
 	this.checkForCursor( format );
 	this.format = format;
 	this.it.insertChars( chars, format );
@@ -94,7 +121,6 @@ JSOT.OTListener.prototype.deleteCharacters = function( chars, format )
 	if ( this.suspend )
 		return;
 	this.format = format;
-	// this.checkForCursor( format );
 	this.it.deleteChars( chars.length );
 };
 
@@ -140,20 +166,19 @@ JSOT.OTListener.prototype.annotationBoundary = function( update, format )
 {
 	if ( this.suspend )
 		return;
-	// this.checkForCursor( format );
-	// this.format = format;
 	this.it.setStyle( this.format, update );
 };
 
 JSOT.OTListener.prototype.end = function()
 {
 	if ( this.suspend )
-		return;	
+		return;
+	
+  	if ( !this.cursor )
+		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
+	
 	this.it.finalizeLine();
 	
-	if ( !this.cursor )
-		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
-
 	if ( this.hasSelection )
 		this.editor.showSelection();
 	
@@ -169,7 +194,7 @@ JSOT.OTListener.prototype.setSuspend = function( suspend )
 JSOT.OTListener.prototype.checkForCursor = function(format)
 {
 	if ( !this.cursor && format && format[ this.cursorAnnoKey ] == this.cursorAnnoValue )
-		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount, format : this.format };
+		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
 }
 
 
@@ -190,6 +215,9 @@ JSOT.Editor = function(doc, dom)
 	this.doc.addListener( this.listener );
 }
 
+/**
+ * Handle non-printable keys, i.e. backspace or delete.
+ */
 JSOT.Editor.prototype.keydown = function(e)
 {
 	window.console.log("KeyDown = " + e.keyIdentifier.toString() + " code=" + e.keyCode.toString());
@@ -380,6 +408,9 @@ JSOT.Editor.prototype.keydown = function(e)
 		throw "Unsupported keycode";
 };
 
+/**
+ * Handle printable keys, i.e. letters, numbers, enter/return
+ */
 JSOT.Editor.prototype.keypress = function(e)
 {
 	window.console.log("Key Press = " + e.keyIdentifier);
@@ -401,6 +432,13 @@ JSOT.Editor.prototype.keypress = function(e)
 	}
 
 	var sel = window.getSelection();
+	
+	// Delete selection?
+	if ( !sel.isCollapsed )
+	{
+		this.deleteSelection();
+	}
+
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
 	
@@ -680,6 +718,7 @@ JSOT.Editor.prototype.getDomPosition = function( line, lineno, charCount )
 	it.line = line;
 	it.current = line;
 	it.lineno = lineno;
+	// TODO: This could change the DOM.
 	it.skipChars( charCount );
 	return { node : it.current, offset : it.index };
 };
@@ -689,9 +728,11 @@ JSOT.Editor.prototype.markSelection = function()
 	this.listener.setSuspend( true );
 	
 	// Delete the old selection
-	if ( this.listener.cursor )
+	var cursor = this.listener.getDocCursor();
+	if ( !cursor.isEndOfDocument )
 	{
-		var cursorpos = this.getDocPosition( this.listener.cursor.lineno, this.listener.cursor.charCount );
+		window.console.log("Cursor is at line " + cursor.lineno.toString() + " and char " +  cursor.charCount.toString() );
+		var cursorpos = this.getDocPosition( cursor.lineno, cursor.charCount );
 		var itemcount = this.doc.itemCount();
 		// The cursor is currently at the end of the document -> it has no annotationBoundary -> nothing to do. Otherwise remove the annoation of the cursor
 		if ( cursorpos < itemcount )
@@ -757,3 +798,4 @@ JSOT.Editor.prototype.submit = function(docOp)
 	// Apply locally and send to the server
 	wavelet.submitMutations( [m] );
 };
+
