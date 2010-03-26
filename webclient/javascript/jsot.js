@@ -1501,6 +1501,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					throw "Cannot delete element start because attribute values differ";
 			}
 				
+			var oldc = c;
+			
 			doc.content.splice( contentIndex, 1 );
 			doc.format.splice( contentIndex, 1 );
 			c = doc.content[contentIndex];
@@ -1508,7 +1510,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 			
 			if ( doc.listeners )
 				for( var i = 0; i < doc.listeners.length; ++i )
-					doc.listeners[i].deleteElementStart( c, updatedAnnotation );
+					doc.listeners[i].deleteElementStart( oldc, updatedAnnotation );
 		}
 		else if ( op.delete_element_end )
 		{
