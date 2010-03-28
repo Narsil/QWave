@@ -11,6 +11,7 @@ if ( !window.JSOT )
  */
 JSOT.DomIterator = function( dom )
 {
+	this.dom = dom;
 	/**
 	 * Number of the current line.
 	 */
@@ -24,9 +25,9 @@ JSOT.DomIterator = function( dom )
 	 */
 	this.charCount;
 	/**
-	 * A div, span or text node.
+	 * A span or text node or null. A value of null means the position at the end of the current line
 	 */
-	this.current = dom;
+	this.current = null;
 	/**
 	 * Position inside a text node. Only relevant when this,current is a text node.
 	 */
@@ -60,7 +61,7 @@ JSOT.DomIterator.prototype.skipLineBreak = function()
 {
 	if ( this.lineno == -1 )
 	{
-		this.line = this.current.firstChild;
+		this.line = this.dom.firstChild;
 	}
 	else
 	{
@@ -69,7 +70,7 @@ JSOT.DomIterator.prototype.skipLineBreak = function()
 	}
 	if ( !this.line )
 		throw "There is no more line to go to";
-	this.current = this.line; //.firstChild;
+	this.current = this.line.firstChild;
 	this.index = 0;
 	this.charCount = 0;
 	this.lineno++;
@@ -86,33 +87,21 @@ JSOT.DomIterator.prototype.skipChars = function( count, format )
 		return;
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
-		
-	// Go down in the tree without skipping a character.
-	// This will either lead to a text node or an empty span
-	while( this.current.firstChild )
-		this.current = this.current.firstChild;
-	
-	// Detected an empty span? Remove it and put the cursor in front of the next item (text node or span)
+	if ( !this.current )
+		throw "Cannot skip characters at the end of a line";
+
+	// If inside a SPAN go down to the text node
 	if ( this.current.nodeType == 1 )
 	{
-		if ( this.current.nodeName == "DIV" )
-			throw "Skipping characters in an empty line is not possible";
-		var n = this.current;
-		// Skip the empty span
-		var ok = this.goRightUp();
-		if ( !ok )
-			throw "Skipping characters in an empty line is not possible";
-		n.parentNode.removeChild(n);
-		// Try again
-		this.skipChars(count, format);
+		this.current = this.current.firstChild;
+		// Detected an empty span?
+		if ( !this.current )
+			throw "Detected an empty span"
 	}
-
-	if ( this.current.nodeType != 3 )
-		throw "Expeccted a text node"
 	  
 	if ( this.index == 0 && (this.formatUpdate || this.styleChanged ) )
 	{
-		this.setTextNodeStyle( this.current, format );
+		this.setSpanStyle( this.current.parentNode, format );
 		this.styleChanged = false;
 	}
 		
@@ -124,9 +113,8 @@ JSOT.DomIterator.prototype.skipChars = function( count, format )
 	// Need to skip more characters?
 	if ( count > 0 )
 	{
-		var ok = this.goRightUp();
-		if ( !ok )
-			throw "Skipping characters in an empty line is not possible";
+		this.current = this.current.parentNode.nextSibling;
+		this.index = 0;
 		this.skipChars( count, format );
 	}
 };
@@ -141,76 +129,58 @@ JSOT.DomIterator.prototype.insertLineBreak = function(element)
 {
 	this.styleChanged = false;
   
-	// The document is empty?
+	// Beginning of line?
+	if ( this.charCount == 0 )
+		this.removeBr();
+	
+	// The document is empty? -> Insert a first line
 	if ( !this.line )
 	{
 		this.line = document.createElement("div");
-		this.current.appendChild(this.line);
-		this.current = this.line;
+		this.line.className = "jsot_line";
+		this.dom.appendChild(this.line);
+		this.current = null;
 		this.index = 0;
 		this.lineno = 0;
 		this.line.lineno = this.lineno;
 		this.charCount = 0;
 		return;
 	}
-	
-	var node = this.current;
-	var before;
-	if ( this.current.nodeType == 3 )
+
+	var before = null;
+	// The cursor is not at the end of the line
+	if ( this.current )
 	{
-		before = this.splitTextNode( node, this.index );
-		node = node.parentNode;
-	}
-	else
-		before = this.current.firstChild;
-	if ( node.nodeName == "SPAN" )
-	{
+		// Inside a text node? Split it
+		if ( this.current.nodeType == 3 )
+		{
+			before = this.splitTextNode( this.current, this.index );
+			this.current = this.current.parentNode;
+		}
+		else
+			before = this.current.firstChild;
+
 		// Split the SPAN. If the cursor is on the right end of the span or
 		// if the span is empty, then there is no reason to split it
 		if ( before )
 		{
-			before = this.splitNodeBefore( node, before );
-			this.copySpanStyle( before, node );
+			before = this.splitNodeBefore( this.current, before );
+			this.copySpanStyle( before, this.current );
 		}
 		else
-			before = node.nextSibling;
-		node = node.parentNode;
+			before = this.current.nextSibling;
 	}
-	if ( node.nodeName != "DIV" )
-		throw "Expected DIV";
-	// Split the DIV
-	before = this.splitNodeBefore( node, before );
+	// Split the line DIV
+	before = this.splitNodeBefore( this.line, before );
 	this.finalizeLine();
 	
 	// Move to the new line
 	this.line = before;
-	this.current = this.line;
+	this.current = this.line.firstChild;
 	this.index = 0;
 	this.lineno++;
 	this.line.lineno = this.lineno;
 	this.charCount = 0;
-	
-	// Go down in the tree without skipping a character.
-	// This is required to set the cursor of the browser correctly.
-	// For the following DomIterator operations this is not required.
-	while( this.current.firstChild )
-		this.current = this.current.firstChild;
-};
-
-/**
- * @internal
- */
-JSOT.DomIterator.prototype.setTextNodeStyle = function( node, format )
-{
-	// Wrap the text node (and all text node siblings) in a span
-	if ( node.parentNode.nodeName == "DIV" )
-	{
-		var span = document.createElement("span");
-		node.parentNode.insertBefore( span, node );
-		node.parentNode.removeChild(node);
-		span.appendChild(node);
-	}
-	this.setSpanStyle( node.parentNode, format );
 };
 
 /**
@@ -225,44 +195,35 @@ JSOT.DomIterator.prototype.insertChars = function( str, format )
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
 
+	// Beginning of line?
+	if ( this.charCount == 0 )
+		this.removeBr();
+	
 	this.charCount += str.length;
-	
-	while ( this.current.nodeType == 1 && this.current.firstChild )
-		this.current = this.current.firstChild;
-		
-	// Empty div?
-	if ( this.current.nodeType == 1 && this.current.nodeName == "DIV" )
+
+	// Empty line or at the beginning of a SPAN? -> Insert a new span with the proper formatting
+	if ( !this.current || this.current.nodeType == 1 )
 	{
+		if ( this.current && this.current.nodeName != "SPAN" )
+			throw "Expected a span";
+		// Create a new span
 		var span = document.createElement("span");
-		this.current.appendChild( span );
-		this.current = span;
-	}
-	
-	// Empty span?
-	if ( this.current.nodeType == 1 && this.current.nodeName == "SPAN" )
-	{
+		this.setSpanStyle( span, format );
 		var t = document.createTextNode( str );
-		this.current.appendChild(t);
-		this.setSpanStyle( this.current, format );
+		span.appendChild(t);
+		this.line.insertBefore( span, this.current );
 		this.current = t;
 		this.index = str.length;
 		return;
 	}
-
-	// Insert inside a text node?
-	if ( this.current.nodeType != 3 )
-		throw "Expected a text node";
-		
+			
 	// Need to set a format for the new text? This can only happen on the first characters.
 	// If inserting in the middle, the new characters gets the format of its left neightbour character
 	// which is already correct.
 	if ( this.index == 0 )
 	{
-		var t = document.createTextNode( str );
-		this.current.parentNode.insertBefore( t, this.current.nextSibling );
-		this.setTextNodeStyle( t, format )
-		this.current = t;
-		this.index = str.length;
+		this.current = this.current.parentNode;
+		this.insertChars( str, format )
 		return;
 	}
 	
@@ -271,8 +232,7 @@ JSOT.DomIterator.prototype.insertChars = function( str, format )
 };
 
 /**
- * Sets the style for all characters which are inserted from here on. The update
- * will be applied to all skipped items.
+ * Ensures that the cursor is positioned either in an empty line or on a span.
  *
  * @param {object} format is a dictionary mapping style keys to their value.
  * @param {KeyValueUpdate[]} update is a list of style updates or null if nothing needs updating.
@@ -281,41 +241,32 @@ JSOT.DomIterator.prototype.setStyle = function( format, update )
 {
 	if ( this.lineno == -1 )
 		throw "Must skip line break first";
-	if ( this.current == this.line )
-		this.removeBr();
 
 	this.formatUpdate = update;
 	this.format = format;
 	this.styleChanged = true;
 
-	// Cursor is at the end of a text node. Try to go right up to the next text node or the next span
-	if ( this.current.nodeType == 3 && this.index == this.current.data.length )
-	{
-		var ok = this.goRightUp();
-	
-		// At end of the line? Could not go right up.
-		if ( !ok )
-		{
-			var span = document.createElement("span");
-			this.line.appendChild( span );
-			this.current = span;
-			this.index = 0;
-			return;
-		}
-	}
-	
-	// Cursor is on a span or at the beginning of a top-level text node -> ok
-	if ( this.current.nodeType == 1 || ( this.index == 0 && this.current.parentNode.nodeName == "DIV" ) )
+	// Cursor is on a span or empty line -> ok
+	if ( !this.current || this.current.nodeType == 1 )
 		return;
-	
+
+	// Cursor is at the end of a text node. Go to the next span
+	if ( this.index == this.current.data.length )
+	{
+		this.current = this.current.parentNode.nextSibling;
+		this.index = 0;
+		return;
+	}
+		
 	// Somewhere inside a text node
 	var node = this.current;
 	this.current = this.splitTextNode( this.current, this.index );
 
-	// The text node is inside a span? -> Split the span as well
-	if ( this.current.parentNode.nodeName == "SPAN" )
-		this.current = this.splitNodeBefore( this.current.parentNode, this.current );
-	
+	// The text node must be inside a span
+	if ( this.current.parentNode.nodeName != "SPAN" )
+		throw "Expected a SPAN"
+	// Split the span
+	this.current = this.splitNodeBefore( this.current.parentNode, this.current );	
 	this.index = 0;
 };
 
@@ -323,19 +274,25 @@ JSOT.DomIterator.prototype.deleteLineBreak = function()
 {
 	if ( this.lineno == -1 )
 		throw "Deleting the first line tag is not allowed";
-	if ( this.current == this.line )
+	// Beginning of line?
+	if ( this.charCount == 0 )
 		this.removeBr();
 
 	var l = this.line.nextSibling;
 	if ( !l )
 		throw "There is no more line to go to";
 	this.removeBr( l );
+	// End of current line?
+	if ( !this.current )
+		this.current = l.firstChild;
+	// Copy all children from the deleted line to the current line
 	while( l.firstChild )
 	{
 		var f = l.firstChild;
 		l.removeChild(f);
 		this.line.appendChild(f);
 	};
+	// Remove the deleted line
 	l.parentNode.removeChild(l);
 };
 
@@ -345,41 +302,24 @@ JSOT.DomIterator.prototype.deleteChars = function( count )
 		throw "Deleting chars before the first line tag is not allowed";
 	if ( count == 0 )
 		return;
-	if ( this.current == this.line )
-		this.removeBr();
-  
+	if ( !this.current )
+		throw "Cannot delete characters at the end of a line";
+
 	// Inside a text node
 	if ( this.current.nodeType == 3 )
 	{
 		var data = this.current.data;
 		var min = Math.min( data.length - this.index, count );
 		count -= min;
-		// Delete the entire text node?
+		// Delete the entire text node (including its parent span)?
 		if ( this.index == 0 && min == data.length )
 		{
 			var t = this.current;
-			var p = t.parentNode;
+			// Go to the next span
+			this.current = t.parentNode.nextSibling;
 			this.index = 0;
-			this.current = t.previousSibling;
-			// Delete the text node
-			p.removeChild(t);
-			if ( !this.current && p.tagName == "SPAN" )
-			{
-				// There is no text node on the left. Go to the left sibling of the parent span
-				this.current = p.previousSibling;
-				// Is the SPAN itself empty
-				if ( !p.firstChild )
-					p.parentNode.removeChild(p);
-			}
-			if ( !this.current )
-				// There is nothing on the left. Go to the beginning of the line
-				this.current = this.line;
-			// On a SPAN? -> Go to the right end of the span
-			if ( this.current.nodeType == 1 && this.current.nodeName == "SPAN" )
-				this.current = this.current.lastChild;			
-			if ( this.current.nodeType == 3 )
-				// Go to the right end of the text node
-				this.index = this.current.data.length;
+			// Remove the span
+			t.parentNode.parentNode.removeChild( t.parentNode );
 			// Need to delete more?
 			if ( count > 0 )
 				this.deleteChars( count );
@@ -391,18 +331,15 @@ JSOT.DomIterator.prototype.deleteChars = function( count )
 			if ( count > 0 )
 			{
 				this.index = 0;
-				var t = this.current.nextSibling;
-				if ( t )
-					this.current = t;
-				else
-					this.current = this.current.parentNode.nextSibling;
+				// Go to the next span
+				this.current = this.current.parentNode.nextSibling;
 				this.deleteChars( count );
 			}
 		}
 	}
 	else if ( this.current.nodeType == 1 )
 	{
-		if ( this.current.childNodes.length == 0 )
+		if ( !this.current.firstChild )
 			throw "Did not expect an empty span";
 		this.current = this.current.firstChild;
 		this.deleteChars( count );
@@ -445,6 +382,7 @@ JSOT.DomIterator.prototype.splitTextNode = function(node, pos)
 JSOT.DomIterator.prototype.splitNodeBefore = function(node, before)
 {
 	var el = document.createElement( node.nodeName );
+	el.className = node.className;
 	var b = before;
 	while( b )
 	{
@@ -455,26 +393,6 @@ JSOT.DomIterator.prototype.splitNodeBefore = function(node, before)
 	}
 	node.parentNode.insertBefore( el, node.nextSibling );
 	return el;
-};
-
-JSOT.DomIterator.prototype.goRightUp = function()
-{
-	var node = this.current;
-	while ( node.nodeType != 1 || node.nodeName != "DIV" )
-	{
-		if ( node.nextSibling )
-		{
-			// Go right
-			this.current = node.nextSibling;
-			this.index = 0;
-			return true;
-		}
-		if ( node.parentNode.nodeName == "DIV" )
-			return false;
-		// Go up
-		node = node.parentNode;
-	}
-	return false;
 };
 
 JSOT.DomIterator.prototype.finalizeLine = function()
@@ -489,7 +407,8 @@ JSOT.DomIterator.prototype.finalizeLine = function()
 	// Empty line?
 	if ( !this.line.firstChild )
 	{
-		this.line.appendChild( document.createElement("br") );
+		this.line.appendChild( document.createElement("span") );
+		this.line.lastChild.appendChild( document.createElement("br") );
 	}
 };
 
@@ -499,10 +418,15 @@ JSOT.DomIterator.prototype.finalizeLine = function()
 JSOT.DomIterator.prototype.removeBr = function(l)
 {
 	if ( !l ) l = this.line;
-	if ( l && l.firstChild && l.firstChild.nodeType == 1 && l.firstChild.nodeName == "BR" )
+	if ( l && l.firstChild && l.firstChild.firstChild && l.firstChild.firstChild.nodeName == "BR" )	  
+	{
+		if ( this.current == l.firstChild )
+			this.current = l.firstChild.nextSibling;
 		l.removeChild( l.firstChild );
+	}
 };
 
+/*
 JSOT.DomIterator.prototype.updateSpanStyle = function( span, update )
 {
 	if ( !update )
@@ -527,6 +451,7 @@ JSOT.DomIterator.prototype.updateSpanStyle = function( span, update )
 			span.verticalAlign = update[key].new_value;
 	}
 };
+*/
 
 JSOT.DomIterator.prototype.setSpanStyle = function( span, format )
 {
@@ -571,11 +496,16 @@ JSOT.DomIterator.prototype.copySpanStyle = function( dest, source )
 	dest.style.fontStyle = source.style.fontStyle;
 };
 
+/*
 JSOT.DomIterator.prototype.compareStyles = function( span1, span2 )
 {
 	return span1.style.fontWeight == span2.style.fontWeight && span1.style.fontStyle == span2.style.fontStyle && span1.style.fontSize == span2.style.fontSize;
 };
+*/
 
+/**
+ * Positions the cursor behin the last character in the line.
+ */
 JSOT.DomIterator.prototype.gotoEndOfLine = function()
 {
 	// Empty document?
@@ -586,7 +516,7 @@ JSOT.DomIterator.prototype.gotoEndOfLine = function()
 	// The line is empty?
 	if ( !this.current || (this.current.nodeType == 1 && this.current.nodeName == "BR" ) )
 	{
-		this.current = this.line;
+		this.current = null;
 		return;
 	}
 	// Currently on a span?
@@ -597,6 +527,7 @@ JSOT.DomIterator.prototype.gotoEndOfLine = function()
 			return;
 		this.current = this.current.lastChild;
 	}
+	// Go behind the last characters
 	this.index = this.current.data.length;
 };
 
@@ -605,27 +536,28 @@ JSOT.DomIterator.prototype.isEndOfLine = function()
 	// Empty document?
 	if ( !this.line )
 		return true;
+	// End of line?
+	if ( !this.current )
+	  return true;
 	var node = this.current;
-	do
-	{
-		// Inside text?
-		if ( node.nodeType == 3 )
-		{
-			if ( this.index < node.data.length )
-				return false;
-		}
-		// The element has a child (which is NOT <br>)
-		else if ( node.firstChild && !(node.firstChild.nodeType == 1 && node.firstChild.nodeName == "BR" ) )
+
+	// Inside text?
+	if ( node.nodeType == 3 )
+	{	
+		// In the middle of a text node?
+		if ( this.index < node.data.length )
 			return false;
-		// Empty line?
-		if ( node.nodeName == "DIV" )
-			return true;
-		// Sibling -> not end of line
-		if ( node.nextSibling )
-			return false;
+		// Go to the next span
 		node = node.parentNode.nextSibling;
-	} while( node );
-	
+	}
+
+	while( node )
+	{
+		// Does the span ( or br ) have any child text nodes?
+		if ( node.firstChild )
+			return false;
+		node = node.nextSibling;
+	}
 	return true;
 };
 
@@ -637,4 +569,53 @@ JSOT.DomIterator.prototype.isEndOfDocument = function()
 	if ( line.nextSibling )
 		return false;
 	return this.isEndOfLine();
+};
+
+JSOT.DomIterator.prototype.insertCaret = function(user)
+{
+	var name = user;
+	var i = name.indexOf( '@' );
+	if ( i != -1 ) name = name.substr(0,i);
+	
+	var div = document.createElement("div");
+	div.className = "jsot_caret";
+	div.appendChild( document.createTextNode( name ) );
+
+	if ( !this.current )
+	{
+		this.removeBr();
+		this.line.appendChild( div );
+		return;
+	}
+	else if ( this.current.nodeType == 1 )
+	{
+		this.current.parentNode.insertBefore( div, this.current );
+		return;
+	}
+	
+	// Beginning of a text node?
+	if ( this.index == 0 )
+	{
+		this.current = this.current.parentNode;
+		this.insertCaret(user);
+		return;
+	}
+	// End of a text node?
+	if ( this.index == this.current.data.length )
+	{
+		this.current = this.current.parentNode.nextSibling;
+		this.index = 0;
+		this.insertCaret(user);
+		return;
+	}
+	
+	// Somewhere inside a text node
+	this.current = this.splitTextNode( this.current, this.index );
+
+	// The text node is inside a span -> Split the span as well
+	if ( this.current.parentNode.nodeName != "SPAN" )
+		throw "Expected a SPAN";
+	this.current = this.splitNodeBefore( this.current.parentNode, this.current );
+	this.index = 0;
+	this.insertCaret(user);
 };

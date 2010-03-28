@@ -426,7 +426,6 @@ JSOT.Editor.prototype.keypress = function(e)
 		var ops = new protocol.ProtocolDocumentOperation();
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-		// ops.applyTo( this.doc );
 		this.submit( ops );
 		this.listener.setSuspend(false);
 	}
@@ -483,7 +482,9 @@ JSOT.Editor.prototype.keypress = function(e)
 		iter.finalizeLine();
 		
 		// Position the cursor
-		if ( iter.current.nodeType == 1 )
+		if ( !iter.current )
+			sel.collapse( iter.line.lastChild, 1 );
+		else if ( iter.current.nodeType == 1 )
 			sel.collapse( iter.current, 0 );
 		else
 			sel.collapse( iter.current, iter.index );
@@ -500,7 +501,6 @@ JSOT.Editor.prototype.keypress = function(e)
 		if ( count - pos > 0 )
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - pos ) );
 		this.submit( ops );
-		// ops.applyTo( this.doc );
 		this.listener.setSuspend(false);
 		return;
 	}
@@ -516,9 +516,7 @@ JSOT.Editor.prototype.keypress = function(e)
 	if ( count - pos > 0 )
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - pos ) );
 	this.submit( ops );
-	// ops.applyTo( this.doc );
 	this.listener.setSuspend(false);
-
 };
 
 JSOT.Editor.prototype.getElementByLineNo = function( lineno )
@@ -716,7 +714,7 @@ JSOT.Editor.prototype.getDomPosition = function( line, lineno, charCount )
 {
 	var it = new JSOT.DomIterator(this.dom);
 	it.line = line;
-	it.current = line;
+	it.current = line.firstChild;
 	it.lineno = lineno;
 	// TODO: This could change the DOM.
 	it.skipChars( charCount );

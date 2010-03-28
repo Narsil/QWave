@@ -13,6 +13,7 @@
 body { font-family:aria,sans-serif; }
 #login { position:absolute; top:0px; left:0px; }
 #app { position:absolute; top:0px; left:0px;visibility:hidden;width:100% }
+.jsot_caret { background-color:red; color:white; display:inline; font-size:9pt; position:relative; top:-2px }
 	</style>	
 </head>
 <body>
@@ -25,6 +26,7 @@ body { font-family:aria,sans-serif; }
 	</div>
 	<div id="app" style="visibility:hidden">
 		<h1>Concurrent editor</h1>
+		<div><span>Hello <div class="jsot_caret">Torben</div>World</span></div>
 		<div><input id="bold" type="button" value="Bold" > <input id="italic" type="button" value="Italic" ></div>
 		<div id="editor" contentEditable="true" style="border:1px solid black; margin:3px"></div>
 	</div>
