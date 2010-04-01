@@ -93,8 +93,6 @@ JSOT.Rpc.processSubmitRequest = function( wavelet, submitRequest, openWavelet )
 		if ( op.has_mutate_document() )
 		{
 			var docid = op.mutate_document.document_id;
-//			if ( wavelet.hashed_version.version == 0 && docId != "conversation" )
-//			  continue;
 			var doc = wavelet.getDoc(docid);
 			if ( doc.has_gui )
 				doc.createGUI();
@@ -102,18 +100,14 @@ JSOT.Rpc.processSubmitRequest = function( wavelet, submitRequest, openWavelet )
 	}
 	
 	// Print the wave1
-	if ( window.console )
-		window.console.log( wavelet.toString() );
+	//if ( window.console )
+	//	window.console.log( wavelet.toString() );
 
 	JSOT.Rpc.sendNextSubmitRequest();
 };
 
-// window.qin = [];
-
 JSOT.Rpc.processUpdate = function( update )
 {
-//	window.qin.push( update );
-	
 	// Is this the echo to our submit? TODO: This sucks like hell.
 	if ( JSOT.Rpc.pendingSubmitUrl == update.wavelet_name )
 	{
@@ -244,8 +238,8 @@ JSOT.Rpc.applyUpdate = function( update )
 		for( var a in wave.wavelets )
 		{
 			var wavelet = wave.wavelets[a];
-			if ( window.console )
-				window.console.log( wavelet.toString() );
+			// if ( window.console )
+			//	window.console.log( wavelet.toString() );
 		}
 		
 		// Show the changes in the UI
@@ -259,8 +253,6 @@ JSOT.Rpc.applyUpdate = function( update )
 				if ( op.has_mutate_document() )
 				{
 					var docid = op.mutate_document.document_id;
-//					if ( is_initial && docid != "conversation" )
-//						break;
 					if ( !done[docid] )
 					{
 						done[docid] = true;
@@ -312,8 +304,8 @@ JSOT.Rpc.callServer = function(jsonData, callback)
 //		c.appendChild( document.createTextNode("OUT:") );
 //		c.appendChild( document.createTextNode(jsonData) );
 //		document.getElementById("out").appendChild(c);
-		if ( window.console )
-			window.console.log( "OUT: " + jsonData );
+		//if ( window.console )
+			//window.console.log( "OUT: " + jsonData );
     
 		JSOT.Rpc.pendingRequestCount++;
 		
@@ -327,20 +319,12 @@ JSOT.Rpc.callServer = function(jsonData, callback)
 //				c.appendChild( document.createTextNode("IN:") );
 //				c.appendChild( document.createTextNode(xmlHttp.responseText) );
 //				document.getElementById("out").appendChild(c);
-				if ( window.console )
-					window.console.log( "IN: " + xmlHttp.responseText );
+				//if ( window.console )
+				//	window.console.log( "IN: " + xmlHttp.responseText );
 	  
 				if( callback )
 				{
-					//try
-					{
-						callback(xmlHttp.responseText);						
-					}
-					//catch( e )
-					//{
-					//	if ( window.console )
-					//		window.console.log(e.toString());
-					//}
+					callback(xmlHttp.responseText);
 				}
 			}
 		};

@@ -13,10 +13,12 @@ JSOT.OTListener = function(editor)
 	this.cursorAnnoValue = editor.jid;
 	this.hasSelection = false;
 	this.format = null;
+	this.carets = { };
 };
 
 /**
  * Tells where the cursor should be according to document and its annotations.
+ * Therefore, this function inspects the annotation and looks for keys of the format user/e/xxxx".
  */
 JSOT.OTListener.prototype.getDocCursor = function()
 {
@@ -56,6 +58,13 @@ JSOT.OTListener.prototype.begin = function( doc )
 	this.doc = doc;
 	if ( this.suspend )
 		return;
+	// Delete all carets
+	for( var key in this.carets )
+	{
+		var d = this.carets[key].dom;
+		window.console.log("Remove CARET " + d.id );
+		d.parentNode.removeChild( d );
+	}
 	this.it = new JSOT.DomIterator( this.dom );
 }
 
@@ -176,6 +185,7 @@ JSOT.OTListener.prototype.end = function()
 	
   	if ( !this.cursor )
 		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
+	this.carets = this.it.carets;
 	
 	this.it.finalizeLine();
 	
@@ -228,34 +238,8 @@ JSOT.Editor.prototype.keydown = function(e)
 	var sel = window.getSelection();
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
-	
-	var charCount = selDom.nodeType == 3 ? selOffset : 0;
-	var lineno = 0;
-	// Find the line, i.e. <div> element
-	var line = selDom;
-	// Document is empty?
-	if ( !line )
-		return;
-	while( line.nodeType != 1 || line.nodeName != "DIV" )
-	{
-		var p = line.previousSibling;
-		while( p )
-		{
-			charCount += this.charCount(p);
-			p = p.previousSibling;
-		}
-		line = line.parentNode;
-	}
-	// Find the line number
-	var l = line.previousSibling;
-	while( l )
-	{
-		lineno++;
-		l = l.previousSibling;
-	}
-	
-	// window.console.log("Line No " + line.lineno.toString() + " and pos " + charCount.toString() );
-	
+	var pos = this.getLinePosition( selDom, selOffset );
+  
 	// Delete selection?
 	if ( !sel.isCollapsed )
 	{
@@ -270,40 +254,49 @@ JSOT.Editor.prototype.keydown = function(e)
 	// Backspace?
 	if ( e.keyCode == 8 )
 	{
-		var element = this.getElementByLineNo( lineno );
+		var element = this.getElementByLineNo( pos.lineno );
 
 		// Delete a linebreak?
-		if ( charCount == 0 )
+		if ( pos.charCount == 0 )
 		{
 			e.stopPropagation();
 			e.preventDefault();
 
 			// At the beginning of the document? -> Do nothing
-			if ( !line.previousSibling )
+			if ( !pos.line.previousSibling )
 				return;
 
+			// Put the iterator at the end of the previous line
 			var iter = new JSOT.DomIterator( this.dom );
-			iter.line = line.previousSibling;
-			iter.lineno = lineno - 1;
-			iter.current = iter.line;
+			iter.line = pos.line.previousSibling;
+			iter.lineno = pos.lineno - 1;
+			iter.current = null;
 			iter.index = 0;
-			iter.gotoEndOfLine();
+			// iter.gotoEndOfLine();
 			iter.deleteLineBreak();
 			iter.finalizeLine();
 			
 			// Position the cursor
-			if ( iter.current.nodeType == 1 )
+			if ( !iter.current )
+			{
+				if ( iter.line.lastChild.lastChild.nodeType == 3 )
+					sel.collapse( iter.line.lastChild, iter.line.lastChild.lastChild.data.length );
+				else
+					sel.collapse( iter.line.lastChild, 0 );
+			}
+			else if ( iter.current.nodeType == 1 )
 				sel.collapse( iter.current, 0 );
 			else
 				sel.collapse( iter.current, iter.index );
 			
-			var pos = element.itemCountBefore();
+			var docpos = element.itemCountBefore();
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
-			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+			this.newUserAnnotation(ops);
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos ) );
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart("line") );
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
-			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 2 ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos - 2 ) );
 			this.submit( ops );
 			// ops.applyTo( this.doc );
 			this.listener.setSuspend(false);
@@ -311,40 +304,41 @@ JSOT.Editor.prototype.keydown = function(e)
 		}
 		else
 		{
-			var pos = element.itemCountBefore() + 2 + charCount - 1;
-			var ch = this.doc.getCharAt(pos);
-			window.console.log("Backspace " + ch);
+			var docpos = element.itemCountBefore() + 2 + pos.charCount - 1;
+			var ch = this.doc.getCharAt(docpos);
+			// window.console.log("Backspace " + ch);
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
-			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+			this.newUserAnnotation(ops);
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos ) );
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( ch ) );
-			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 1 ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos - 1 ) );
 			this.submit( ops );
 			// ops.applyTo( this.doc );
 			this.listener.setSuspend(false);
 			
 			// Chrome inserts some tags when a line becomes empty. Don't want this.
 			// Thus, I do the deletion myself and end up with a nice <div><br><div>
-			if ( this.charCount( line ) == 1 )
+			if ( this.charCount( pos.line ) == 1 )
 			{
 				e.stopPropagation();
 				e.preventDefault();
 				
-				line.innerHTML = "<br>";
-				sel.collapse( line, 0 );
-			}			
+				line.innerHTML = "<span><br></span>";
+				sel.collapse( pos.line, 0 );
+			}
 			return;
 		}
 	}
 	// Delete?
 	else if ( e.keyCode == 46 )
 	{
-		var element = this.getElementByLineNo( lineno );
-		var pos = element.itemCountBefore() + 2 + charCount;
+		var element = this.getElementByLineNo( pos.lineno );
+		var docpos = element.itemCountBefore() + 2 + pos.charCount;
 
 		var iter = new JSOT.DomIterator( this.dom );
-		iter.line = line;
-		iter.lineno = lineno;
+		iter.line = pos.line;
+		iter.lineno = pos.lineno;
 		iter.current = selDom;
 		iter.index = selOffset;
 		
@@ -369,10 +363,11 @@ JSOT.Editor.prototype.keydown = function(e)
 			window.console.log("Delete line break" + ch);
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
-			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+			this.newUserAnnotation(ops);
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos ) );
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart("line") );
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
-			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 2 ) );
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos - 2 ) );
 			this.submit( ops );
 			// ops.applyTo( this.doc );
 			this.listener.setSuspend(false);
@@ -384,6 +379,7 @@ JSOT.Editor.prototype.keydown = function(e)
 			window.console.log("Delete " + ch);
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
+			this.newUserAnnotation(ops);
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( ch ) );
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - pos - 1 ) );
@@ -418,16 +414,19 @@ JSOT.Editor.prototype.keypress = function(e)
 	// The document is currently empty?
 	if ( this.doc.isEmpty() )
 	{
-		this.dom.innerHTML = "<div><br></div>";
+		this.dom.innerHTML = '<div class="jsot_line"><span><br></span></div>';
 		var sel = window.getSelection();
-		sel.collapse( this.dom.firstChild, 0 );
+		sel.collapse( this.dom.firstChild.firstChild, 0 );
 		
 		this.listener.setSuspend(true);
 		var ops = new protocol.ProtocolDocumentOperation();
+		this.newUserAnnotation(ops);
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
+		ops.component.push( protocol.ProtocolDocumentOperation.newCharacters( String.fromCharCode(e.keyCode) ) );
 		this.submit( ops );
 		this.listener.setSuspend(false);
+		return;
 	}
 
 	var sel = window.getSelection();
@@ -440,30 +439,7 @@ JSOT.Editor.prototype.keypress = function(e)
 
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
-	
-	var charCount = selDom.nodeType == 3 ? selOffset : 0;
-	var lineno = 0;
-	// Find the line, i.e. <div> element
-	var line = selDom;
-	while( line.nodeType != 1 || line.nodeName != "DIV" )
-	{
-		var p = line.previousSibling;
-		while( p )
-		{
-			charCount += this.charCount(p);
-			p = p.previousSibling;
-		}
-		line = line.parentNode;
-	}
-	// Find the line number
-	var l = line.previousSibling;
-	while( l )
-	{
-		lineno++;
-		l = l.previousSibling;
-	}
-	
-	// window.console.log("Line No " + line.lineno.toString() + " and pos " + charCount.toString() );
+	var pos = this.getLinePosition( selDom, selOffset );
 	
 	if ( e.keyIdentifier == "Enter" || e.keyCode == 13)
 	{
@@ -472,8 +448,8 @@ JSOT.Editor.prototype.keypress = function(e)
 		e.preventDefault();
 
 		var iter = new JSOT.DomIterator( this.dom );
-		iter.line = line;
-		iter.lineno = lineno;
+		iter.line = pos.line;
+		iter.lineno = pos.lineno;
 		iter.current = selDom;
 		iter.index = selOffset;
 		
@@ -489,36 +465,52 @@ JSOT.Editor.prototype.keypress = function(e)
 		else
 			sel.collapse( iter.current, iter.index );
 			
-		var element = this.getElementByLineNo( lineno );
-		var pos = element.itemCountBefore() + 2 + charCount;
+		var element = this.getElementByLineNo( pos.lineno );
+		var docpos = element.itemCountBefore() + 2 + pos.charCount;
 		var count = this.doc.itemCount();
 		
 		this.listener.setSuspend(true);
+		this.newUserAnnotation(ops);
 		var ops = new protocol.ProtocolDocumentOperation();
-		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos ) );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
-		if ( count - pos > 0 )
-			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - pos ) );
+		if ( count - docpos > 0 )
+			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - docpos ) );
 		this.submit( ops );
 		this.listener.setSuspend(false);
 		return;
 	}
+
+	var element = this.getElementByLineNo( pos.lineno );
+	var docpos = element.itemCountBefore() + 2 + pos.charCount;
+	var count = this.doc.itemCount();
+
+	// First character? Create a span and put the cursor inside.
+	if ( pos.charCount == 0 )
+	{		
+		var span = document.createElement("span");
+		var format = this.doc.getFormatAt( docpos - 1 );
+		JSOT.DomIterator.setSpanStyle( span, format );
+		pos.line.insertBefore(span, pos.line.firstChild);
+		sel.collapse( span, 0 );
+	}
 	
 	this.listener.setSuspend(true);
-	var element = this.getElementByLineNo( lineno );
-	var pos = element.itemCountBefore() + 2 + charCount;
-	var count = this.doc.itemCount();
-	window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
+	// window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
 	var ops = new protocol.ProtocolDocumentOperation();
-	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( pos ) );
+	this.newUserAnnotation(ops);
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos ) );
 	ops.component.push( protocol.ProtocolDocumentOperation.newCharacters( String.fromCharCode(e.keyCode) ) );
-	if ( count - pos > 0 )
-		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - pos ) );
+	if ( count - docpos > 0 )
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - docpos ) );
 	this.submit( ops );
 	this.listener.setSuspend(false);
 };
 
+/**
+ * @return {JOST.Doc.ElementStart} of type 'line' for the given line number or null.
+ */
 JSOT.Editor.prototype.getElementByLineNo = function( lineno )
 {
 	var l = 0;
@@ -538,6 +530,9 @@ JSOT.Editor.prototype.getElementByLineNo = function( lineno )
 
 /**
  * @return the number of characters in a HTML node.
+ *
+ * This helper function is required to map the cursor position from inside the dom
+ * to a line/charCount representation.
  */
 JSOT.Editor.prototype.charCount = function( node )
 {
@@ -553,6 +548,7 @@ JSOT.Editor.prototype.charCount = function( node )
 	return result;
 };
 
+/*
 JSOT.Editor.prototype.isEmptyElement = function(node)
 {
 	if ( node.nodeType == 3 )
@@ -562,6 +558,7 @@ JSOT.Editor.prototype.isEmptyElement = function(node)
 			return false;
 	return true;
 };
+*/
 
 /**
  * Changes the style of the current selection.
@@ -596,6 +593,7 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 	var style = false;
 
 	var ops = new protocol.ProtocolDocumentOperation();
+	this.newUserAnnotation(ops);
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos1 ) );
 	for( var i = docpos1; i < docpos2; ++i )
 	{
@@ -623,6 +621,7 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ styleKey ], [  ] ) );
 	if ( this.doc.itemCount() - docpos2 > 0 )
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
+		
 	this.submit( ops );
 	
 	this.showSelection();
@@ -655,6 +654,7 @@ JSOT.Editor.prototype.deleteSelection = function()
 	var docpos2 = element2.itemCountBefore() + 2 + pos2.charCount;
 
 	var ops = new protocol.ProtocolDocumentOperation();
+	this.newUserAnnotation(ops);
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos1 ) );
 	for( var i = docpos1; i < docpos2; ++i )
 	{
@@ -783,6 +783,24 @@ JSOT.Editor.prototype.showSelection = function()
 	var sel = window.getSelection();
 	var cursorPos = this.getDomPosition( this.listener.cursor.line, this.listener.cursor.lineno, this.listener.cursor.charCount );
 	sel.collapse( cursorPos.node, cursorPos.offset );
+};
+
+/**
+ * Internal helper function.
+ *
+ * @param {ProtocolDocumentOperation} ops
+ */
+JSOT.Editor.prototype.newUserAnnotation = function(ops)
+{
+	var key = "user/d/" + JSOT.Rpc.sessionId;
+	var newValue = JSOT.Rpc.jid + "," + (new Date()).getTime().toString();
+	var oldValue = null;
+	if ( this.doc.content.length > 0 )
+		oldValue = this.doc.getFormatAt(0)[ key ];
+	
+	// Add an annotation to the ProtocolDocumentOperation
+	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ 
+		protocol.ProtocolDocumentOperation.newKeyValueUpdate( key, oldValue, newValue) ] ) );
 };
 
 JSOT.Editor.prototype.submit = function(docOp)

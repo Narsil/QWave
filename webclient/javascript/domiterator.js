@@ -44,6 +44,11 @@ JSOT.DomIterator = function( dom )
 	 * @type bool
 	 */
 	this.styleChanged = false;
+	/**
+	  * Map from annotation keys (especially user/e/xxxx} to a struct {dom, user} where dom is their
+	  * HTML represenation of the caret and user is the jid of the corresponding user.
+	  */
+	this.carets = { };
 }
 
 JSOT.DomIterator.prototype.dispose = function()
@@ -52,6 +57,7 @@ JSOT.DomIterator.prototype.dispose = function()
 	delete this.formatUpdate;
 	delete this.format;
 	delete this.line;
+	delete this.carets;
 };
 
 /**
@@ -90,6 +96,8 @@ JSOT.DomIterator.prototype.skipChars = function( count, format )
 	if ( !this.current )
 		throw "Cannot skip characters at the end of a line";
 
+	this.checkForCaret( format );
+	
 	// If inside a SPAN go down to the text node
 	if ( this.current.nodeType == 1 )
 	{
@@ -101,7 +109,7 @@ JSOT.DomIterator.prototype.skipChars = function( count, format )
 	  
 	if ( this.index == 0 && (this.formatUpdate || this.styleChanged ) )
 	{
-		this.setSpanStyle( this.current.parentNode, format );
+		JSOT.DomIterator.setSpanStyle( this.current.parentNode, format );
 		this.styleChanged = false;
 	}
 		
@@ -198,7 +206,9 @@ JSOT.DomIterator.prototype.insertChars = function( str, format )
 	// Beginning of line?
 	if ( this.charCount == 0 )
 		this.removeBr();
-	
+
+	this.checkForCaret( format );	
+
 	this.charCount += str.length;
 
 	// Empty line or at the beginning of a SPAN? -> Insert a new span with the proper formatting
@@ -208,7 +218,7 @@ JSOT.DomIterator.prototype.insertChars = function( str, format )
 			throw "Expected a span";
 		// Create a new span
 		var span = document.createElement("span");
-		this.setSpanStyle( span, format );
+		JSOT.DomIterator.setSpanStyle( span, format );
 		var t = document.createTextNode( str );
 		span.appendChild(t);
 		this.line.insertBefore( span, this.current );
@@ -235,19 +245,17 @@ JSOT.DomIterator.prototype.insertChars = function( str, format )
  * Ensures that the cursor is positioned either in an empty line or on a span.
  *
  * @param {object} format is a dictionary mapping style keys to their value.
- * @param {KeyValueUpdate[]} update is a list of style updates or null if nothing needs updating.
+ * @param {object} update is a dictionary mapping style keys to a KeyValueUpdate object.
  */
 JSOT.DomIterator.prototype.setStyle = function( format, update )
 {
-	if ( this.lineno == -1 )
-		throw "Must skip line break first";
-
 	this.formatUpdate = update;
 	this.format = format;
 	this.styleChanged = true;
 
+	
 	// Cursor is on a span or empty line -> ok
-	if ( !this.current || this.current.nodeType == 1 )
+	if ( !this.current || this.current.nodeType == 1 || !this.line )
 		return;
 
 	// Cursor is at the end of a text node. Go to the next span
@@ -257,7 +265,14 @@ JSOT.DomIterator.prototype.setStyle = function( format, update )
 		this.index = 0;
 		return;
 	}
-		
+	
+	if ( this.index == 0 )
+	{
+		this.current = this.current.parentNode;
+		this.index = 0;
+		return;
+	}
+	
 	// Somewhere inside a text node
 	var node = this.current;
 	this.current = this.splitTextNode( this.current, this.index );
@@ -266,7 +281,7 @@ JSOT.DomIterator.prototype.setStyle = function( format, update )
 	if ( this.current.parentNode.nodeName != "SPAN" )
 		throw "Expected a SPAN"
 	// Split the span
-	this.current = this.splitNodeBefore( this.current.parentNode, this.current );	
+	this.current = this.splitNodeBefore( this.current.parentNode, this.current );
 	this.index = 0;
 };
 
@@ -453,7 +468,7 @@ JSOT.DomIterator.prototype.updateSpanStyle = function( span, update )
 };
 */
 
-JSOT.DomIterator.prototype.setSpanStyle = function( span, format )
+JSOT.DomIterator.setSpanStyle = function( span, format )
 {
 	if ( format && format["style/backgroundColor"] )
 		span.style.backgroundColor = format["style/backgroundColor"];
@@ -466,7 +481,7 @@ JSOT.DomIterator.prototype.setSpanStyle = function( span, format )
 	if ( format && format["style/fontFamily"] )
 		span.style.fontFamily = format["style/fontFamily"];
 	else
-		span.style.fontFamily = null;	
+		span.style.fontFamily = null;
 	if ( format && format["style/fontWeight"] )
 		span.style.fontWeight = format["style/fontWeight"];
 	else
@@ -482,7 +497,7 @@ JSOT.DomIterator.prototype.setSpanStyle = function( span, format )
 	if ( format && format["style/textDecoration"] )
 		span.style.textDecoration = format["style/textDecoration"];
 	else
-		span.style.textDecoration = null;	
+		span.style.textDecoration = null;
 	if ( format && format["style/verticalAlign"] )
 		span.style.verticalAlign = format["style/verticalAlign"];
 	else
@@ -503,9 +518,10 @@ JSOT.DomIterator.prototype.compareStyles = function( span1, span2 )
 };
 */
 
-/**
+/*
  * Positions the cursor behin the last character in the line.
  */
+/*
 JSOT.DomIterator.prototype.gotoEndOfLine = function()
 {
 	// Empty document?
@@ -530,13 +546,14 @@ JSOT.DomIterator.prototype.gotoEndOfLine = function()
 	// Go behind the last characters
 	this.index = this.current.data.length;
 };
+*/
 
 JSOT.DomIterator.prototype.isEndOfLine = function()
 {
 	// Empty document?
 	if ( !this.line )
 		return true;
-	// End of line?
+	// End of line? (The trivial case)
 	if ( !this.current )
 	  return true;
 	var node = this.current;
@@ -553,10 +570,13 @@ JSOT.DomIterator.prototype.isEndOfLine = function()
 
 	while( node )
 	{
-		// Does the span ( or br ) have any child text nodes?
-		if ( node.firstChild )
-			return false;
-		node = node.nextSibling;
+		if ( node.className != "jsot_caret" )
+		{
+			// Does the span have any child text nodes?
+			if ( node.firstChild && node.firstChild.nodeType == 3 )
+				return false;
+			node = node.nextSibling;
+		}
 	}
 	return true;
 };
@@ -571,42 +591,70 @@ JSOT.DomIterator.prototype.isEndOfDocument = function()
 	return this.isEndOfLine();
 };
 
-JSOT.DomIterator.prototype.insertCaret = function(user)
+JSOT.DomIterator.prototype.checkForCaret = function( format )
 {
-	var name = user;
-	var i = name.indexOf( '@' );
-	if ( i != -1 ) name = name.substr(0,i);
+	if ( !format )
+		return;
 	
-	var div = document.createElement("div");
-	div.className = "jsot_caret";
-	div.appendChild( document.createTextNode( name ) );
+	// Display a new cursor?
+	for( var key in format )
+	{
+		if ( this.carets[key] )
+			return;
+		if ( key.substr(0, 7) == "user/e/" )
+		{
+			var v = format[key];
+			if ( v == JSOT.Rpc.jid )
+				continue;
+			var dom = this.insertCaret( v );
+			this.carets[key] = { dom : dom, user : v };
+		}
+	}
+};
 
+/**
+ * @param {HTMLElementDiv} the caret to insert or null. In the latter case a HTML caret will be constructed.
+ */
+JSOT.DomIterator.prototype.insertCaret = function(user, div)
+{
+	if ( !div )
+	{
+		var name = user;
+		var i = name.indexOf( '@' );
+		if ( i != -1 ) name = name.substr(0,i);
+	
+		div = document.createElement("div");
+		div.id = Math.random().toString();
+		window.console.log("Added CARET " + div.id);
+		div.className = "jsot_caret";
+		div.appendChild( document.createTextNode( name ) );	
+	}
+	
+	// End of line?
 	if ( !this.current )
 	{
 		this.removeBr();
 		this.line.appendChild( div );
-		return;
+		return div;
 	}
 	else if ( this.current.nodeType == 1 )
 	{
 		this.current.parentNode.insertBefore( div, this.current );
-		return;
+		return div;
 	}
 	
 	// Beginning of a text node?
 	if ( this.index == 0 )
 	{
 		this.current = this.current.parentNode;
-		this.insertCaret(user);
-		return;
+		return this.insertCaret(user, div);
 	}
 	// End of a text node?
 	if ( this.index == this.current.data.length )
 	{
 		this.current = this.current.parentNode.nextSibling;
 		this.index = 0;
-		this.insertCaret(user);
-		return;
+		return this.insertCaret(user, div);
 	}
 	
 	// Somewhere inside a text node
@@ -617,5 +665,5 @@ JSOT.DomIterator.prototype.insertCaret = function(user)
 		throw "Expected a SPAN";
 	this.current = this.splitNodeBefore( this.current.parentNode, this.current );
 	this.index = 0;
-	this.insertCaret(user);
+	return this.insertCaret(user, div);
 };

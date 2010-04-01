@@ -961,7 +961,7 @@ JSOT.Doc.prototype.toString = function()
 JSOT.Doc.prototype.createGUI = function()
 {
 	this.has_gui = true;
-	window.console.log("PROCESSING " + this.docId);
+	//window.console.log("PROCESSING " + this.docId);
 	
 	var result = []
 	var current = this;
@@ -1273,44 +1273,6 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 					doc.content[contentIndex] = c;
 					inContentIndex += op.characters.length;
 				}
-/*
-				// If the annotation does not change here or if it has already been changed, simply insert some text
-				if ( annotationUpdateCount == 0 || inContentIndex > 0 )
-				{
-					c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
-					doc.content[contentIndex] = c;
-					inContentIndex += op.characters.length;
-				}
-				// Need to insert a new string in doc.content
-				else
-				{
-					// At the end of a string? -> Go to the next item.
-					if ( inContentIndex == c.length )
-					{
-						c = doc.content[++contentIndex];
-						inContentIndex = 0;
-					}
-					// Insert in front of a text, but with a new formatting
-					if ( inContentIndex == 0 )
-					{
-						doc.content.splice( contentIndex, 0, op.characters );
-						doc.format.splice( contentIndex, 0, updatedAnnotation );
-						// contentIndex += 1;
-						// c = doc.content[contentIndex];
-						inContentIndex = op.characters.length;
-					}
-					// Insert in the middle (not at the end!) of a string?
-					else
-					{
-						doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), op.characters, c.substring( inContentIndex, c.length ) );
-						doc.format.splice( contentIndex, 1, doc.format[contentIndex], updatedAnnotation, doc.format[contentIndex] );
-						// contentIndex += 2;
-						c = doc.content[++contentIndex];
-						inContentIndex = c.length;
-						// inContentIndex = 0;
-					}
-				}
-				*/
 			}
 			// Insert text in front of an element or at the end of the document
 			else
@@ -1681,11 +1643,11 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 				c = doc.content[++contentIndex];
 				inContentIndex = 0;
 			}
-			// If in the middle of a string -> break it because the annotation of the following characters is different			
+			// If in the middle of a string -> break it because the annotation of the following characters is different
 			else if ( inContentIndex > 0 )
 			{
 				doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), c.substring( inContentIndex, c.length ) );
-				doc.format.splice( contentIndex, 0, docAnnotation );
+				doc.format.splice( contentIndex + 1, 0, docAnnotation );
 				c = doc.content[++contentIndex];
 				inContentIndex = 0;
 			}
