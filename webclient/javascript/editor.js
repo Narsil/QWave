@@ -84,6 +84,8 @@ JSOT.OTListener.prototype.selectCarets_ = function()
 			  continue;
 			var val = format[a].split(",");
 			var user = val[0];
+			if ( user == JSOT.Rpc.jid )
+				continue;
 			try {
 				var time = parseInt(val[1]);
 			} catch( e ) { continue; }
@@ -262,6 +264,7 @@ JSOT.Editor = function(doc, dom)
 	var self = this;
 	dom.onkeypress = function(e) { self.keypress(e); }
 	dom.onkeydown = function(e) { self.keydown(e); }
+	dom.onkeyup = function(e) { self.keyup(e); }
 	
 	this.listener = new JSOT.OTListener( this );
 	this.doc.addListener( this.listener );
@@ -569,6 +572,70 @@ JSOT.Editor.prototype.keypress = function(e)
 	this.listener.setSuspend(false);
 };
 
+JSOT.Editor.prototype.keyup = function(e)
+{
+	// window.console.log("KeyUp = " + e.keyIdentifier.toString() + " code=" + e.keyCode.toString());
+	
+	// Cursor keys?
+	if ( e.keyCode < 33 || e.keyCode > 40 )
+		return;
+	
+	var sel = window.getSelection();
+	var selDom = sel.focusNode;
+	var selOffset = sel.focusOffset;
+	
+	// Is the cursor inside a caret?
+	var caret;
+	if ( selDom.nodeType == 1 && selDom.className == "jsot_caret" )
+		caret = selDom;
+	else if ( selDom.nodeType == 3 && selDom.parentNode.className == "jsot_caret" ) // && selOffset < selDom.data.length )
+		caret = selDom.parentNode;
+	
+	if ( caret )
+	{
+		// Left, Home, PageUp, Up
+		if ( e.keyCode == 37 || e.keyCode == 36 || e.keyCode == 33 || e.keyCode == 38 )
+		{
+			// Skip all carets to the left
+			while ( caret.previousSibling && caret.previousSibling.className == "jsot_caret" )
+				caret = caret.previousSibling;
+			// Position the cursor left of it.
+			if ( caret.previousSibling )
+			{
+				// Left of the caret there is a span with a text node
+				selDom = caret.previousSibling.lastChild;
+				selOffset = caret.previousSibling.lastChild.data.length;
+			}
+			else
+			{
+				selDom = caret;
+				selOffset = 0;
+			}
+		}
+		else
+		{
+			// Skip all carets to the right
+			while ( caret.nextSibling && caret.nextSibling.className == "jsot_caret" )
+				caret = caret.nextSibling;
+			// Position the cursor left of it.
+			if ( caret.nextSibling )
+			{
+				// Right of the caret there is a span with a text node
+				selDom = caret.nextSibling.firstChild;
+				selOffset = 1;
+			}
+			else
+			{
+			  // TODO: Move the cursor to the left of the caret instead!
+				selDom = caret;
+				selOffset = 0;
+			}
+		}
+	}
+	
+	sel.collapse( selDom, selOffset );
+};
+
 /**
  * @return {JOST.Doc.ElementStart} of type 'line' for the given line number or null.
  */
@@ -599,6 +666,8 @@ JSOT.Editor.prototype.charCount = function( node )
 {
 	if ( node.nodeType == 3 )
 		return node.data.length;
+	if ( node.className == "jsot_caret" )
+		return 0;
 	var result = 0;
 	var c = node.firstChild;
 	while( c )
@@ -747,11 +816,16 @@ JSOT.Editor.prototype.deleteSelection = function()
  */
 JSOT.Editor.prototype.getLinePosition = function(selDom, selOffset)
 {
-	var charCount = selDom.nodeType == 3 ? selOffset : 0;
-	var lineno = 0;
-	// Count the number of characters
+	var charCount = 0;
+	// In a text node?
+	if ( selDom.nodeType == 3 )
+		charCount = selOffset;
+	// At the end of a HTML node?
+	else if ( selOffset == 1 )
+		charCount = this.charCount(selDom);
+	// Count the number of characters in front of selDom and find the line DIV
 	var line = selDom;
-	while( line.nodeType != 1 || line.nodeName != "DIV" )
+	while( line.nodeType == 3 || line.className != "jsot_line" )
 	{
 		var p = line.previousSibling;
 		while( p )
@@ -762,6 +836,7 @@ JSOT.Editor.prototype.getLinePosition = function(selDom, selOffset)
 		line = line.parentNode;
 	}
 	// Find the line number
+	var lineno = 0;
 	var l = line.previousSibling;
 	while( l )
 	{
