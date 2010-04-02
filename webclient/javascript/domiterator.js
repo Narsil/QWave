@@ -11,13 +11,18 @@ if ( !window.JSOT )
  */
 JSOT.DomIterator = function( dom )
 {
+	/**
+	 * The HTML div element that hosts the editor.
+	 * @type {HTMLElementDiv}
+	 */
 	this.dom = dom;
 	/**
 	 * Number of the current line.
 	 */
 	this.lineno = -1;
 	/**
-	 * A HTMLElementDiv.
+	 * The HTMLElementDiv of the current line or null at the beginning.
+	 * @type {HTMLElementDiv}
 	 */
 	this.line = null;
 	/**
@@ -26,6 +31,7 @@ JSOT.DomIterator = function( dom )
 	this.charCount;
 	/**
 	 * A span or text node or null. A value of null means the position at the end of the current line
+	 * @type {HTMLElementSpan}
 	 */
 	this.current = null;
 	/**
@@ -33,7 +39,7 @@ JSOT.DomIterator = function( dom )
 	 */
 	this.index = 0;
 	/**
-	 * List of KeyValueUpdate objects.
+	 * List of KeyValueUpdate objects.	 
 	 */
 	this.formatUpdate = null;
 	/**
@@ -41,7 +47,7 @@ JSOT.DomIterator = function( dom )
 	 */
 	this.format = null;
 	/**
-	 * @type bool
+	 * @type {bool}
 	 */
 	this.styleChanged = false;
 	/**
@@ -49,6 +55,11 @@ JSOT.DomIterator = function( dom )
 	  * HTML represenation of the caret and user is the jid of the corresponding user.
 	  */
 	this.carets = { };
+	/**
+	 * Map from user JID to a string of the form user/e/xxxx. Carets for this user&session will be shown. Others not.
+	 * Overwrite this property after the constructor. Changing it later yields unspecified results.
+	 */
+	this.showCarets = { };
 }
 
 JSOT.DomIterator.prototype.dispose = function()
@@ -604,10 +615,15 @@ JSOT.DomIterator.prototype.checkForCaret = function( format )
 		if ( key.substr(0, 7) == "user/e/" )
 		{
 			var v = format[key];
+			// Caret of the local user?
 			if ( v == JSOT.Rpc.jid )
 				continue;
-			var dom = this.insertCaret( v );
-			this.carets[key] = { dom : dom, user : v };
+			// Show  this caret?
+			if ( this.showCarets[v] == key )
+			{
+				var dom = this.insertCaret( v );
+				this.carets[key] = { dom : dom, user : v };
+			}
 		}
 	}
 };
@@ -666,4 +682,18 @@ JSOT.DomIterator.prototype.insertCaret = function(user, div)
 	this.current = this.splitNodeBefore( this.current.parentNode, this.current );
 	this.index = 0;
 	return this.insertCaret(user, div);
+};
+
+JSOT.DomIterator.prototype.end = function()
+{
+	// Some carets at the end of the document?
+	for( var user in this.showCarets )
+	{
+		var key = this.showCarets[user];
+		if ( !this.carets[key] )
+		{
+			var dom = this.insertCaret( user );
+			this.carets[key] = { dom : dom, user : user };
+		}
+	}
 };

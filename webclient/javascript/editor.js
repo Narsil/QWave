@@ -9,8 +9,8 @@ JSOT.OTListener = function(editor)
 	this.editor = editor;
 	this.dom = editor.dom;
 	this.suspend = false;
-	this.cursorAnnoKey = "user/e/" + editor.session;
-	this.cursorAnnoValue = editor.jid;
+	this.cursorAnnoKey = "user/e/" + JSOT.Rpc.sessionId;
+	this.cursorAnnoValue = JSOT.Rpc.jid;
 	this.hasSelection = false;
 	this.format = null;
 	this.carets = { };
@@ -18,7 +18,7 @@ JSOT.OTListener = function(editor)
 
 /**
  * Tells where the cursor should be according to document and its annotations.
- * Therefore, this function inspects the annotation and looks for keys of the format user/e/xxxx".
+ * Therefore, this function inspects the annotations and looks for keys of the format user/e/xxxx".
  */
 JSOT.OTListener.prototype.getDocCursor = function()
 {
@@ -58,6 +58,7 @@ JSOT.OTListener.prototype.begin = function( doc )
 	this.doc = doc;
 	if ( this.suspend )
 		return;
+	
 	// Delete all carets
 	for( var key in this.carets )
 	{
@@ -65,8 +66,37 @@ JSOT.OTListener.prototype.begin = function( doc )
 		window.console.log("Remove CARET " + d.id );
 		d.parentNode.removeChild( d );
 	}
+		
 	this.it = new JSOT.DomIterator( this.dom );
 }
+
+JSOT.OTListener.prototype.selectCarets_ = function()
+{
+	// Tell the iterator which carets we want to see
+	var showCarets = { };
+	if ( !this.doc.isEmpty() )
+	{
+		var current = new Date().getTime();
+		var format = this.doc.getFormatAt(0);
+		for( var a in format )
+		{
+			if ( a.substr(0,7) != "user/d/" )
+			  continue;
+			var val = format[a].split(",");
+			var user = val[0];
+			try {
+				var time = parseInt(val[1]);
+			} catch( e ) { continue; }
+			if ( current - time > 30 * 60 * 10000 )
+				continue;
+			var otherTime = showCarets[ user ];
+			if ( otherTime && otherTime > time )
+				continue;
+			showCarets[ user ] = "user/e/" + a.substring(7, a.length );
+		}
+	}
+	this.it.showCarets = showCarets;
+};
 
 JSOT.OTListener.prototype.retainElementStart = function( element, format )
 {
@@ -75,7 +105,11 @@ JSOT.OTListener.prototype.retainElementStart = function( element, format )
 	this.checkForCursor( format );
 	this.format = format;
 	if ( element.type == "line" )
+	{
+		if ( this.it.lineno == -1 )
+			this.selectCarets_();
 		this.it.skipLineBreak();
+	}
 };
 
 JSOT.OTListener.prototype.retainElementEnd = function( element, format )
@@ -92,7 +126,11 @@ JSOT.OTListener.prototype.insertElementStart = function( element, format )
 	this.checkForCursor( format );
 	this.format = format;
 	if ( element.type == "line" )
+	{
+		if ( this.it.lineno == -1 )
+			this.selectCarets_();
 		this.it.insertLineBreak( element );
+	}
 };
 
 JSOT.OTListener.prototype.insertElementEnd = function( element, format )
@@ -188,9 +226,13 @@ JSOT.OTListener.prototype.end = function()
 	this.carets = this.it.carets;
 	
 	this.it.finalizeLine();
+	this.it.end();
 	
 	if ( this.hasSelection )
-		this.editor.showSelection();
+	{
+		this.editor.cursor = this.cursor;
+		this.editor.showCursor();
+	}
 	
 	this.it.dispose();
 	delete this.it;
@@ -215,8 +257,8 @@ JSOT.Editor = function(doc, dom)
 {
 	this.dom = dom;
 	this.doc = doc;
-	this.session = JSOT.Rpc.sessionId;
-	this.jid = JSOT.Rpc.jid;
+	this.cursor = null;
+	
 	var self = this;
 	dom.onkeypress = function(e) { self.keypress(e); }
 	dom.onkeydown = function(e) { self.keydown(e); }
@@ -250,7 +292,10 @@ JSOT.Editor.prototype.keydown = function(e)
 		this.deleteSelection();
 		return;
 	}
-		
+
+	// The cursor has moved by means of the cursor keys, mouse click, home key, ... ?
+	this.updateCursor( pos );
+
 	// Backspace?
 	if ( e.keyCode == 8 )
 	{
@@ -288,6 +333,7 @@ JSOT.Editor.prototype.keydown = function(e)
 				sel.collapse( iter.current, 0 );
 			else
 				sel.collapse( iter.current, iter.index );
+			this.cursor = { line : iter.line, lineno : iter.lineno, charCount : iter.charCount };
 			
 			var docpos = element.itemCountBefore();
 			this.listener.setSuspend(true);
@@ -304,6 +350,8 @@ JSOT.Editor.prototype.keydown = function(e)
 		}
 		else
 		{
+			this.cursor.charCount--;
+			
 			var docpos = element.itemCountBefore() + 2 + pos.charCount - 1;
 			var ch = this.doc.getCharAt(docpos);
 			// window.console.log("Backspace " + ch);
@@ -417,7 +465,9 @@ JSOT.Editor.prototype.keypress = function(e)
 		this.dom.innerHTML = '<div class="jsot_line"><span><br></span></div>';
 		var sel = window.getSelection();
 		sel.collapse( this.dom.firstChild.firstChild, 0 );
-		
+
+		this.cursor = { line: this.dom.firstChild, lineno : 0, charCount : 1 };
+
 		this.listener.setSuspend(true);
 		var ops = new protocol.ProtocolDocumentOperation();
 		this.newUserAnnotation(ops);
@@ -440,7 +490,10 @@ JSOT.Editor.prototype.keypress = function(e)
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
 	var pos = this.getLinePosition( selDom, selOffset );
-	
+
+	// The cursor has moved by means of the cursor keys, mouse click, home key, ... ?
+	this.updateCursor( pos );
+
 	if ( e.keyIdentifier == "Enter" || e.keyCode == 13)
 	{
 		window.console.log("Return");
@@ -464,7 +517,8 @@ JSOT.Editor.prototype.keypress = function(e)
 			sel.collapse( iter.current, 0 );
 		else
 			sel.collapse( iter.current, iter.index );
-			
+		this.cursor = { line : iter.line, lineno : iter.lineno, charCount : iter.charCount };
+		
 		var element = this.getElementByLineNo( pos.lineno );
 		var docpos = element.itemCountBefore() + 2 + pos.charCount;
 		var count = this.doc.itemCount();
@@ -485,16 +539,23 @@ JSOT.Editor.prototype.keypress = function(e)
 	var element = this.getElementByLineNo( pos.lineno );
 	var docpos = element.itemCountBefore() + 2 + pos.charCount;
 	var count = this.doc.itemCount();
-
+	
 	// First character? Create a span and put the cursor inside.
 	if ( pos.charCount == 0 )
-	{		
+	{
+		e.stopPropagation();
+		e.preventDefault();
+		
 		var span = document.createElement("span");
 		var format = this.doc.getFormatAt( docpos - 1 );
 		JSOT.DomIterator.setSpanStyle( span, format );
+		var t = document.createTextNode( String.fromCharCode(e.keyCode) );
+		span.appendChild(t);
 		pos.line.insertBefore(span, pos.line.firstChild);
-		sel.collapse( span, 0 );
+		sel.collapse( t, 1 );
 	}
+	
+	this.cursor.charCount++;
 	
 	this.listener.setSuspend(true);
 	// window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
@@ -568,7 +629,7 @@ JSOT.Editor.prototype.isEmptyElement = function(node)
  */
 JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 {
-	this.markSelection();
+	//this.markSelection();
 	
 	var sel = window.getSelection();
 	var selDom = sel.anchorNode;
@@ -579,6 +640,9 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 
 	var pos1 = this.getLinePosition( sel.anchorNode, sel.anchorOffset );
 	var pos2 = this.getLinePosition( sel.focusNode, sel.focusOffset );
+
+	// The cursor has moved by means of the cursor keys, mouse click, home key, ... ?
+	this.updateCursor( pos2 );
 	
 	if ( pos2.lineno < pos1.lineno || ( pos2.lineno == pos1.lineno && pos2.charCount < pos1.charCount ) )
 	{
@@ -624,7 +688,7 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 		
 	this.submit( ops );
 	
-	this.showSelection();
+	this.showCursor();
 };
 
 JSOT.Editor.prototype.deleteSelection = function()
@@ -633,10 +697,11 @@ JSOT.Editor.prototype.deleteSelection = function()
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
 	
+	// Paranoia
 	if ( sel.isCollapsed )
 		return;
 
-	this.markSelection();
+	// this.markSelection();
 	
 	var pos1 = this.getLinePosition( sel.anchorNode, sel.anchorOffset );
 	var pos2 = this.getLinePosition( sel.focusNode, sel.focusOffset );
@@ -647,7 +712,10 @@ JSOT.Editor.prototype.deleteSelection = function()
 		pos2 = pos1;
 		pos1 = tmp;
 	}
-	
+
+	// The cursor has moved by means of the cursor keys, mouse click, home key, ... ?
+	this.updateCursor( pos1 );
+
 	var element1 = this.getElementByLineNo( pos1.lineno );
 	var docpos1 = element1.itemCountBefore() + 2 + pos1.charCount;
 	var element2 = this.getElementByLineNo( pos2.lineno );
@@ -669,7 +737,7 @@ JSOT.Editor.prototype.deleteSelection = function()
 	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
 	this.submit( ops );
 	
-	this.showSelection();
+	this.showCursor();
 };
 
 /**
@@ -721,6 +789,50 @@ JSOT.Editor.prototype.getDomPosition = function( line, lineno, charCount )
 	return { node : it.current, offset : it.index };
 };
 
+JSOT.Editor.prototype.updateCursor = function( newCursor)
+{
+	if ( this.cursor && this.cursor.lineno == newCursor.lineno && this.cursor.charCount == newCursor.charCount )
+		return;
+
+	var count = this.doc.itemCount();
+
+	if ( !this.cursor )
+		var oldCursorPos = count;
+	else
+		var oldCursorPos = this.getDocPosition( this.cursor.lineno, this.cursor.charCount );
+	var newCursorPos = this.getDocPosition( newCursor.lineno, newCursor.charCount );
+	this.cursor = { line : newCursor.line, lineno : newCursor.lineno, charCount : newCursor.charCount };
+
+	// Just paranoia
+	if ( oldCursorPos == newCursorPos )
+	  return;
+  
+	var ops = new protocol.ProtocolDocumentOperation();
+	var start = Math.min( oldCursorPos, newCursorPos );
+	if ( start > 0 )
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( start ) );
+	if ( oldCursorPos < newCursorPos )
+	{
+		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], 
+			[ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, this.listener.cursorAnnoValue, null ) ] ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( newCursorPos - oldCursorPos ) );
+	}
+	else
+	{
+		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], 
+			[ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, null, this.listener.cursorAnnoValue ) ] ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( oldCursorPos - newCursorPos ) );
+	}
+	var end = Math.max( oldCursorPos, newCursorPos );
+	if ( end < count )	  
+	{
+		ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ this.listener.cursorAnnoKey ], [ ] ) );
+		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( count - end ) );
+	}
+	this.submit( ops );
+};
+
+/*
 JSOT.Editor.prototype.markSelection = function()
 {
 	this.listener.setSuspend( true );
@@ -777,11 +889,13 @@ JSOT.Editor.prototype.markSelection = function()
 	
 	this.listener.setSuspend( false );
 };
+*/
 
-JSOT.Editor.prototype.showSelection = function()
+JSOT.Editor.prototype.showCursor = function()
 {
 	var sel = window.getSelection();
-	var cursorPos = this.getDomPosition( this.listener.cursor.line, this.listener.cursor.lineno, this.listener.cursor.charCount );
+	// var cursorPos = this.getDomPosition( this.listener.cursor.line, this.listener.cursor.lineno, this.listener.cursor.charCount );
+	var cursorPos = this.getDomPosition( this.cursor.line, this.cursor.lineno, this.cursor.charCount );
 	sel.collapse( cursorPos.node, cursorPos.offset );
 };
 
