@@ -277,6 +277,7 @@ JSOT.Editor.prototype.keydown = function(e)
 {
 	window.console.log("KeyDown = " + e.keyIdentifier.toString() + " code=" + e.keyCode.toString());
 
+	// Only backspace and delete are handled here. Everything else passes.
 	if ( e.keyCode != 8 && e.keyCode != 46 )
 		return;
 	
@@ -527,8 +528,8 @@ JSOT.Editor.prototype.keypress = function(e)
 		var count = this.doc.itemCount();
 		
 		this.listener.setSuspend(true);
-		this.newUserAnnotation(ops);
 		var ops = new protocol.ProtocolDocumentOperation();
+		this.newUserAnnotation(ops);
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( docpos ) );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementStart("line") );
 		ops.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
@@ -576,7 +577,7 @@ JSOT.Editor.prototype.keyup = function(e)
 {
 	// window.console.log("KeyUp = " + e.keyIdentifier.toString() + " code=" + e.keyCode.toString());
 	
-	// Cursor keys?
+	// Cursor keys are handled here. Everything else passes.
 	if ( e.keyCode < 33 || e.keyCode > 40 )
 		return;
 	
@@ -588,7 +589,7 @@ JSOT.Editor.prototype.keyup = function(e)
 	var caret;
 	if ( selDom.nodeType == 1 && selDom.className == "jsot_caret" )
 		caret = selDom;
-	else if ( selDom.nodeType == 3 && selDom.parentNode.className == "jsot_caret" ) // && selOffset < selDom.data.length )
+	else if ( selDom.nodeType == 3 && selDom.parentNode.className == "jsot_caret" )
 		caret = selDom.parentNode;
 	
 	if ( caret )
@@ -631,9 +632,9 @@ JSOT.Editor.prototype.keyup = function(e)
 				selOffset = 0;
 			}
 		}
-	}
-	
-	sel.collapse( selDom, selOffset );
+
+		sel.collapse( selDom, selOffset );
+	}	
 };
 
 /**
@@ -977,6 +978,10 @@ JSOT.Editor.prototype.showCursor = function()
 /**
  * Internal helper function.
  *
+ * Adds an annotation boundary to the ops which sets the
+ * time and JID for the current session. This allows others to understand the age
+ * of the current session and the user associated with the session.
+ *
  * @param {ProtocolDocumentOperation} ops
  */
 JSOT.Editor.prototype.newUserAnnotation = function(ops)
@@ -992,6 +997,11 @@ JSOT.Editor.prototype.newUserAnnotation = function(ops)
 		protocol.ProtocolDocumentOperation.newKeyValueUpdate( key, oldValue, newValue) ] ) );
 };
 
+/**
+ * Internal helper function.
+ *
+ * Sends the document operation to the wavelet which will apply it and forward it to the server.
+ */
 JSOT.Editor.prototype.submit = function(docOp)
 {
 	var wavelet = this.doc.wavelet;
