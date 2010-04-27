@@ -32,6 +32,9 @@ body { font-family:aria,sans-serif; }
 	</div>
 	<script type="text/javascript">
 	
+var _isBold = false;
+var _isItalic = false;
+
 /**
  * Called when clicking on login
  */
@@ -57,12 +60,30 @@ function onLogin()
 
 	// Connect the editor with the wavelet document
 	var editor = new JSOT.Editor( mainDoc, document.getElementById("editor") );
-	document.getElementById( 'bold' ).onclick = function() { editor.setStyle( "style/fontWeight", "bold"); };
-	document.getElementById( 'italic' ).onclick = function() { editor.setStyle( "style/fontStyle", "italic"); };
+	editor.onCursorChange = function() { cursorChange(editor); };
+	document.getElementById( 'bold' ).onclick = function() { editor.setStyle( "style/fontWeight", _isBold ? null : "bold"); };
+	document.getElementById( 'italic' ).onclick = function() { editor.setStyle( "style/fontStyle", _isItalic ? null : "italic"); };
 	
 	// Open the wave
 	JSOT.Rpc.openWavelet( wavelet.url() );
 }
 
+function cursorChange(editor)
+{
+	if ( !editor.cursorFormat )
+		return;
+	var italic = editor.cursorFormat["style/fontStyle"] == "italic";
+	var bold = editor.cursorFormat["style/fontWeight"] == "bold";
+	if ( italic != _isItalic )
+	{
+		_isItalic = italic;
+		document.getElementById('italic').value = _isItalic ? "No italic" : "Italic";
+	}
+	if ( bold != _isBold )
+	{
+		_isBold = bold;
+		document.getElementById('bold').value = _isBold ? "No bold" : "Bold";
+	}
+}
 	</script>
 </body>	

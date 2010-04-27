@@ -257,9 +257,24 @@ JSOT.OTListener.prototype.checkForCursor = function(format)
   */
 JSOT.Editor = function(doc, dom)
 {
+	/**
+	 * The HTML div element that is being edited.
+	 */
 	this.dom = dom;
+	/**
+	 * The wavelet document that is being edited.
+	 */
 	this.doc = doc;
+	/**
+	 * The current cursor position expressed as {line, lineno, charCount} or null if no cursor is set.
+	 */
 	this.cursor = null;
+	this.cursorFormat = null;
+	/**
+	 * Callback function that is being invoked when the cursor changes or the format at
+	 * the cursor changes.
+	 */
+	this.onCursorChange = null;
 	
 	var self = this;
 	dom.onkeypress = function(e) { self.keypress(e); }
@@ -321,7 +336,6 @@ JSOT.Editor.prototype.keydown = function(e)
 			iter.lineno = pos.lineno - 1;
 			iter.current = null;
 			iter.index = 0;
-			// iter.gotoEndOfLine();
 			iter.deleteLineBreak();
 			iter.finalizeLine();
 			
@@ -338,8 +352,11 @@ JSOT.Editor.prototype.keydown = function(e)
 			else
 				sel.collapse( iter.current, iter.index );
 			this.cursor = { line : iter.line, lineno : iter.lineno, charCount : iter.charCount };
-			
 			var docpos = element.itemCountBefore();
+			this.cursorFormat = this.doc.getFormatAt(docpos + 1);
+			if ( this.onCursorChange )
+				this.onCursorChange();
+			
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
 			this.newUserAnnotation(ops);
@@ -358,6 +375,10 @@ JSOT.Editor.prototype.keydown = function(e)
 			
 			var docpos = element.itemCountBefore() + 2 + pos.charCount - 1;
 			var ch = this.doc.getCharAt(docpos);
+			this.cursorFormat = this.doc.getFormatAt(docpos);
+			if ( this.onCursorChange )
+				this.onCursorChange();
+			
 			// window.console.log("Backspace " + ch);
 			this.listener.setSuspend(true);
 			var ops = new protocol.ProtocolDocumentOperation();
@@ -394,6 +415,7 @@ JSOT.Editor.prototype.keydown = function(e)
 		iter.current = selDom;
 		iter.index = selOffset;
 		
+		// Delete a line break?
 		if ( iter.isEndOfLine() )
 		{		  
 			e.stopPropagation();
@@ -421,7 +443,6 @@ JSOT.Editor.prototype.keydown = function(e)
 			ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
 			ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos - 2 ) );
 			this.submit( ops );
-			// ops.applyTo( this.doc );
 			this.listener.setSuspend(false);
 			return;
 		}
@@ -526,7 +547,11 @@ JSOT.Editor.prototype.keypress = function(e)
 		var element = this.getElementByLineNo( pos.lineno );
 		var docpos = element.itemCountBefore() + 2 + pos.charCount;
 		var count = this.doc.itemCount();
-		
+
+		this.cursorFormat = this.doc.getFormatAt(docpos - 1);
+		if ( this.onCursorChange )
+			this.onCursorChange();
+
 		this.listener.setSuspend(true);
 		var ops = new protocol.ProtocolDocumentOperation();
 		this.newUserAnnotation(ops);
@@ -560,6 +585,8 @@ JSOT.Editor.prototype.keypress = function(e)
 	}
 	
 	this.cursor.charCount++;
+	if ( this.onCursorChange )
+		this.onCursorChange();
 	
 	this.listener.setSuspend(true);
 	// window.console.log("Before = " + element.itemCountBefore().toString() + " charCount=" + charCount.toString() );
@@ -699,8 +726,6 @@ JSOT.Editor.prototype.isEmptyElement = function(node)
  */
 JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 {
-	//this.markSelection();
-	
 	var sel = window.getSelection();
 	var selDom = sel.anchorNode;
 	var selOffset = sel.anchorOffset;
@@ -713,17 +738,19 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 
 	// The cursor has moved by means of the cursor keys, mouse click, home key, ... ?
 	this.updateCursor( pos2 );
-	
+
+	var switched = false;
 	if ( pos2.lineno < pos1.lineno || ( pos2.lineno == pos1.lineno && pos2.charCount < pos1.charCount ) )
 	{
 		var tmp = pos2;
 		pos2 = pos1;
 		pos1 = tmp;
+		switched = true;
 	}
 	
 	var docpos1 = this.getDocPosition( pos1.lineno, pos1.charCount );
 	var docpos2 = this.getDocPosition( pos2.lineno, pos2.charCount );
-
+	
 	var style = false;
 
 	var ops = new protocol.ProtocolDocumentOperation();
@@ -757,7 +784,11 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - docpos2 ) );
 		
 	this.submit( ops );
-	
+
+	this.cursorFormat = this.doc.getFormatAt( switched ? docpos1 - 1 : docpos2 - 1 );
+	if ( this.onCursorChange )
+		this.onCursorChange();
+
 	this.showCursor();
 };
 
@@ -771,8 +802,6 @@ JSOT.Editor.prototype.deleteSelection = function()
 	if ( sel.isCollapsed )
 		return;
 
-	// this.markSelection();
-	
 	var pos1 = this.getLinePosition( sel.anchorNode, sel.anchorOffset );
 	var pos2 = this.getLinePosition( sel.focusNode, sel.focusOffset );
 	
@@ -811,9 +840,13 @@ JSOT.Editor.prototype.deleteSelection = function()
 };
 
 /**
+ * Internal helper function.
+ *
  * Determines the line number and character position inside the line
  * from a given HTML node and offset. This helps in mapping HTML cursor positions
  * to a position in JSOT.Doc.
+ *
+ * The counterpart is getDomPosition
  */
 JSOT.Editor.prototype.getLinePosition = function(selDom, selOffset)
 {
@@ -848,12 +881,25 @@ JSOT.Editor.prototype.getLinePosition = function(selDom, selOffset)
 	return { line : line, lineno : lineno, charCount : charCount };
 };
 
+/**
+ * Internal helper function.
+ *
+ * Maps from a line number and a character offset inside the line to a
+ * position in the wavelet document.
+ */
 JSOT.Editor.prototype.getDocPosition = function( lineno, charCount )
 {
 	var element = this.getElementByLineNo( lineno );
 	return element.itemCountBefore() + 2 + charCount;
 };
 
+/**
+ * Internal helper function.
+ *
+ * Determines the HTML element and offset from a given line, line number and character count inside the line.
+ *
+ * The counterpart is getLinePosition
+ */
 JSOT.Editor.prototype.getDomPosition = function( line, lineno, charCount )
 {
 	var it = new JSOT.DomIterator(this.dom);
@@ -865,7 +911,14 @@ JSOT.Editor.prototype.getDomPosition = function( line, lineno, charCount )
 	return { node : it.current, offset : it.index };
 };
 
-JSOT.Editor.prototype.updateCursor = function( newCursor)
+/**
+ * Internal helper function.
+ *
+ * Updates the cursor annotation when the cursor changes. The new cursor (given as line, lineno, charCount)
+ * is passed as an argument. The old cursor is stored in 'this.cursor'.
+ * If the new and old cursor are equal, the function does nothing.
+ */
+JSOT.Editor.prototype.updateCursor = function( newCursor )
 {
 	if ( this.cursor && this.cursor.lineno == newCursor.lineno && this.cursor.charCount == newCursor.charCount )
 		return;
@@ -908,69 +961,14 @@ JSOT.Editor.prototype.updateCursor = function( newCursor)
 	this.submit( ops );
 };
 
-/*
-JSOT.Editor.prototype.markSelection = function()
-{
-	this.listener.setSuspend( true );
-	
-	// Delete the old selection
-	var cursor = this.listener.getDocCursor();
-	if ( !cursor.isEndOfDocument )
-	{
-		window.console.log("Cursor is at line " + cursor.lineno.toString() + " and char " +  cursor.charCount.toString() );
-		var cursorpos = this.getDocPosition( cursor.lineno, cursor.charCount );
-		var itemcount = this.doc.itemCount();
-		// The cursor is currently at the end of the document -> it has no annotationBoundary -> nothing to do. Otherwise remove the annoation of the cursor
-		if ( cursorpos < itemcount )
-		{
-		  var ops = new protocol.ProtocolDocumentOperation();
-		  ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( cursorpos ) );
-		  ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], 
-				[ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, this.listener.cursorAnnoValue, null ) ] ) );
-		  ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( itemcount - cursorpos ) );
-		  // ops.applyTo( this.doc );
-		  this.submit( ops );
-		}
-	}
-	
-	var sel = window.getSelection();
-	var selDom = sel.focusNode;
-	var selOffset = sel.focusOffset;
-	
-	// Is the current selection in this editor?
-	var found = false;
-	var x = selDom;
-	while( x )
-	{
-		if ( x == this.dom )
-		{
-			found = true;
-			break;
-		}
-		x = x.parentNode;
-	}
-	
-	if ( found )
-	{
-		var pos = this.getLinePosition( selDom, selOffset );
-		var cursorpos = this.getDocPosition( pos.lineno, pos.charCount );
-		var ops = new protocol.ProtocolDocumentOperation();
-		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( cursorpos ) );
-	  	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ],
-				[ protocol.ProtocolDocumentOperation.newKeyValueUpdate( this.listener.cursorAnnoKey, null, this.listener.cursorAnnoValue ) ] ) );
-		ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - cursorpos ) );
-		// ops.applyTo( this.doc );
- 		this.submit( ops );
-	}
-	
-	this.listener.setSuspend( false );
-};
-*/
-
+/**
+ * Internal helper function.
+ *
+ * Sets the HTML cursor according to 'this.cursor'.
+ */
 JSOT.Editor.prototype.showCursor = function()
 {
 	var sel = window.getSelection();
-	// var cursorPos = this.getDomPosition( this.listener.cursor.line, this.listener.cursor.lineno, this.listener.cursor.charCount );
 	var cursorPos = this.getDomPosition( this.cursor.line, this.cursor.lineno, this.cursor.charCount );
 	sel.collapse( cursorPos.node, cursorPos.offset );
 };
