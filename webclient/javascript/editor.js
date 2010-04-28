@@ -11,8 +11,12 @@ JSOT.OTListener = function(editor)
 	this.suspend = false;
 	this.cursorAnnoKey = "user/e/" + JSOT.Rpc.sessionId;
 	this.cursorAnnoValue = JSOT.Rpc.jid;
+	this.cursorRangeAnnoKey = "user/e/" + JSOT.Rpc.sessionId;
+	this.cursorRangeAnnoValue = JSOT.Rpc.jid;
 	this.hasSelection = false;
 	this.format = null;
+	this.cursor = null;
+	this.cursorRange = null;
 	this.carets = { };
 };
 
@@ -249,6 +253,11 @@ JSOT.OTListener.prototype.checkForCursor = function(format)
 {
 	if ( !this.cursor && format && format[ this.cursorAnnoKey ] == this.cursorAnnoValue )
 		this.cursor = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
+	
+	if ( !this.cursorRange && format && format[ this.cursorRangeAnnoKey ] == this.cursorRangeAnnoValue )
+		this.cursorRange = { from : { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount } };
+	else if ( this.cursorRange && format && format[ this.cursorRangeAnnoKey ] != this.cursorRangeAnnoValue )
+		this.cursorRange.to = { line : this.it.line, lineno : this.it.lineno, charCount : this.it.charCount };
 }
 
 
@@ -301,6 +310,9 @@ JSOT.Editor.prototype.keydown = function(e)
 	var selOffset = sel.anchorOffset;
 	var pos = this.getLinePosition( selDom, selOffset );
   
+	if ( this.cursorRange )
+		this.deleteUserRangeAnnotation();
+	
 	// Delete selection?
 	if ( !sel.isCollapsed )
 	{
@@ -505,7 +517,10 @@ JSOT.Editor.prototype.keypress = function(e)
 	}
 
 	var sel = window.getSelection();
-	
+
+	if ( this.cursorRange )
+		this.deleteUserRangeAnnotation();
+
 	// Delete selection?
 	if ( !sel.isCollapsed )
 	{
@@ -611,6 +626,9 @@ JSOT.Editor.prototype.keyup = function(e)
 	var sel = window.getSelection();
 	var selDom = sel.focusNode;
 	var selOffset = sel.focusOffset;
+	
+	if ( this.cursorRange )
+		this.deleteUserRangeAnnotation();
 	
 	// Is the cursor inside a caret?
 	var caret;
@@ -739,6 +757,9 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 	// The cursor has moved by means of the cursor keys, mouse click, home key, ... ?
 	this.updateCursor( pos2 );
 
+	// Set the selection
+	this.createUserRangeAnnotation( pos2, pos1 );
+
 	var switched = false;
 	if ( pos2.lineno < pos1.lineno || ( pos2.lineno == pos1.lineno && pos2.charCount < pos1.charCount ) )
 	{
@@ -750,7 +771,7 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 	
 	var docpos1 = this.getDocPosition( pos1.lineno, pos1.charCount );
 	var docpos2 = this.getDocPosition( pos2.lineno, pos2.charCount );
-	
+		
 	var style = false;
 
 	var ops = new protocol.ProtocolDocumentOperation();
@@ -969,8 +990,28 @@ JSOT.Editor.prototype.updateCursor = function( newCursor )
 JSOT.Editor.prototype.showCursor = function()
 {
 	var sel = window.getSelection();
-	var cursorPos = this.getDomPosition( this.cursor.line, this.cursor.lineno, this.cursor.charCount );
-	sel.collapse( cursorPos.node, cursorPos.offset );
+	
+	// Show a selection range?
+	if ( this.cursorRange )
+	{
+		var start = this.getDomPosition( this.cursorRange.focus.line, this.cursorRange.focus.lineno, this.cursorRange.focus.charCount );
+		var end = this.getDomPosition( this.cursorRange.anchor.line, this.cursorRange.anchor.lineno, this.cursorRange.anchor.charCount );
+		// The cursor is at the beginning of the selection?
+		if ( this.cursorRange.focus.lineno != this.cursor.lineno || this.cursorRange.focus.charCount != this.cursor.lineno )
+		{
+			// Something is wrong ...
+			delete this.cursorRange;
+			this.showCursor();
+		}
+		sel.collapse( end.node, end.offset );
+		sel.extend( start.node, start.offset );
+	}
+	// Simply show the cursor
+	else
+	{
+		var cursorPos = this.getDomPosition( this.cursor.line, this.cursor.lineno, this.cursor.charCount );
+		sel.collapse( cursorPos.node, cursorPos.offset );
+	}
 };
 
 /**
@@ -993,6 +1034,76 @@ JSOT.Editor.prototype.newUserAnnotation = function(ops)
 	// Add an annotation to the ProtocolDocumentOperation
 	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ 
 		protocol.ProtocolDocumentOperation.newKeyValueUpdate( key, oldValue, newValue) ] ) );
+};
+
+JSOT.Editor.prototype.createUserRangeAnnotation = function(focus, anchor)
+{
+	if ( this.cursorRange )
+		this.deleteUserRangeAnnotation();
+	
+	this.cursorRange = { focus: focus, anchor : anchor };
+	var start = this.getDocPosition( this.cursorRange.focus.lineno, this.cursorRange.focus.charCount );
+	var end = this.getDocPosition( this.cursorRange.anchor.lineno, this.cursorRange.anchor.charCount );
+	if ( end < start )
+	{
+		var tmp = end;
+		end = start;
+		start = tmp;
+	}
+	
+	this.listener.setSuspend(true);
+	var ops = new protocol.ProtocolDocumentOperation();
+	this.newUserAnnotation(ops);
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( start ) );
+
+	var key = "user/r/" + JSOT.Rpc.sessionId;
+	var newValue = JSOT.Rpc.jid;
+	var oldValue = null;	
+	// Add an annotation to the ProtocolDocumentOperation
+	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ 
+		protocol.ProtocolDocumentOperation.newKeyValueUpdate( key, oldValue, newValue) ] ) );
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( end - start ) );
+	// Add an annotation to the ProtocolDocumentOperation
+	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ key ], [ ] ) );
+	
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - end ) );
+	this.submit( ops );
+	this.listener.setSuspend(false);
+};
+
+JSOT.Editor.prototype.deleteUserRangeAnnotation = function()
+{
+	if ( !this.cursorRange )
+		return;
+
+	var start = this.getDocPosition( this.cursorRange.focus.lineno, this.cursorRange.focus.charCount );
+	var end = this.getDocPosition( this.cursorRange.anchor.lineno, this.cursorRange.anchor.charCount );
+	if ( end < start )
+	{
+		var tmp = end;
+		end = start;
+		start = tmp;
+	}
+	delete this.cursorRange;
+	
+	this.listener.setSuspend(true);
+	var ops = new protocol.ProtocolDocumentOperation();
+	this.newUserAnnotation(ops);
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( from ) );
+
+	var key = "user/r/" + JSOT.Rpc.sessionId;
+	var oldValue = JSOT.Rpc.jid;
+	var newValue = null;	
+	// Add an annotation to the ProtocolDocumentOperation
+	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ 
+		protocol.ProtocolDocumentOperation.newKeyValueUpdate( key, oldValue, newValue) ] ) );
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( to - from ) );
+	// Add an annotation to the ProtocolDocumentOperation
+	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ key ], [ ] ) );
+	
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.itemCount() - end ) );
+	this.submit( ops );
+	this.listener.setSuspend(false);
 };
 
 /**
