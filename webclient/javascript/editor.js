@@ -681,20 +681,9 @@ JSOT.Editor.prototype.keyup = function(e)
 		sel.collapse( selDom, selOffset );
 	}
 	
-	var pos = this.getLinePosition( selDom, selOffset );
-	var docpos = this.getDocPosition( pos.lineno, pos.charCount );
-	if ( !sel.isCollapsed )
-	{
-		var pos2 = this.getLinePosition( sel.anchorNode, sel.anchorOffset );
-		var docpos2 = this.getDocPosition( pos2.lineno, pos2.charCount );
-		if ( docpos < docpos2 )
-			docpos++;
-		else
-			docpos = docpos2 + 1;
-	}
-	this.cursorFormat = this.doc.getFormatAt(docpos - 1);
+	this.updateCursorFormat_(sel);
 	if ( this.onCursorChange )
-		this.onCursorChange();
+		this.onCursorChange();	
 };
 
 /**
@@ -738,18 +727,6 @@ JSOT.Editor.prototype.charCount = function( node )
 	}
 	return result;
 };
-
-/*
-JSOT.Editor.prototype.isEmptyElement = function(node)
-{
-	if ( node.nodeType == 3 )
-		return node.data.length == 0;
-	for( var i = 0; i < node.childNodes.length; ++i )
-		if ( !this.isEmptyElement( node.childNodes[i] ) )
-			return false;
-	return true;
-};
-*/
 
 /**
  * Changes the style of the current selection.
@@ -821,11 +798,10 @@ JSOT.Editor.prototype.setStyle = function(styleKey, styleValue)
 		
 	this.submit( ops );
 
-	this.cursorFormat = this.doc.getFormatAt( switched ? docpos1 - 1 : docpos2 - 1 );
+	this.showCursor();
+	this.updateCursorFormat_(sel);
 	if ( this.onCursorChange )
 		this.onCursorChange();
-
-	this.showCursor();
 };
 
 JSOT.Editor.prototype.deleteSelection = function()
@@ -1012,9 +988,10 @@ JSOT.Editor.prototype.showCursor = function()
 		var start = this.getDomPosition( this.cursorRange.focus.line, this.cursorRange.focus.lineno, this.cursorRange.focus.charCount );
 		var end = this.getDomPosition( this.cursorRange.anchor.line, this.cursorRange.anchor.lineno, this.cursorRange.anchor.charCount );
 		// The cursor is at the beginning of the selection?
-		if ( this.cursorRange.focus.lineno != this.cursor.lineno || this.cursorRange.focus.charCount != this.cursor.lineno )
+		if ( this.cursorRange.focus.lineno != this.cursor.lineno || this.cursorRange.focus.charCount != this.cursor.charCount )
 		{
 			// Something is wrong ...
+			window.console.log("Selection is wrong");
 			delete this.cursorRange;
 			this.showCursor();
 		}
@@ -1104,7 +1081,7 @@ JSOT.Editor.prototype.deleteUserRangeAnnotation = function()
 	this.listener.setSuspend(true);
 	var ops = new protocol.ProtocolDocumentOperation();
 	this.newUserAnnotation(ops);
-	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( from ) );
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( start ) );
 
 	var key = "user/r/" + JSOT.Rpc.sessionId;
 	var oldValue = JSOT.Rpc.jid;
@@ -1112,7 +1089,7 @@ JSOT.Editor.prototype.deleteUserRangeAnnotation = function()
 	// Add an annotation to the ProtocolDocumentOperation
 	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ ], [ 
 		protocol.ProtocolDocumentOperation.newKeyValueUpdate( key, oldValue, newValue) ] ) );
-	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( to - from ) );
+	ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( end - start ) );
 	// Add an annotation to the ProtocolDocumentOperation
 	ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [ key ], [ ] ) );
 	
@@ -1138,3 +1115,25 @@ JSOT.Editor.prototype.submit = function(docOp)
 	wavelet.submitMutations( [m] );
 };
 
+/**
+ * Internal helper function.
+ *
+ * @param sel is a DOM selection object.
+ *
+ * Determine the format of the cursor/selection and store it in 'this.cursorFormat'.
+ */
+JSOT.Editor.prototype.updateCursorFormat_ = function( sel )
+{
+	var pos = this.getLinePosition( sel.focusNode, sel.focusOffset );
+	var docpos = this.getDocPosition( pos.lineno, pos.charCount );
+	if ( !sel.isCollapsed )
+	{
+		var pos2 = this.getLinePosition( sel.anchorNode, sel.anchorOffset );
+		var docpos2 = this.getDocPosition( pos2.lineno, pos2.charCount );
+		if ( docpos < docpos2 )
+			docpos++;
+		else
+			docpos = docpos2 + 1;
+	}
+	this.cursorFormat = this.doc.getFormatAt(docpos - 1);
+};
