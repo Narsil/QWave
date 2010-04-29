@@ -679,7 +679,22 @@ JSOT.Editor.prototype.keyup = function(e)
 		}
 
 		sel.collapse( selDom, selOffset );
-	}	
+	}
+	
+	var pos = this.getLinePosition( selDom, selOffset );
+	var docpos = this.getDocPosition( pos.lineno, pos.charCount );
+	if ( !sel.isCollapsed )
+	{
+		var pos2 = this.getLinePosition( sel.anchorNode, sel.anchorOffset );
+		var docpos2 = this.getDocPosition( pos2.lineno, pos2.charCount );
+		if ( docpos < docpos2 )
+			docpos++;
+		else
+			docpos = docpos2 + 1;
+	}
+	this.cursorFormat = this.doc.getFormatAt(docpos - 1);
+	if ( this.onCursorChange )
+		this.onCursorChange();
 };
 
 /**
