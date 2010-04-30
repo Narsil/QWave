@@ -181,8 +181,8 @@ function onLogin()
 	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
 	// Register event handlers to become notified when something changes
 	var mainDoc = wavelet.getDoc("conversation");
-	mainDoc.newChild = conversationNewChild;
-	mainDoc.removeChild = conversationRemoveChild;
+	mainDoc.getEvent("newChild").addListener( conversationNewChild );
+	mainDoc.getEvent("removeChild").addListener( conversationRemoveChild );
 	mainDoc.createGUI();
 	
 	// Open the wave
@@ -329,7 +329,7 @@ function updateLike( message, remove )
 		control.innerHTML = "Like";
 }
 
-function contentTextChange()
+function contentTextChange( eventArgs )
 {
 	var dom = getElementByClass( this.parent().dom, "content" );
 	dom.innerHTML = "";
@@ -347,7 +347,7 @@ function contentTextChange()
 	}
 }
 
-function commentTextChange()
+function commentTextChange( eventArgs )
 {
 	this.dom.innerHTML = "";
 	var span = document.createElement("span");
@@ -381,12 +381,14 @@ function commentTextChange()
  * Called when the message element in the wavelet document has a new child,
  * i.e. someone commented on the message, liked it, ...
  */
-function messageNewChild( child )
+function messageNewChild( eventArgs )
 {
+	var child = eventArgs.element;
+	
 	if ( child.type == "content" )
 	{
-		child.textChange = contentTextChange;
-		child.textChange();
+		child.getEvent("textChange").addListener( contentTextChange, child );
+		child.getEvent("textChange").emit( new JSOT.Doc.EventArgs( eventArgs.doc, "textChange", child ) );
 	}
 	else if ( child.type == "like" )
 	{
@@ -406,9 +408,9 @@ function messageNewChild( child )
 		var comment = document.createElement("div");
 		comment.className = "comment";
 		child.dom = comment;
-		child.textChange = commentTextChange;
-		
-		child.textChange();
+
+		child.getEvent("textChange").addListener( commentTextChange, child );
+		child.getEvent("textChange").emit( new JSOT.Doc.EventArgs( eventArgs.doc, "textChange", child ) );
 		
 		// Where to insert this comment
 		var before = child.nextSibling( "comment" );
@@ -420,8 +422,10 @@ function messageNewChild( child )
  * Called when the message element in the wavelet document has a new child,
  * i.e. someone commented on the message, liked it, ...
  */
-function messageRemoveChild( child )
+function messageRemoveChild( eventArgs )
 {
+	var child = eventArgs.element;
+
 	if ( child.type == "content" )
 	{
 		// Should not happen anyway
@@ -462,12 +466,14 @@ function messageRemoveChild( child )
 /**
  * Called when the wavelet document containing the message tag has a new child.
  */
-function messageDocNewChild(child)
-{  
+function messageDocNewChild( eventArgs )
+{
+	var child = eventArgs.element;
+
 	if ( child.type == "message" )
 	{
-		child.newChild = messageNewChild;
-		child.removeChild = messageRemoveChild;
+		child.getEvent("newChild").addListener( messageNewChild, child );
+		child.getEvent("removeChild").addListener( messageRemoveChild, child );
 		
 		var mdom = newMessage(this);
 		child.dom = mdom;
@@ -480,16 +486,19 @@ function messageDocNewChild(child)
 		var text = document.createTextNode( child.attributes[ "date" ] );
 		date.appendChild( text );
 		
-		return mdom;
+		eventArgs.doc.dom = mdom;
+		// return mdom;
 	}
-	return null;
+	// return null;
 };
 
 /**
  * Called when the wavelet document containing the list of messages has a new child.
  */
-function conversationNewChild(child)
+function conversationNewChild( eventArgs )
 {
+	var child = eventArgs.element;
+  
 	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
 	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
 
@@ -498,23 +507,25 @@ function conversationNewChild(child)
 		var d = wavelet.getDoc( child.attributes[ "id" ] );
 		if ( !d )
 			return null;
-		d.newChild = messageDocNewChild;
+		d.getEvent("newChild").addListener( messageDocNewChild, d );
 		var result = d.createGUI();
 		var dom = document.getElementById( "messages" );
 		var next = child.nextSibling();
 		// dom.appendChild(result[0]);
-		dom.insertBefore( result[0], next ? next.dom : null );
-		child.dom = result[0];
-		return result[0];
+		dom.insertBefore( d.dom, next ? next.dom : null );
+		child.dom = d.dom;
+//		return result[0];
 	}
-	return null;
+//	return null;
 };
 
 /**
  * Called when the wavelet document containing the list of messages removes a child.
  */
-function conversationRemoveChild(child)
+function conversationRemoveChild( eventArgs )
 {
+	var child = eventArgs.element;
+  
 	var wave = JSOT.Wave.getWave( "w+wall", "wave1.vs.uni-due.de" );
 	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
 
@@ -794,8 +805,8 @@ function hideEditMessage( content )
 {
 	var message = content.parent();
 	var dom = content.dom
-	dom.innerHTML = "";
-	message.newChild( content );
+	// dom.innerHTML = "";
+	message.getEvent("newChild").emit( new JSOT.Doc.EventArgs( content.doc, "newChild", content ) );
 }
 
 function showEditComment( comment )
@@ -885,7 +896,7 @@ function hideEditComment( comment )
 {
 	var dom = comment.dom
 	dom.parentNode.removeChild( dom );
-	comment.parent().newChild( comment );
+	comment.parent().getEvent("newChild").emit( new JSOT.Doc.EventArgs( comment.doc, "newChild", comment ) );
 }
 
 	</script>

@@ -291,7 +291,7 @@ JSOT.Editor = function(doc, dom)
 	dom.onkeyup = function(e) { self.keyup(e); }
 	
 	this.listener = new JSOT.OTListener( this );
-	this.doc.addListener( this.listener );
+	this.doc.addOTListener( this.listener );
 }
 
 /**
