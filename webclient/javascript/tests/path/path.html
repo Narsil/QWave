@@ -1,0 +1,223 @@
+<html>
+<head>
+	<title>Wave Editor</title>
+	<script src="utils.js" type="text/javascript"></script>
+	<script src="rpc.js" type="text/javascript"></script>
+	<script src="common.pbjson.js" type="text/javascript"></script>
+	<script src="waveclient-rpc.pbjson.js" type="text/javascript"></script>
+	<script src="webclient.pbjson.js" type="text/javascript"></script>
+	<script src="jsot.js" type="text/javascript"></script>
+	<script src="path.js" type="text/javascript"></script>
+</head>
+<body>
+	<div id="login">
+		<form>
+			<p>User JID: <input type="text" id="jid" value="tux" />@wave1.vs.uni-due.de</p>
+			<p><input type="button" value="Login" onclick="login()" /></p>
+			<p id="logintext"></p>
+		</form>
+	</div>
+
+  <h1>Path example</h1>
+  <input type="submit" value="Test path" onclick="testPath()" />
+  <input type="submit" value="Test path 2" onclick="testPath2()" />
+  <input type="submit" value="Test path 3" onclick="testPath3()" />
+  <input type="submit" value="Print path" onclick="printPath()" />
+  <input type="submit" value="Template" onclick="buildTmpl()" />
+  
+  <h1>Template</h1>
+  <div id="tmpl"></div>
+  
+  <script type="text/javascript">
+
+var path;
+var mainDoc;
+var tpath;
+
+/**
+ * Called when clicking on login
+ */
+function login()
+{
+	document.getElementById('logintext').innerHTML = "Logging in ... please wait";
+	// Login at the wave server
+	JSOT.Rpc.login( document.getElementById('jid').value + "@wave1.vs.uni-due.de", onLogin );
+}
+
+/**
+ * Called when the server has logged us in
+ */
+function onLogin()
+{
+	document.getElementById('logintext').innerHTML = "Logging successful";
+	
+	// Initialize the wave
+	var wave = JSOT.Wave.getWave( "w+path", "wave1.vs.uni-due.de" );
+	var wavelet = wave.getWavelet( "conv+root", "wave1.vs.uni-due.de" );
+	// Register event handlers to become notified when something changes
+	mainDoc = wavelet.getDoc("conversation");
+	mainDoc.has_gui = true;
+	
+	path = new JSOT.Path.Axis.Child();
+	path.nodeTest = new JSOT.Path.Filter.NodeName( "root" );
+	var path2 = new JSOT.Path.Axis.Child();
+	path2.nodeTest = new JSOT.Path.Filter.NodeName( "msg" );
+	path.nextPath = path2;
+	path2.parentPath = path;
+	path.evaluate( mainDoc, true );
+
+	tpath = new JSOT.Path.Axis.Child();
+	tpath.nodeTest = new JSOT.Path.Filter.NodeName( "root" );
+	var path2 = new JSOT.Path.Axis.Child();
+	path2.nodeTest = new JSOT.Path.Filter.NodeName( "msg" );
+	tpath.nextPath = path2;
+	path2.parentPath = tpath;
+	var path3 = new JSOT.Path.Axis.Child();
+	path3.nodeTest = new JSOT.Path.Filter.NodeName( "comment" );
+	path2.nextPath = path3;
+	path3.parentPath = path2;
+	path3.nodeTest.nextTest = new JSOT.Path.Filter.Text();
+	tpath.evaluate( mainDoc, true );
+
+	// Open the wave
+	JSOT.Rpc.openWavelet( "wave://wave1.vs.uni-due.de/w+path/conv+root" );
+}
+
+function testPath()
+{
+  var root = new JSOT.Doc.ElementStart("root", { } );
+  var msg1 = new JSOT.Doc.ElementStart("msg", { } );
+  root.insertBefore( msg1 );
+  var msg2 = new JSOT.Doc.ElementStart("msg", { } );
+  root.insertBefore( msg2 );
+  var comment = new JSOT.Doc.ElementStart("comment", { } );
+  msg2.insertBefore( comment );  
+  var t1 = new JSOT.Doc.TextNode("Hallo Welt");
+  comment.insertBefore( t1 );
+  var msg3 = new JSOT.Doc.ElementStart("msg", { } );
+  root.insertBefore( msg3 );  
+  mainDoc.insertBefore( root );
+}
+
+function testPath2()
+{
+  var msg2 = new JSOT.Doc.ElementStart("msg", { } );
+  var comment = new JSOT.Doc.ElementStart("comment", { } );
+  msg2.insertBefore( comment );  
+  var t1 = new JSOT.Doc.TextNode("Erster");
+  comment.insertBefore( t1 );
+  mainDoc.firstChild.insertBefore( msg2, mainDoc.firstChild.firstChild );
+}
+
+function testPath3()
+{
+  var msg = mainDoc.firstChild.lastChild;
+  mainDoc.firstChild.removeChild( msg );
+}
+
+function printPath()
+{
+  window.console.log( "Path: " + path.nodes.length );
+  for( var i = 0; i < path.nodes.length; ++i )
+  {
+	window.console.log( path.nodes[i].type );
+  };
+  window.console.log("----------------------");
+  window.console.log( "TPath " + tpath.nodes.length );
+  for( var i = 0; i < tpath.nodes.length; ++i )
+  {
+	window.console.log( tpath.nodes[i].getText() );
+  };
+  window.console.log("----------------------");
+}
+
+var rootInstance;
+
+function buildTmpl()
+{
+  if ( rootInstance )
+  {
+	rootInstance.evaluate();
+  }
+  else
+  {
+	var t1 = new JSOT.Template.StaticTemplate( templ1 );
+	var t2 = new JSOT.Template.StaticTemplate( templ2 );
+	var foreach = new JSOT.Template.ForeachTemplate( tpath, t2 );
+	t1.addTemplate( "t1", foreach );
+	var root = new JSOT.Template.RootTemplate( document.getElementById("tmpl"), t1 );
+	rootInstance = root.createInstance( mainDoc );
+  }
+/*  window.console.log("FUCK 3");
+  var nodes = instance.evaluate();
+  window.console.log("Returned node count: " + nodes.length);
+  var dom = document.getElementById("tmpl");
+  for( var i = 0; i < nodes.length; ++i )
+  {
+	dom.appendChild( nodes[i] );
+  }
+*/
+}
+
+function templ1(templateInstance)
+{
+  window.console.log("FUCK 4");
+  var h1 = document.createElement("h1")
+  h1.appendChild( document.createTextNode("Hallo Static Template") );
+  templateInstance.domNodes.push( h1 );
+  var d = document.createElement("div");
+  templateInstance.domNodes.push( d );
+  templateInstance.instantiateTemplate( "t1", d, null );
+}
+
+function templ2(templateInstance)
+{
+  window.console.log("FUCK 5");
+  var h1 = document.createElement("h3")
+  h1.appendChild( document.createTextNode("Eine Nachricht: " + templateInstance.context.getText() ) );
+  var input = document.createElement("input");
+  input.type = "checkbox";
+  h1.appendChild( input );
+  templateInstance.domNodes.push( h1 );
+}
+
+/*
+var doc = new JSOT.Doc();
+var root = new JSOT.Doc.ElementStart("root", { }, doc );
+doc.firstChild = root;
+doc.lastChild = root;
+var msg1 = new JSOT.Doc.ElementStart("msg", { }, doc );
+msg1.parentNode = root;
+root.firstChild = msg1;
+var msg2 = new JSOT.Doc.ElementStart("msg", { }, doc );
+msg2.parentNode = root;
+msg2.previousSibling = msg1;
+msg1.nextSibling = msg2;
+var comment = new JSOT.Doc.ElementStart("comment", { }, doc );
+comment.parentNode = msg2;
+msg2.firstChild = comment;
+msg2.lastChild = comment;
+var msg3 = new JSOT.Doc.ElementStart("msg", { }, doc );
+msg3.parentNode = root;
+msg3.previousSibling = msg2;
+msg2.nextSibling = msg3;
+root.lastChild = msg3;
+
+var path = new JSOT.Path.Axis.Child();
+path.nodeTest = new JSOT.Path.Filter.NodeName( "root" );
+var path2 = new JSOT.Path.Axis.Child();
+path2.nodeTest = new JSOT.Path.Filter.NodeName( "msg" );
+path.nextPath = path2;
+path2.parentPath = path;
+
+path.evaluate(doc);
+window.console.log( path.nodes.length );
+for( var i = 0; i < path.nodes.length; ++i )
+{
+  window.console.log( path.nodes[i].type );
+};
+*/
+
+  </script>
+</body>
+</html>

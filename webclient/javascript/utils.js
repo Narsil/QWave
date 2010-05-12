@@ -27,3 +27,28 @@ function getElementsByClass( root, className, result )
 	}
 	return result;
 }
+
+function assert(ok, assertString)
+{
+  if ( ok )
+	return true;
+  
+  try {
+     throw new Error("ECMAScript assertion failed:  (" + assertString + ")");    
+  }
+  catch(e) {
+/* For Mozilla, use
+      throw new Error(e.message + " stack:\n" + e.stack);
+*/
+      window.console.log(e.stack);
+      throw e;
+/* For Mozilla, use
+      dump ("Warning: " + e.message + " stack:\n" + e.stack);
+      for (property in argsObj) {
+        dump(property + " = " + argsObj[property] + "\n");
+      }
+      dump("\n");
+*/
+  }
+  return false;
+}

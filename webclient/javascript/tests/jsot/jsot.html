@@ -6,10 +6,17 @@
 </head>
 <body>
 	<h1>Hello world</h1>
-	<div id="out"></div>
+	<pre id="out"></pre>
 	<script type="text/javascript">
 var doc = new JSOT.Doc();
-doc.content.push("Hallo!");
+
+var ops = new protocol.ProtocolDocumentOperation();
+ops.component.push( protocol.ProtocolDocumentOperation.newCharacters("Hallo!") );
+
+ops.applyTo(doc);
+
+var result = doc.toString();
+document.getElementById("out").appendChild( document.createTextNode(result + "\n\n") );
 
 var ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newAnnotationBoundary( [], [ protocol.ProtocolDocumentOperation.newKeyValueUpdate( "bold", null, "true" ) ] ) );
@@ -27,7 +34,7 @@ ops.component.push( protocol.ProtocolDocumentOperation.newCharacters(" Bye.") );
 ops.applyTo(doc);
 
 var result = doc.toString();
-document.getElementById("out").appendChild( document.createTextNode(result) );
+document.getElementById("out").appendChild( document.createTextNode(result + "\n\n") );
 
 ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(6) );
@@ -37,7 +44,7 @@ ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(11) );
 ops.applyTo(doc);
 
 result = doc.toString();
-document.getElementById("out").appendChild( document.createTextNode(result) );
+document.getElementById("out").appendChild( document.createTextNode(result + "\n\n") );
 
 ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(6) );
@@ -47,7 +54,7 @@ ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(11) );
 ops.applyTo(doc);
 
 result = doc.toString();
-document.getElementById("out").appendChild( document.createTextNode(result) );
+document.getElementById("out").appendChild( document.createTextNode(result + "\n\n") );
 
 ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(6) );
@@ -57,7 +64,7 @@ ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(11) );
 ops.applyTo(doc);
 
 result = doc.toString();
-document.getElementById("out").appendChild( document.createTextNode(result) );
+document.getElementById("out").appendChild( document.createTextNode(result + "\n\n") );
 
 ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(2) );
@@ -66,12 +73,12 @@ ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(2) );
 ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart("b", [ protocol.ProtocolDocumentOperation.newKeyValuePair( "xfoo", "Xbar"), protocol.ProtocolDocumentOperation.newKeyValuePair("name", "Joe" ) ] ) );
 ops.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters("Welt") );
 ops.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd("b") );
-ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(7) );
+ops.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount(6) );
 
 ops.applyTo(doc);
 
 result = doc.toString();
-document.getElementById("out").appendChild( document.createTextNode(result) );
+document.getElementById("out").appendChild( document.createTextNode(result + "\n\n") );
 
 ops = new protocol.ProtocolDocumentOperation();
 ops.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters("Hao ! Bye.") );

@@ -10,11 +10,29 @@ if ( !window.JSOT )
 //
 /////////////////////////////////////////////////
 
-JSOT.Event = function()
+/**
+ * @param {Object} owner is the owner of this event. When an event is emitted, the listener gets a reference
+ *                       to this event. Using the owner property, it is possible to find the object to which
+ *                       this event belongs.
+ * @constructor
+ */
+JSOT.Event = function(owner)
 {
+  /**
+   * The object to which this event belongs.
+   */
+  this.owner = owner;
   this.counter = 0;
 };
 
+/**
+ * Registers an event listener.
+ *
+ * @param {Function} func is a function which takes two arguments. The first argument is an instance of JSOT.EventArgs
+ *                        or a compatible object. The second argument is a reference to the JSOT.Event that called the function.
+ * @param {Object} obj is the object on which the function func will be invoked.
+ * @return {String} a key that is required for unregistering the listener.
+ */
 JSOT.Event.prototype.addListener = function( func, obj )
 {
   if ( !func )
@@ -33,14 +51,17 @@ JSOT.Event.prototype.removeListener = function( id )
   delete this[id];
 };
 
-JSOT.Event.prototype.emit = function()
+/**
+ * Sends the event with the specified event arguments to all registered listeners.
+ */
+JSOT.Event.prototype.emit = function(args)
 {
   for( var key in this )
   {
     if ( key[0] == "+" )
     {
       var val = this[key];
-      val[0].apply( val[1] ? val[1] : window, arguments );
+      val[0].call( val[1] ? val[1] : window, args, this );
     }
   }
 };
@@ -436,7 +457,7 @@ JSOT.Wavelet.prototype.submitRemoveParticipant = function(jid)
  */
 JSOT.Wavelet.prototype.submitMutation = function( mutation, add_participant, open_wavelet )
 {
-  this.submitMutations( this, [mutation], add_participant, open_wavelet );
+  this.submitMutations( [mutation], add_participant, open_wavelet );
 };
 
 /**
@@ -502,6 +523,14 @@ JSOT.Doc = function(docId, wavelet)
    */
   this.format = [ ];
   this.listeners = null;
+  /**
+   * The first child node (ElementStart or TextNode) or null.
+   */
+  this.firstChild = null;
+  /**
+   * The first child node (ElementStart or TextNode) or null.
+   */
+  this.lastChild = null;  
 };
 
 /**
@@ -532,7 +561,7 @@ JSOT.Doc.prototype.removeOTListener = function( listener )
 };
 
 /**
- * @param {string} event_type is either "newChild", "removeChild", or "textChange".
+ * @param {string} event_type is either "newChild", "removeChild", "remove", or "textChange".
  * @return {JSOT.Event} the event object which can be used to register callbacks.
  */
 JSOT.Doc.prototype.getEvent = function( event_type )
@@ -540,22 +569,66 @@ JSOT.Doc.prototype.getEvent = function( event_type )
   if ( event_type == "newChild" )
   {
 	if ( !this.new_child_event )
-	  this.new_child_event = new JSOT.Event();
+	  this.new_child_event = new JSOT.Event(this);
 	return this.new_child_event;
   }
   if ( event_type == "removeChild" )
   {
 	if ( !this.remove_child_event )
-	  this.remove_child_event = new JSOT.Event();
+	  this.remove_child_event = new JSOT.Event(this);
 	return this.remove_child_event;
+  }
+  if ( event_type == "remove" )
+  {
+	if ( !this.remove_event )
+	  this.remove_event = new JSOT.Event(this);
+	return this.remove_event;
   }
   if ( event_type == "textChange" )
   {
 	if ( !this.text_change_event )
-	  this.text_change_event = new JSOT.Event();
+	  this.text_change_event = new JSOT.Event(this);
 	return this.text_change_event;
   }
+  if ( event_type == "attributeChange" )
+  {
+	if ( !this.attribute_change_event )
+	  this.attribute_change_event = new JSOT.Event(this);
+	return this.attribute_change_event;
+  }
   throw "Unknown event " + event_type;
+};
+
+JSOT.Doc.prototype.insertBefore = function( newNode, beforeNode )
+{  
+  var m = new protocol.ProtocolWaveletOperation_MutateDocument();
+  m.document_id = this.docId;
+  m.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = m.document_operation;
+  docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( beforeNode ? beforeNode.start_index : this.content.length ) );
+  newNode.createDocOps_( docop );
+  docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.content.length - ( beforeNode ? beforeNode.start_index : 0 )  ) );
+
+  // Apply locally and send to the server
+  this.wavelet.submitMutation( m );
+};
+
+JSOT.Doc.prototype.appendChild = JSOT.Doc.prototype.insertBefore;
+
+JSOT.Doc.prototype.removeChild = function( node )
+{  
+  assert( !node.parentNode && node.doc == this, "The node must be a root child of the document.");
+  
+  var m = new protocol.ProtocolWaveletOperation_MutateDocument();
+  m.document_id = this.docId;
+  m.document_operation = new protocol.ProtocolDocumentOperation();
+  var docop = m.document_operation;
+  docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( node.start_index ) );
+  node.createRemoveDocOps_( docop );
+  docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.content.length - node.end_index - 1  ) );
+
+  // Apply locally and send to the server
+  this.wavelet.submitMutation( m );
 };
 
 /**
@@ -585,6 +658,82 @@ JSOT.Doc.prototype.getEvent = function( event_type )
  * @name JSOT.Doc#removeChild
  * @event
  */
+
+JSOT.Doc.TextNode = function(text, doc)
+{
+  /**
+   * The document to which the text node belongs.
+   */
+  this.doc = doc;
+  /**
+   * The content of the text node.
+   */
+  this.text = text;
+  /**
+   * The next sibling node (ElementStart or TextNode) or null.
+   */
+  this.nextSibling = null;  
+  /**
+   * The next sibling node (ElementStart or TextNode) or null.
+   */
+  this.previousSibling = null;  
+  /**
+   * The parent node (ElementStart) or null if this is a root text node.
+   * Unlike XML, text nodes can exist at the root level.
+   */
+  this.parentNode = null;  
+};
+
+/**
+ * Internal helper function.
+ * @private
+ */
+JSOT.Doc.TextNode.prototype.insertText_ = function ( pos, str )
+{
+  this.text = this.text.substr( 0, pos ) + str + this.text.substring( pos, this.text.length );
+  this.has_text_change = true;
+};
+
+/**
+ * Internal helper function.
+ * @private 
+ */
+JSOT.Doc.TextNode.prototype.appendText_ = function ( str )
+{
+  this.text += str;
+  this.has_text_change = true;
+};
+
+/**
+ * Internal helper function.
+ * @private 
+ */
+JSOT.Doc.TextNode.prototype.removeText_ = function ( pos, len )
+{
+  this.text = this.text.substr(0, pos ) + this.text.substring(pos + len, this.text.length);
+  if ( this.text.length == 0 && this.parentNode )
+	this.parentNode.has_text_change = true;
+  this.has_text_change = true;
+};
+
+/**
+ * Internal helper function.
+ * @private
+ */
+JSOT.Doc.TextNode.prototype.appendTextNode_ = function ( textNode )
+{
+  this.text += textNode.text;
+};
+
+JSOT.Doc.TextNode.prototype.createDocOps_ = function( docop )
+{
+  docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( this.text ) );
+};
+
+JSOT.Doc.TextNode.prototype.createRemoveDocOps_ = function( docop )
+{
+  docop.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( this.text ) );
+};
 
 /**
  * The beginning of an element is marked with an instance of this class.
@@ -622,13 +771,29 @@ JSOT.Doc.ElementStart = function(type, attributes, doc)
    */
   this.end_index = -1;
   /**
-   * The index in doc.content where the parent element can be found or -1.
+   * The first child node (ElementStart or TextNode) or null.
    */
-  this.parent_index = -1;
+  this.firstChild = null;
+  /**
+   * The first child node (ElementStart or TextNode) or null.
+   */
+  this.lastChild = null;
+  /**
+   * The next sibling node (ElementStart or TextNode) or null.
+   */
+  this.nextSibling = null;  
+  /**
+   * The next sibling node (ElementStart or TextNode) or null.
+   */
+  this.previousSibling = null;  
+  /**
+   * The parent node (ElementStart) or null if this is a root element.
+   */
+  this.parentNode = null;
 };
 
 /**
- * @param {string} type is either "newChild", "removeChild", or "textChange".
+ * @param {string} type is either "newChild", "removeChild", "remove", or "textChange".
  * @return {JSOT.Event} the event object which can be used to register callbacks.
  */
 JSOT.Doc.ElementStart.prototype.getEvent = function( event_type )
@@ -636,88 +801,178 @@ JSOT.Doc.ElementStart.prototype.getEvent = function( event_type )
   if ( event_type == "newChild" )
   {
 	if ( !this.new_child_event )
-	  this.new_child_event = new JSOT.Event();
+	  this.new_child_event = new JSOT.Event(this);
 	return this.new_child_event;
   }
   if ( event_type == "removeChild" )
   {
 	if ( !this.remove_child_event )
-	  this.remove_child_event = new JSOT.Event();
+	  this.remove_child_event = new JSOT.Event(this);
 	return this.remove_child_event;
   }
+  if ( event_type == "remove" )
+  {
+	if ( !this.remove_event )
+	  this.remove_event = new JSOT.Event(this);
+	return this.remove_event;
+  }  
   if ( event_type == "textChange" )
   {
 	if ( !this.text_change_event )
-	  this.text_change_event = new JSOT.Event();
+	  this.text_change_event = new JSOT.Event(this);
 	return this.text_change_event;
   }
+  if ( event_type == "attributeChange" )
+  {
+	if ( !this.attribute_change_event )
+	  this.attribute_change_event = new JSOT.Event(this);
+	return this.attribute_change_event;
+  }  
   throw "Unknown event " + event_type;
 };
 
-/**
- * @return the parent element or null. The return type is JSOT.Doc.ElementStart.
- */
-JSOT.Doc.ElementStart.prototype.parent = function()
+JSOT.Doc.ElementStart.prototype.insertBefore = function( newNode, beforeNode )
 {
-  if ( this.parent_index == -1 )
-    return null;
-  return this.doc.content[this.parent_index];
+  assert( !beforeNode || (beforeNode.element_start && beforeNode.parentNode == this ), "beforeNode must be null or a child element." );
+  
+  if ( this.doc )
+  {
+	var m = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m.document_id = this.doc.docId;
+	m.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( beforeNode ? beforeNode.start_index : this.end_index ) );
+	newNode.createDocOps_( docop );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.content.length - ( beforeNode ? beforeNode.start_index : this.end_index )  ) );
+
+	// Apply locally and send to the server
+	this.doc.wavelet.submitMutation( m );
+  }
+  else
+  {
+	newNode.parentNode = this;
+	if ( !this.firstChild )
+	{
+	  this.firstChild = newNode;
+	  this.lastChild = newNode;
+	  newNode.previousSibling = null;
+	  newNode.nextSibling = null;
+	}
+	else
+	{
+	  if ( this.firstChild == beforeNode )
+		this.firstChild = newNode;
+	  if ( beforeNode )
+	  {
+		if ( beforeNode.previousSibling )
+		  beforeNode.previousSibling.nextSibling = newNode;
+		newNode.previousSibling = beforeNode.previousSibling;
+		newNode.nextSibling = beforeNode;
+		beforeNode.previousSibling = newNode;
+	  }
+	  else
+	  {
+		this.lastChild.nextSibling = newNode;
+		newNode.previousSibling = this.lastChild;
+		newNode.nextSibling = null;
+		this.lastChild = newNode;
+	  }
+	}
+  }
+};
+
+JSOT.Doc.ElementStart.prototype.removeChild = function( node )
+{
+  assert( node.parentNode == this, "The node to be removed must be a direct child node");
+  
+  if ( this.doc )
+  {
+	var m = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m.document_id = this.doc.docId;
+	m.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( node.start_index ) );
+	node.createRemoveDocOps_( docop );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.content.length - node.end_index - 1 ) );
+
+	// Apply locally and send to the server
+	this.doc.wavelet.submitMutation( m );
+  }
+  else
+  {
+	delete node.parentNode;
+	if ( this.firstChild == node )
+	  this.firstChild = node.nextSibling;
+	if ( this.lastChild == node )
+	  this.lastChild = node.previousSibling;
+	if ( node.nextSibling )
+	  node.nextSibling.previousSibling = node.previousSibling;
+	if ( node.previousSibling )
+	  node.previousSibling.nextSibling = node.nextSibling;
+  }
 };
 
 /**
- * @param type is either null or a string denoting an element type, In this case their
- *             previous sibling of the requested element type is returned.
- * @return the previous sibling element or null. The return type is JSOT.Doc.ElementStart.
- *
- * Please note that text strings are not treated as siblings.
+ * Internal helper function.
+ * @private
  */
-JSOT.Doc.ElementStart.prototype.previousSibling = function(type)
+JSOT.Doc.ElementStart.prototype.createDocOps_ = function( docop )
 {
-  var depth = 0;
-  for( var i = this.start_index - 1; i >= 0; --i )
+  var attribs = [];
+  for( var key in this.attributes )  
+	attribs.push( protocol.ProtocolDocumentOperation.newKeyValuePair( key, this.attributes[key] ) );
+  
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementStart( this.type, attribs ) );
+  var child = this.firstChild;
+  while( child )
   {
-    var item = this.doc.content[i];
-    if ( typeof(item) == "string" )
-      continue;
-    if ( item.element_start )
-    {
-      depth--;
-      if ( depth == 0 && (!type || item.type == type ) )
-        return item;
-    }
-    else if ( item.element_end )
-      depth++;
+	child.createDocOps_( docop );
+	child = child.nextSibling;
   }
-
-  return null;
+  docop.component.push( protocol.ProtocolDocumentOperation.newElementEnd() );
 };
 
 /**
- * @param type is either null or a string denoting an element type, In this case their
- *             next sibling of the requested element type is returned.
- * @return the next sibling element or null. The return type is JSOT.Doc.ElementStart.
- *
- * Please note that text strings are not treated as siblings.
+ * Internal helper function.
+ * @private
  */
-JSOT.Doc.ElementStart.prototype.nextSibling = function(type)
+JSOT.Doc.ElementStart.prototype.createRemoveDocOps_ = function( docop )
 {
-  var depth = 0;
-  for( var i = this.end_index + 1; i < this.doc.content.length; i++ )
+  var attribs = [];
+  for( var key in this.attributes )  
+	attribs.push( protocol.ProtocolDocumentOperation.newKeyValuePair( key, this.attributes[key] ) );
+  
+  docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( this.type, attribs ) );
+  var child = this.firstChild;
+  while( child )
   {
-    var item = this.doc.content[i];
-    if ( typeof(item) == "string" )
-      continue;
-    if ( item.element_start && (!type || item.type == type ) )
-    {
-      if ( depth == 0 )
-        return item;
-      depth++;
-    }
-    else if ( item.element_end )
-      depth--;
+	child.createRemoveDocOps_( docop );
+	child = child.nextSibling;
   }
+  docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
+};
 
-  return null;
+JSOT.Doc.ElementStart.prototype.setLocalAttribute = function( key, value )
+{
+  if ( !this.localAttributes )
+	this.localAttributes = { };
+  this.localAttributes[ key ] = value;
+  
+  // Emit a signal
+  var p = this;
+  while( p )
+  {
+	if ( p.attribute_change_event )
+	  p.attribute_change_event.emit( new JSOT.Doc.EventArgs( this.doc, "attributeChange", this ) );
+	p = parentNode;
+  }
+};
+
+JSOT.Doc.ElementStart.prototype.getLocalAttribute = function( key )
+{
+  if ( !this.localAttributes )
+	return null;
+  return this.localAttributes[ key ];
 };
 
 /**
@@ -726,26 +981,25 @@ JSOT.Doc.ElementStart.prototype.nextSibling = function(type)
  */
 JSOT.Doc.ElementStart.prototype.itemCountBefore = function()
 {
-  var count = 0;
-  for( var i = 0; i < this.start_index; ++i )
-  {
-    if ( typeof(this.doc.content[i]) == "string" )
-      count += this.doc.content[i].length;
-    else
-      count++;
-  }
-  return count;
+  return this.start_index;
 };
 
 /**
  * @return {string} the concatenation of all text inside this element. This includes text of nested elements as well.
  */
 JSOT.Doc.ElementStart.prototype.getText = function()
-{
-  var t = ""
-  for( var i = this.start_index + 1; i < this.end_index; ++i )
-    if ( typeof(this.doc.content[i]) == "string" )
-      t += this.doc.content[i];
+{  
+  var t = "";
+
+  var node = this.firstChild;
+  while( node )
+  {
+	if ( node.text )
+	  t += node.text;
+	else
+	  t += node.getText();
+	node = node.nextSibling;
+  }
   return t;
 };
 
@@ -761,11 +1015,8 @@ JSOT.Doc.ElementStart.prototype.getElementByType = function(type)
   for( var i = this.start_index + 1; i < this.end_index; ++i )
   {
     var item = this.doc.content[i];
-    if ( typeof(item) != "string" )
-    {
-      if ( item.element_start && item.type == type )
-        return item;
-    }
+	if ( item.element_start && item.type == type )
+	  return item;    
   }
   return null;
 };
@@ -782,11 +1033,8 @@ JSOT.Doc.ElementStart.prototype.getElementsByType = function(type)
   for( var i = this.start_index; i < this.end_index; ++i )
   {
     var item = this.doc.content[i];
-    if ( typeof(item) != "string" )
-    {
-      if ( item.element_start && item.type == type )
-        result.push( item );
-    }
+	if ( item.element_start && item.type == type )
+	  result.push( item );    
   }
   return result;
 };
@@ -804,11 +1052,8 @@ JSOT.Doc.ElementStart.prototype.getElementById = function(id)
   for( var i = this.start_index; i < this.end_index; ++i )
   {
     var item = this.doc.content[i];
-    if ( typeof(item) != "string" )
-    {
-      if ( item.element_start && item.attributes["id"] == id )
-        return item;
-    }
+	if ( item.element_start && item.attributes["id"] == id )
+	  return item;    
   }
   return null;
 };
@@ -862,15 +1107,7 @@ JSOT.Doc.ElementEnd = function()
  */
 JSOT.Doc.prototype.itemCount = function()
 {
-  var count = 0;
-  for( var i = 0; i < this.content.length; ++i )
-  {
-    if ( typeof(this.content[i]) == "string" )
-      count += this.content[i].length;
-    else
-      count++;
-  }
-  return count;
+  return this.content.length;
 };
 
 /**
@@ -880,25 +1117,8 @@ JSOT.Doc.prototype.itemCount = function()
  */
 JSOT.Doc.prototype.getCharAt = function(pos)
 {
-  var count = 0;
-  var i = 0;
-  while( i < this.content.length )
-  {
-    var c = this.content[i++];
-    if ( typeof(c) == "string" )
-    {
-      if ( count + c.length > pos )
-        return c[pos - count];
-      count += c.length;
-    }
-    else
-    {
-      if ( pos == count )
-        return null;
-      count++;
-    }
-  }
-  return null;
+  var c = this.content[pos];
+  return c.text[pos - c.start_index];
 };
 
 /**
@@ -909,48 +1129,15 @@ JSOT.Doc.prototype.getCharAt = function(pos)
  */
 JSOT.Doc.prototype.getItemAt = function(pos)
 {
-  var count = 0;
-  var i = 0;
-  while( i < this.content.length )
-  {
-    var c = this.content[i++];
-    if ( typeof(c) == "string" )
-    {
-      if ( count + c.length > pos )
-        return c[pos - count];
-      count += c.length;
-    }
-    else
-    {
-      if ( pos == count )
-        return c;
-      count++;
-    }
-  }
-  return null;
+  var c = this.content[pos];
+  if ( c.text )
+	return c.text[pos - c.start_index];
+  return c;
 };
 
 JSOT.Doc.prototype.getFormatAt = function(pos)
 {
-  var count = 0;
-  var i = 0;
-  while( i < this.content.length )
-  {
-    var c = this.content[i++];
-    if ( typeof(c) == "string" )
-    {
-      if ( count + c.length > pos )
-        return this.format[i-1];
-      count += c.length;
-    }
-    else
-    {
-      if ( pos == count )
-        return this.format[i-1];
-      count++;
-    }
-  }
-  return null;
+  return this.format[pos];
 };
 
 JSOT.Doc.prototype.getElementByType = function(type)
@@ -958,11 +1145,8 @@ JSOT.Doc.prototype.getElementByType = function(type)
   for( var i = 0; i < this.content.length; ++i )
   {
     var item = this.content[i];
-    if ( typeof(item) != "string" )
-    {
-      if ( item.element_start && item.type == type )
-        return item;
-    }
+	if ( item.element_start && item.type == type )
+	  return item;    
   }
   return null;
 };
@@ -973,11 +1157,8 @@ JSOT.Doc.prototype.getElementsByType = function(type)
   for( var i = 0; i < this.content.length; ++i )
   {
     var item = this.content[i];
-    if ( typeof(item) != "string" )
-    {
-      if ( item.element_start && item.type == type )
-        result.push( item );
-    }
+	if ( item.element_start && item.type == type )
+	  result.push( item );    
   }
   return result;
 };
@@ -995,11 +1176,8 @@ JSOT.Doc.prototype.getElementById = function(id)
   for( var i = 0; i < this.content.length; ++i )
   {
     var item = this.content[i];
-    if ( typeof(item) != "string" )
-    {
-      if ( item.element_start && item.attributes["id"] == id )
-        return item;
-    }
+	if ( item.element_start && item.attributes["id"] == id )
+	  return item;    
   }
   return null;
 };
@@ -1020,47 +1198,49 @@ JSOT.Doc.prototype.toString = function()
   
   for( var i = 0; i < this.content.length; ++i )
   {
+	str = "";
     var c = this.content[i];
     if( this.format[i] != anno )
     {
       var a = this.format[i];
       if ( a != anno )
       {
-        result.push("[");
+		str = "[";
         for( var key in a )
         {
-          result.push(key + "=\"" + a[key] + "\" ");
+          str += (key + "=\"" + a[key] + "\" ");
         }
-        result.push("]");
+        str += "] ";
         anno = a;
       }
     }
     if ( c.element_start )
     {
       stack.push( c.type );
-      result.push("<" + c.type);
+      str += ("<" + c.type);
       if ( c.attributes )
       {
         for( var key in c.attributes )
         {
-          result.push(" " + key + "=\"");
-          result.push(c.attributes[key]);
-          result.push("\"");
+          str += (" " + key + "=\"");
+          str += (c.attributes[key]);
+          str += ("\"");
         }
       }
-      result.push(">");
+      str += (">");
     }
     else if ( c.element_end )
     {
-      result.push("<" + stack.pop() + "/>");
+      str += ("<" + stack.pop() + "/>");
     }
     else
     {
-      result.push( c );
+      str += ( c.text[ i - c.start_index ] );
     }
+	result.push(str);
   }
   
-  return result.join("");
+  return result.join("\n");
 };
 
 /**
@@ -1078,7 +1258,6 @@ JSOT.Doc.prototype.createGUI = function()
   this.has_gui = true;
   //window.console.log("PROCESSING " + this.docId);
   
-  var result = []
   var current = this;
   var currentIndex = -1;
   var stack = [];
@@ -1087,19 +1266,41 @@ JSOT.Doc.prototype.createGUI = function()
   for( var i = 0; i < this.content.length; ++i )
   {
     var item = this.content[i];
-    if ( typeof(item) == "string" )
+    if ( item.text )
     {
     }
     else if ( item.element_start )
     {
       // The item is a new element and its parent has a newChild event handler?
-      if ( item.is_new && current.new_child_event )
+      if ( item.is_new )
       {
-        // New root element? -> remember the result
+        // New root element?
         if ( currentIndex == -1 )
-          result.push( current.new_child_event.emit( new JSOT.Doc.EventArgs( this, "newChild", item ) ) ); 
+		{
+		  if ( current.new_child_event )
+			current.new_child_event.emit( new JSOT.Doc.EventArgs( this, "newChild", item ) ); 
+		}
+		// New sub-element
         else
-          current.new_child_event.emit( new JSOT.Doc.EventArgs( this, "newChild", item ) );
+		{
+		  var e = new JSOT.Doc.EventArgs( this, "newChild", item );
+		  // Let the event bubble upwards in the tree
+		  var x = current;
+		  while( x )
+		  {
+			if ( x.new_child_event )
+			{
+			  x.new_child_event.emit( e );
+			  if ( e.cancel )
+				breakl
+			}
+			if ( x == this )
+			  break;
+			x = x.parentNode;
+			if ( !x )
+			  x = this;
+		  }
+		}
         delete item.has_new_text;
       }
       else if ( item.has_new_text )
@@ -1115,7 +1316,7 @@ JSOT.Doc.prototype.createGUI = function()
             e.text_change_event.emit( new JSOT.Doc.EventArgs( this, "textChange", item ) );
             break;
           }
-          e = e.parent();
+          e = e.parentNode;
         }
         delete item.has_new_text;
       }
@@ -1134,8 +1335,6 @@ JSOT.Doc.prototype.createGUI = function()
         current = this.content[ currentIndex ];
     }
   }
-    
-  return result;
 };
 
 JSOT.Doc.EventArgs = function( doc, event_type, element )
@@ -1165,88 +1364,6 @@ JSOT.Doc.EventArgs.prototype.stopPropagation = function()
 protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
 {
   //
-  // Find out which elements are to be deleted and notify the application logic
-  // before the document is changed.
-  //
-  
-  // Position in this.components
-  var opIndex = 0;
-  // Position in doc.content
-  var contentIndex = 0;
-  // Position in the text of variable 'c'
-  var inContentIndex = 0;
-  var c = doc.content[contentIndex];
-  // Loop until all ops are processed
-  while( opIndex < this.component.length )
-  {
-    var op = this.component[opIndex++];
-    if ( op.element_start || op.element_end || op.characters )
-    {
-    }
-    else if ( op.retain_item_count || op.delete_characters )
-    {
-      if ( !c )
-        break;
-      if ( op.delete_characters )
-        var count = op.delete_characters.length;
-      else
-        var count = op.retain_item_count;
-      while( count > 0 )
-      {
-        if ( !c )
-          throw "document op is larger than doc /1";  
-        if ( c.element_start || c.element_end )
-        {
-          count--;
-          c = doc.content[++contentIndex];
-          inContentIndex = 0;
-        }
-        else  // Characters
-        {
-          // How many characters can be retained?
-          var m = Math.min( count, c.length - inContentIndex );
-          // Skip characters
-          count -= m;
-          inContentIndex += m;
-          // Reached end of the entire string? -> Move to the next element
-          if ( c.length == inContentIndex )
-          {
-            // Go to the next content entry
-            c = doc.content[++contentIndex];
-            inContentIndex = 0;
-          }
-        }
-      }
-    }
-    else if ( op.delete_element_start )
-    {
-      if ( !c )
-        break;
-      var p = c.parent();
-      if ( p )
-      {
-        if ( p.remove_child_event )
-          p.remove_child_event.emit( new JSOT.Doc.EventArgs( this, "removeChild", c ) );
-      }
-      else if ( doc.remove_child_event )
-        doc.remove_child_event.emit( new JSOT.Doc.EventArgs( this, "removeChild", c ) );
-      c = doc.content[++contentIndex];
-    }
-    else if ( op.delete_element_end )
-    {
-      if ( !c )
-        break;
-      c = doc.content[++contentIndex];
-    }
-    else if ( op.update_attributes || op.replace_attributes )
-    {
-      if ( !c )
-        break;
-      c = doc.content[++contentIndex];
-    }
-  }
-
-  //
   // Transform the document
   //
   
@@ -1254,8 +1371,6 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
   var opIndex = 0;
   // Position in doc.content
   var contentIndex = 0;
-  // Position in the text of variable 'c'
-  var inContentIndex = 0;
   // Increased by one whenever a delete_element_start is encountered and decreased by 1 upon delete_element_end
   var deleteDepth = 0;
   var insertDepth = 0;
@@ -1267,11 +1382,8 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
   var annotationUpdate = { };
   // The number if keys in annotationUpdate
   var annotationUpdateCount = 0;
-  
-  var currentElement = doc;
-  var currentElementIndex = -1;
-  var stack = [];
-  
+    
+  // Tell all OT-listeners that OT starts now
   if ( doc.listeners )
     for( var i = 0; i < doc.listeners.length; ++i )
       doc.listeners[i].begin( doc );
@@ -1281,11 +1393,29 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
   while( opIndex < this.component.length )
   {
     var op = this.component[opIndex++];
+	//
+	// Insert element start
+	//
     if ( op.element_start )
     {
       if ( deleteDepth > 0 )
         throw "Cannot insert inside a delete sequence";
 
+	  // Inserting in the middle of a text node?
+	  if ( c && c.text && contentIndex > 0 && doc.content[contentIndex - 1] == c )
+	  {
+		// Create a new text node
+		var n2 = new JSOT.Doc.TextNode(null, doc);
+		n2.start_index = contentIndex;
+		n2.text = c.text.substring( n2.start_index - c.start_index, c.text.length );
+		c.text = c.text.substr(0, n2.start_index - c.start_index );
+		// Replace the old with the new text node in the following characters
+		var i = contentIndex;
+		while( i < doc.content.length && doc.content[i] == c )
+		  doc.content[i++] = n2;
+	  }
+	  
+	  // Create a map of attributes
       var attribs = { };
       for( var a in op.element_start.attribute )
       {
@@ -1293,47 +1423,25 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
         attribs[v.key] = v.value;
       }
 
-      stack.push( currentElementIndex );
-      currentElement = new JSOT.Doc.ElementStart( op.element_start.type, attribs, doc );
-      currentElement.start_index = contentIndex;
-      currentElement.parent_index = currentElementIndex;
-      currentElementIndex = contentIndex;
-      currentElement.is_new = true;
-      
+      var element = new JSOT.Doc.ElementStart( op.element_start.type, attribs, doc );
+	  element.is_new = true;
+	  
+	  // Compute annotation
       updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 
-      // Insert at the end of a string? -> Go to the beginning of the next one
-      if ( typeof(c) == "string" && inContentIndex == c.length )
-      {
-        inContentIndex = 0;
-        contentIndex++;
-        currentElement.start_index++;
-      }
-      
-      // Insert in front of another item?
-      if ( inContentIndex == 0 )
-      {
-        doc.content.splice( contentIndex, 0, currentElement );
-        doc.format.splice( contentIndex, 0, updatedAnnotation );
-        c = doc.content[++contentIndex];
-      }
-      // Insert in the middle (not the end!) of a string?
-      else
-      {
-        currentElement.start_index++;
-        doc.content.splice( contentIndex + 1, 0, currentElement, c.substring(inContentIndex, c.length) );
-        doc.format.splice( contentIndex + 1, 0, updatedAnnotation, doc.format[contentIndex] );
-        doc.content[contentIndex] = c.slice(0, inContentIndex);
-        contentIndex += 2;
-        c = doc.content[contentIndex];
-        inContentIndex = 0;
-      }
+	  // Insert the element & format in the content & format arrays
+	  doc.content.splice( contentIndex, 0, element );
+	  doc.format.splice( contentIndex, 0, updatedAnnotation );
+	  c = doc.content[++contentIndex];
       
       insertDepth++;
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
-          doc.listeners[i].insertElementStart( currentElement, updatedAnnotation );
+          doc.listeners[i].insertElementStart( element, updatedAnnotation );
     }
+	//
+	// Insert element end
+	//
     else if ( op.element_end )
     {
       if ( deleteDepth > 0 )
@@ -1342,31 +1450,21 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
         throw "Cannot delete element end without deleting element start";
       insertDepth--;
       
-      if ( inContentIndex > 0 )
-      {
-        if ( typeof(c) != "string" || inContentIndex != c.length )
-          throw "Cannot insert element in the middle of a string. This cannot be a valid docop.";
-        inContentIndex = 0;
-        ++contentIndex;
-      }
-
+	  // Compute annotation
       updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
 
+	  // Insert the element & format in the content & format arrays
       doc.content.splice( contentIndex, 0, new JSOT.Doc.ElementEnd() );
       doc.format.splice( contentIndex, 0, updatedAnnotation );
       c = doc.content[++contentIndex];
-      
-      currentElement.end_index = contentIndex - 1;
-      currentElementIndex = stack.pop();
-      if ( currentElementIndex == -1 )
-        currentElement = doc;
-      else
-        currentElement = doc.content[ currentElementIndex ];
-      
+
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
           doc.listeners[i].insertElementEnd( currentElement, updatedAnnotation );
     }
+	//
+	// Insert characters
+	//
     else if ( op.characters )
     {
       if ( deleteDepth > 0 )
@@ -1374,45 +1472,42 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
       if ( op.characters.length == 0 )
         continue;
       
-      currentElement.has_new_text = true;
-
+	  // Compute annotation
       updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-    
-      // Insert at the end of the document?
-      if ( !c )
-      {
-        doc.format[contentIndex] = updatedAnnotation;
-        doc.content[contentIndex] = op.characters;
-        c = doc.content[contentIndex];
-        inContentIndex = c.length;
-      }
-      // Insert text in a string?
-      else if ( typeof(c) == "string" )
-      {
-        // Insert the first character? Set its annotation.
-        if ( inContentIndex == 0 &&  updatedAnnotation != doc.format[contentIndex] )
-        {
-          doc.content.splice( contentIndex, 0, op.characters );
-          doc.format.splice( contentIndex, 0, updatedAnnotation );
-          c = doc.content[contentIndex];
-          inContentIndex = c.length;
-        }
-        else
-        {
-          doc.format[contentIndex] = updatedAnnotation;
-          c = c.substring(0,inContentIndex) + op.characters + c.substring(inContentIndex,c.length);
-          doc.content[contentIndex] = c;
-          inContentIndex += op.characters.length;
-        }
-      }
-      // Insert text in front of an element or at the end of the document
+
+	  var textNode;
+	  // Insert to the left of a text node?
+	  if ( c && c.text && insertDepth == 0 )
+	  {
+		if ( contentIndex == 0 || doc.content[contentIndex-1] != c )
+		  c.start_index = contentIndex;
+		textNode = c;
+		textNode.insertText_( contentIndex - textNode.start_index, op.characters );		
+	  }
+	  // Insert to the right of a text node?
+	  else if ( contentIndex > 0 && doc.content[contentIndex-1].text )
+	  {
+		textNode = doc.content[contentIndex-1];
+		textNode.appendText_( op.characters );
+	  }
+	  // No text node to the left and no text node to the right
       else
       {
-        doc.content.splice( contentIndex, 0, op.characters );
-        doc.format.splice( contentIndex, 0, updatedAnnotation );
-        c = doc.content[++contentIndex];
-        inContentIndex = 0;
+		// Create a new text node
+		textNode = new JSOT.Doc.TextNode(op.characters, doc);
+		textNode.start_index = contentIndex;
+		textNode.is_new = true;
       }
+	  
+	  // Insert the characters in content & format array
+	  for( var i = 0; i < op.characters.length; ++i )
+	  {
+		doc.content.splice( contentIndex + i, 0, textNode );
+		doc.format.splice( contentIndex + i, 0, updatedAnnotation );
+	  }
+	  // Skip the inserted characters
+	  contentIndex += op.characters.length;
+	  c = doc.content[contentIndex];
       
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
@@ -1422,50 +1517,21 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
     {      
       if ( insertDepth > 0 )
         throw "Cannot delete inside an insertion sequence";
-      if ( !c )
+      if ( !c || !c.text )
         break; // Results in an exception outside the loop
-      var count = op.delete_characters.length;
-      if ( count == 0 )
-        continue;
-  
-      currentElement.has_new_text = true;
-      
-      var done = 0;
-      while( count > 0 )
-      {
-        if ( typeof(c) != "string" )
+  	  
+	  if ( contentIndex == 0 || doc.content[contentIndex-1] != c )
+		c.start_index = contentIndex;
+
+	  if ( c.text.substr( contentIndex - c.start_index, op.delete_characters.length ) != op.delete_characters )
           throw "Cannot delete characters here, because at this position there are no characters";
 
-        // Position is at the end of a string? -> Go to the next item
-        if ( c.length == inContentIndex )
-        {
-          c = doc.content[++contentIndex];
-          inContentIndex = 0;
-          continue;
-        }
-
-        // How many characters can be deleted in this string?
-        var i = Math.min( count, c.length - inContentIndex );
-        if ( c.substr( inContentIndex, i ) != op.delete_characters.substr( done, i ) )
-          throw "Cannot delete characters, because the characters in the document and operation differ.";
-        // Delete the characters
-        c = c.substring(0, inContentIndex).concat( c.substring(inContentIndex + i, c.length ) );
-        done += i;
-        count -= i;
-        // The entire string has been deleted?
-        if ( c.length == 0 )
-        {
-          // If there is an annotation boundary change in the deleted characters,, this change must be applied
-          doc.content.splice( contentIndex, 1 );
-          doc.format.splice( contentIndex, 1 );
-          c = doc.content[contentIndex];
-          inContentIndex = 0;
-        }
-        else
-          // Only some characters of this string have been deleted
-          doc.content[contentIndex] = c;
-      }
-      
+	  c.removeText_( contentIndex - c.start_index, op.delete_characters.length );
+	  
+	  doc.content.splice( contentIndex, op.delete_characters.length );
+	  doc.format.splice( contentIndex, op.delete_characters.length );
+	  c = doc.content[contentIndex];
+	  
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
           doc.listeners[i].deleteCharacters( op.delete_characters, updatedAnnotation );
@@ -1478,99 +1544,59 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
         throw "document op is larger than doc";
       if ( deleteDepth > 0 )
         throw "Cannot retain inside a delete sequence";
-      
-      var count = op.retain_item_count;
-      if ( count == 0 )
-        continue;
-      
-      while( count > 0 )
+            
+      for( var count = 0; count < op.retain_item_count; ++count )
       {
         if ( !c )
           throw "document op is larger than doc";
-        // Check for annotation changes in the document
-        if ( inContentIndex == 0 )
-        {
-          docAnnotation = doc.format[contentIndex];
-          updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-          // Update the annotation
-          doc.format[contentIndex] = updatedAnnotation;
-        }
-        // Retaining an element start?
+
+		docAnnotation = doc.format[contentIndex];
+		updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
+		// Update the annotation
+		doc.format[contentIndex] = updatedAnnotation;
+
+		// Retaining an element start?
         if ( c.element_start )
         {
-          stack.push( currentElementIndex );
-          currentElement = c;
-          currentElement.start_index = contentIndex;
-          currentElement.parent_index = currentElementIndex;
-          currentElementIndex = contentIndex;
-         
           if ( doc.listeners )
             for( var i = 0; i < doc.listeners.length; ++i )
-              doc.listeners[i].retainElementStart( c, updatedAnnotation );
-         
-          // Skip the element
-          count--;
-          c = doc.content[++contentIndex];
-          inContentIndex = 0;
+              doc.listeners[i].retainElementStart( c, updatedAnnotation );         
         }
         // Retaining an element end?
         else if ( c.element_end )
         {
-          currentElement.end_index = contentIndex;
-          currentElementIndex = stack.pop();
-          if ( currentElementIndex == -1 )
-            currentElement = doc;
-          else
-            currentElement = doc.content[ currentElementIndex ];
-
           if ( doc.listeners )
             for( var i = 0; i < doc.listeners.length; ++i )
               doc.listeners[i].retainElementEnd( currentElement, updatedAnnotation );
-
-          // Skip the element
-          count--;
-          c = doc.content[++contentIndex];
-          inContentIndex = 0;
         }
         // Retaining characters
         else  
         {
-          // At the end of a string? -> Go to the beginning of the next one and repeat
-          if ( inContentIndex == c.length )
-          {            
-            // Go to the next content entry
-            c = doc.content[++contentIndex];
-            inContentIndex = 0;
-            continue;
-          }
-
-          // How many characters can be retained?
-          var m = Math.min( count, c.length - inContentIndex );
-          // Skip characters
-          count -= m;
-          inContentIndex += m;
+		  // A text node starts here?
+		  if ( contentIndex > 0 && doc.content[contentIndex - 1] != c )
+			c.start_index = contentIndex;
           
           if ( doc.listeners )
             for( var i = 0; i < doc.listeners.length; ++i )
-              doc.listeners[i].retainCharacters( m, updatedAnnotation );
+              doc.listeners[i].retainCharacters( 1, updatedAnnotation );
         }
+		          
+		// Next item
+		c = doc.content[++contentIndex];
       }
     }
     else if ( op.delete_element_start )
     {
       if ( insertDepth > 0 )
         throw "Cannot delete inside an insertion sequence";
-      if ( typeof(c) == "string" && inContentIndex == c.length )
-      {
-        c = doc.content[++contentIndex];
-        inContentIndex = 0;
-      }
-      if ( !c )
-        break; // Results in an exception outside the loop
-      if ( !c.element_start )
+      if ( !c || !c.element_start )
         throw "Cannot delete element start at this position, because in the document there is none";
       if ( c.type != op.delete_element_start.type )
+	  {
+		window.console.log(c.type);
+		window.console.log(op.delete_element_start.type);
         throw "Cannot delete element start because Op and Document have different element type";
+	  }
       // Count how many opening elements have been deleted. The corresponding closing elements must be deleted, too.
       deleteDepth++;
 
@@ -1593,13 +1619,53 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
         if ( c.attributes[a] != attribs[a] )
           throw "Cannot delete element start because attribute values differ";
       }
-        
-      var oldc = c;
       
+	  // Need to send events to potential listeners?
+	  if ( deleteDepth == 1 )
+	  {
+		// Fix the tree
+		this.buildTree_( doc, contentIndex );
+		// Send an event to listeners of all sub-elements because these sub-elements are about to become deleted.
+		var child = c.firstChild;
+		while( child )
+		{
+		  this.emitRemoveEvent_( child );
+		  child = child.nextSibling;
+		}
+		var e;
+		// Send an event to listeners on the about-to-be-deleted element.
+		if ( c.remove_event )
+		{
+		  e = new JSOT.Doc.EventArgs( this, "remove", c );
+		  c.remove_event.emit( e );
+		}		
+		// Propagate the message upward in the tree?
+		if ( !e || !e.cancel )
+		{
+		  var x = c.parentNode;
+		  e = null;
+		  while( x )
+		  {
+			if ( x.remove_child_event )
+			{
+			  if ( !e )
+				e = new JSOT.Doc.EventArgs( this, "removeChild", c );
+			  x.remove_child_event.emit( e );
+			  if ( e.cancel )
+				break;
+			}
+			if ( x.element_start )
+			  x = x.parentNode ? x.parentNode : doc;
+			else
+			  break;
+		  }
+		}
+	  }
+	  
+      var oldc = c;      
       doc.content.splice( contentIndex, 1 );
       doc.format.splice( contentIndex, 1 );
       c = doc.content[contentIndex];
-      inContentIndex = 0;
       
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
@@ -1609,9 +1675,7 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
     {
       if ( insertDepth > 0 )
         throw "Cannot delete inside an insertion sequence";
-      if ( !c )
-        break; // Results in an exception outside the loop      
-      if ( !c.element_end )
+      if ( !c || !c.element_end )
         throw "Cannot delete element end at this position, because in the document there is none";
       // If there is an annotation boundary change in the deleted characters, this change must be applied
       var anno = doc.format[contentIndex];
@@ -1623,13 +1687,10 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
       // Is there a matching openeing element?
       if ( deleteDepth == 0 )
         throw "Cannot delete element end, because matching delete element start is missing";
-      if ( !c.element_end )
-        throw "Cannot delete element end at this position, because in the document there is none";
 
       doc.content.splice( contentIndex, 1 );
       doc.format.splice( contentIndex, 1 );
       c = doc.content[contentIndex];
-      inContentIndex = 0;
       deleteDepth--;
       
       if ( doc.listeners )
@@ -1638,20 +1699,11 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
     }
     else if ( op.update_attributes )
     {
-      if ( insertDepth > 0 )
+      if ( insertDepth > 0 || deleteDepth > 0 )
         throw "Cannot update attributes inside an insertion sequence";
-      if ( !c )
-        break; // Results in an exception outside the loop
-      if ( !c.element_start )
+      if ( !c || !c.element_start )
         throw "Cannot update attributes at this position, because in the document there is no start element";
       
-      // Construct the element tree
-      stack.push( currentElementIndex );
-      currentElement = c;
-      currentElement.start_index = contentIndex;
-      currentElement.parent_index = currentElementIndex;
-      currentElementIndex = contentIndex;
-
       // Compute the annotation for this element start
       var anno = doc.format[contentIndex];
       if ( anno != docAnnotation )
@@ -1687,27 +1739,17 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
       }
       // Go to the next item
       c = doc.content[++contentIndex];
-      inContentIndex = 0;
-
+	  
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
           doc.listeners[i].updateAttributes( currentElement, updatedAnnotation );
     }
     else if ( op.replace_attributes )
     {
-      if ( insertDepth > 0 )
+      if ( insertDepth > 0 || deleteDepth > 0 )
         throw "Cannot replace attributes inside an insertion sequence";
-      if ( !c )
-        break; // Results in an exception outside the loop      
-      if ( !c.element_start )
+      if ( !c || !c.element_start )
         throw "Cannot replace attributes at this position, because in the document there is no start element";
-      
-      // Construct the element tree
-      stack.push( currentElementIndex );
-      currentElement = c;
-      currentElement.start_index = contentIndex;
-      currentElement.parent_index = currentElementIndex;
-      currentElementIndex = contentIndex;
 
       // Compare the attributes from the docop and the doc. They must be equal
       var acount = 0;
@@ -1735,13 +1777,12 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
       c.attributes = { }
       for( var a in op.replace_attributes.new_attribute )
       {
-         var keyvalue = op.replace_attributes.new_attribute[a];
+		var keyvalue = op.replace_attributes.new_attribute[a];
         c.attributes[keyvalue.key] = keyvalue.value;
       }
       // Go to the next item
       c = doc.content[++contentIndex];
-      inContentIndex = 0;
-
+	  
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
           doc.listeners[i].replaceAttributes( currentElement, updatedAnnotation );
@@ -1765,34 +1806,15 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
           annotationUpdateCount++;
         annotationUpdate[change.key] = change;
       }
-      // The line below is WRONG because the update cannot be applied to the format on the left side of the cursor.
+      // The commented line below is WRONG because the update cannot be applied to the format on the left side of the cursor.
       // updatedAnnotation = this.computeAnnotation(docAnnotation, annotationUpdate, annotationUpdateCount);
-      
-      // If at the end of a string, go to the next item
-      if ( typeof(c) == "string" && inContentIndex == c.length )
-      {
-        c = doc.content[++contentIndex];
-        inContentIndex = 0;
-      }
-      // If in the middle of a string -> break it because the annotation of the following characters is different
-      else if ( inContentIndex > 0 )
-      {
-        doc.content.splice( contentIndex, 1, c.substr(0, inContentIndex ), c.substring( inContentIndex, c.length ) );
-        doc.format.splice( contentIndex + 1, 0, docAnnotation );
-        c = doc.content[++contentIndex];
-        inContentIndex = 0;
-      }
       
       if ( doc.listeners )
         for( var i = 0; i < doc.listeners.length; ++i )
           doc.listeners[i].annotationBoundary( annotationUpdateCount == 0 ? null : annotationUpdate, updatedAnnotation );
     }
   }
-
-  if ( doc.listeners )
-    for( var i = 0; i < doc.listeners.length; ++i )  
-      doc.listeners[i].end( doc );
-  
+    
   if ( opIndex < this.component.length )
     throw "Document is too small for op"
   // Should be impossible if the document is well formed ... Paranoia
@@ -1800,10 +1822,133 @@ protocol.ProtocolDocumentOperation.prototype.applyTo = function(doc)
     throw "Not all delete element starts have been matched with a delete element end";
   if ( insertDepth != 0 )
     throw "Not all opened elements have been closed";
-  if ( typeof(c) == "string" && inContentIndex == c.length )
-    ++contentIndex;
   if ( contentIndex < doc.content.length )
     throw "op is too small for document";
+    
+  this.buildTree_( doc, doc.content.length );
+
+  if ( doc.listeners )
+    for( var i = 0; i < doc.listeners.length; ++i )  
+      doc.listeners[i].end( doc );	
+};
+
+/**
+ * Repairs the tree structure of the entire document or parts of it.
+ * If invoked several times in sequence, it always starts where it left off and executes until 'toContentIndex'.
+ *
+ * @param {int} toContentIndex is an index in doc.content. It is either the index of an ElementStart or the
+ *              length of doc.content.
+ */
+protocol.ProtocolDocumentOperation.prototype.buildTree_ = function( doc, toContentIndex )
+{
+  // First run?
+  if ( !this.build_tree )
+  {
+	this.build_tree = { };
+	this.build_tree.stack = [ ];
+	if ( doc.content.length > 0 )
+	  doc.firstChild = doc.content[0];
+	else
+	  doc.firstChild = null;
+	this.build_tree.i = 0;
+	this.build_tree.currentElement = null;
+	this.build_tree.currentSibling = null;
+	this.build_tree.currentTextNode = null;
+  }
+  
+  while ( this.build_tree.i < toContentIndex )
+  {
+	var item = doc.content[this.build_tree.i];
+	
+	if ( item.element_start || item.text )
+	{
+	  item.parentNode = this.build_tree.currentElement;
+	  item.previousSibling = this.build_tree.currentSibling;
+	  if ( this.build_tree.currentSibling )
+		this.build_tree.currentSibling.nextSibling = item;
+	}
+	
+	if ( item.element_start )
+	{
+	  this.build_tree.stack.push( this.build_tree.currentElement );
+	  this.build_tree.currentElement = item;
+	  this.build_tree.currentElement.start_index = this.build_tree.i;
+	  this.build_tree.currentSibling = null;	  
+	  this.build_tree.i++;
+	}
+	else if ( item.element_end )
+	{
+	  if ( this.build_tree.currentSibling )
+		this.build_tree.currentSibling.nextSibling = null;
+	  
+	  this.build_tree.currentElement.end_index = this.build_tree.i;
+	  this.build_tree.currentElement.lastChild = this.build_tree.currentSibling;
+	  if ( this.build_tree.currentElement.end_index - this.build_tree.currentElement.start_index == 1 )
+		this.build_tree.currentElement.firstChild = null;
+	  else
+		this.build_tree.currentElement.firstChild = doc.content[this.build_tree.currentElement.start_index + 1];
+	  this.build_tree.currentSibling = this.build_tree.currentElement;
+	  this.build_tree.currentElement = this.build_tree.stack.pop();
+	  
+	  this.build_tree.i++;
+	}
+	else
+	{
+	  // Need to merge this text node with the previous one?
+	  if ( this.build_tree.i > 0 && doc.content[this.build_tree.i-1] != item && doc.content[this.build_tree.i-1].text )
+	  {
+		var t = doc.content[this.build_tree.i-1];
+		t.appendTextNode_( item );
+		while( this.build_tree.i < doc.content.length && doc.content[this.build_tree.i] == item )
+		  doc.content[this.build_tree.i++] = t;
+		item = t;
+	  }
+	  else
+	  {
+		item.start_index = this.build_tree.i;
+		while( this.build_tree.i < doc.content.length && doc.content[this.build_tree.i] == item )
+		{
+		  if ( this.build_tree.i >= toContentIndex ) throw "Index in buildTree_ is in the middle of text. Must be on ElementStart instead.";
+		  this.build_tree.i++;
+		}
+	  }
+	  item.end_index = this.build_tree.i;
+	  this.build_tree.currentSibling = item;
+	}
+  }
+  
+  if ( doc.content.length != toContentIndex )
+  {
+	// Get the first element that has not been treated by the loop above and fix its
+	// previous sibling property.
+	var item = doc.content[toContentIndex];
+	if ( !item.element_start ) throw "Wrong index in buildTree_";
+	item.previousSibling = this.build_tree.currentSibling;
+	if ( this.build_tree.currentSibling )
+	  this.build_tree.currentSibling.nextSibling = item;
+  }
+  else  
+  {
+	doc.lastChild = this.build_tree.currentSibling;
+	if ( doc.lastChild )
+	  doc.lastChild.nextSibling = null;
+	delete this.build_tree;
+  }
+}
+
+protocol.ProtocolDocumentOperation.prototype.emitRemoveEvent_ = function( child )
+{
+  // Recursion over all children
+  var c = child.firstChild;
+  while( c )
+  {
+	this.emitRemoveEvent_( c );
+	c = c.nextSibling;
+  }
+  
+  // Emit the event for this child (if required )
+  if ( child.remove_event )
+	child.remove_event.emit( new JSOT.Doc.EventArgs( child.doc, "remove", child ) );
 };
 
 /**

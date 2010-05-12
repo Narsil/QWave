@@ -331,11 +331,11 @@ function updateLike( message, remove )
 
 function contentTextChange( eventArgs )
 {
-	var dom = getElementByClass( this.parent().dom, "content" );
+	var dom = getElementByClass( this.parentNode.dom, "content" );
 	dom.innerHTML = "";
 	var text = document.createTextNode( this.getText() );
 	dom.appendChild( text );
-	if ( this.parent().attributes["author"] == JSOT.Rpc.jid )
+	if ( this.parentNode.attributes["author"] == JSOT.Rpc.jid )
 	{
 		var a = document.createElement("a");
 		a.href = "#";
@@ -413,7 +413,7 @@ function messageNewChild( eventArgs )
 		child.getEvent("textChange").emit( new JSOT.Doc.EventArgs( eventArgs.doc, "textChange", child ) );
 		
 		// Where to insert this comment
-		var before = child.nextSibling( "comment" );
+		var before = child.nextSibling;
 		dom.parentNode.insertBefore( comment, before ? before.dom : null );
 	}
 }
@@ -506,17 +506,14 @@ function conversationNewChild( eventArgs )
 	{
 		var d = wavelet.getDoc( child.attributes[ "id" ] );
 		if ( !d )
-			return null;
+			return;
 		d.getEvent("newChild").addListener( messageDocNewChild, d );
-		var result = d.createGUI();
+		d.createGUI();
 		var dom = document.getElementById( "messages" );
-		var next = child.nextSibling();
-		// dom.appendChild(result[0]);
+		var next = child.nextSibling;
 		dom.insertBefore( d.dom, next ? next.dom : null );
 		child.dom = d.dom;
-//		return result[0];
 	}
-//	return null;
 };
 
 /**
@@ -726,7 +723,7 @@ function deleteCommentBox(m)
 
 function showEditMessage( content )
 {
-	var message = content.parent();
+	var message = content.parentNode;
 	var dom = getElementByClass( message.dom, "content" );
 	dom.innerHTML = '<div><textarea class="changetextarea"></textarea></div>' +
 					'<div><input type="button" value="Publish" class="editpublish" /> <input type="button" value="Delete" class="editdelete" /> <input type="button" value="Cancel" class="editcancel"/></div>';
@@ -803,7 +800,7 @@ function deleteMessage( message )
 
 function hideEditMessage( content )
 {
-	var message = content.parent();
+	var message = content.parentNode;
 	var dom = content.dom
 	// dom.innerHTML = "";
 	message.getEvent("newChild").emit( new JSOT.Doc.EventArgs( content.doc, "newChild", content ) );
@@ -881,7 +878,7 @@ function deleteComment( comment )
 	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( "comment",
 																  [ protocol.ProtocolDocumentOperation.newKeyValuePair( "author", comment.attributes["author"] ),
 																	protocol.ProtocolDocumentOperation.newKeyValuePair( "date", comment.attributes["date"] )] ) );
-	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( "comment" ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementStart( "content" ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteCharacters( oldText ) );
 	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
 	docop.component.push( protocol.ProtocolDocumentOperation.newDeleteElementEnd() );
@@ -896,7 +893,7 @@ function hideEditComment( comment )
 {
 	var dom = comment.dom
 	dom.parentNode.removeChild( dom );
-	comment.parent().getEvent("newChild").emit( new JSOT.Doc.EventArgs( comment.doc, "newChild", comment ) );
+	comment.parentNode.getEvent("newChild").emit( new JSOT.Doc.EventArgs( comment.doc, "newChild", comment ) );
 }
 
 	</script>
