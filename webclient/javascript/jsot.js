@@ -31,9 +31,10 @@ JSOT.Event = function(owner)
  * @param {Function} func is a function which takes two arguments. The first argument is an instance of JSOT.EventArgs
  *                        or a compatible object. The second argument is a reference to the JSOT.Event that called the function.
  * @param {Object} obj is the object on which the function func will be invoked.
+ * @param {Object} extraArgs is an object that will be passed back to the listener when being invoked.
  * @return {String} a key that is required for unregistering the listener.
  */
-JSOT.Event.prototype.addListener = function( func, obj )
+JSOT.Event.prototype.addListener = function( func, obj, extraArgs )
 {
   if ( !func )
   {
@@ -42,8 +43,22 @@ JSOT.Event.prototype.addListener = function( func, obj )
 	window.console.log( "No function specified" );
   }
   var key = "+" + (this.counter++).toString();
-  this[ key ] = [ func, obj ];
+  this[ key ] = [ func, obj, extraArgs ];
   return key;
+};
+
+JSOT.Event.prototype.hasListener = function( func, obj, extraArgs )
+{
+  for( var key in this )
+  {
+    if ( key[0] == "+" )
+    {
+      var val = this[key];
+	  if ( val[0] == func && val[1] == obj && val[2] == extraArgs )
+		return true;
+	}
+  }
+  return false;
 };
 
 JSOT.Event.prototype.removeListener = function( id )
@@ -61,7 +76,7 @@ JSOT.Event.prototype.emit = function(args)
     if ( key[0] == "+" )
     {
       var val = this[key];
-      val[0].call( val[1] ? val[1] : window, args, this );
+      val[0].call( val[1] ? val[1] : window, args, this, val[2] );
     }
   }
 };

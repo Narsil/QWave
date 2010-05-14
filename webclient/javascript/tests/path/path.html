@@ -24,15 +24,20 @@
   <input type="submit" value="Test path 3" onclick="testPath3()" />
   <input type="submit" value="Print path" onclick="printPath()" />
   <input type="submit" value="Template" onclick="buildTmpl()" />
+  <input type="submit" value="Dump" onclick="dump()" />
   
   <h1>Template</h1>
   <div id="tmpl"></div>
   
   <script type="text/javascript">
 
-var path;
+var root1;
+var root2;
 var mainDoc;
-var tpath;
+var axis1;
+var axis2;
+var templatePath1;
+var templatePath2;
 
 /**
  * Called when clicking on login
@@ -58,27 +63,34 @@ function onLogin()
 	mainDoc = wavelet.getDoc("conversation");
 	mainDoc.has_gui = true;
 	
-	path = new JSOT.Path.Axis.Child();
-	path.nodeTest = new JSOT.Path.Filter.NodeName( "root" );
+	var path = new JSOT.Path.Axis.Child();
+	path.filter = new JSOT.Path.Filter.NodeName( "root" );
 	var path2 = new JSOT.Path.Axis.Child();
-	path2.nodeTest = new JSOT.Path.Filter.NodeName( "msg" );
+	path2.filter = new JSOT.Path.Filter.NodeName( "msg" );
 	path.nextPath = path2;
 	path2.parentPath = path;
-	path.evaluate( mainDoc, true );
-
-	tpath = new JSOT.Path.Axis.Child();
-	tpath.nodeTest = new JSOT.Path.Filter.NodeName( "root" );
+	// path.evaluate( mainDoc, true );
+	templatePath1 = new JSOT.Path.PathTemplate( path );
+	axis1 = path;
+	root1 = templatePath1.createInstance( mainDoc );
+	
+	var tpath = new JSOT.Path.Axis.Child();
+	tpath.filter = new JSOT.Path.Filter.NodeName( "root" );
 	var path2 = new JSOT.Path.Axis.Child();
-	path2.nodeTest = new JSOT.Path.Filter.NodeName( "msg" );
+	path2.filter = new JSOT.Path.Filter.NodeName( "msg" );
 	tpath.nextPath = path2;
 	path2.parentPath = tpath;
 	var path3 = new JSOT.Path.Axis.Child();
-	path3.nodeTest = new JSOT.Path.Filter.NodeName( "comment" );
+	path3.filter = new JSOT.Path.Filter.NodeName( "comment" );
 	path2.nextPath = path3;
 	path3.parentPath = path2;
-	path3.nodeTest.nextTest = new JSOT.Path.Filter.Text();
+	path3.filter.nextFilter = new JSOT.Path.Filter.HasText();
 	tpath.evaluate( mainDoc, true );
-
+	templatePath2 = new JSOT.Path.PathTemplate( tpath, mainDoc );
+	templatePath2.setMapping( new JSOT.Path.Mapping.Text() );
+	axis2 = tpath;
+	root2 = templatePath2.createInstance( mainDoc );
+	
 	// Open the wave
 	JSOT.Rpc.openWavelet( "wave://wave1.vs.uni-due.de/w+path/conv+root" );
 }
@@ -117,37 +129,41 @@ function testPath3()
 
 function printPath()
 {
-  window.console.log( "Path: " + path.nodes.length );
-  for( var i = 0; i < path.nodes.length; ++i )
+  window.console.log("----------------------");
+  var nodes = root1.getNodes();
+  window.console.log( "Path: " + nodes.length );
+  for( var i = 0; i < nodes.length; ++i )
   {
-	window.console.log( path.nodes[i].type );
+	window.console.log( nodes[i].type );
   };
   window.console.log("----------------------");
-  window.console.log( "TPath " + tpath.nodes.length );
-  for( var i = 0; i < tpath.nodes.length; ++i )
+  
+  var nodes = root2.getValues();
+  window.console.log( "TPath " + nodes.length );
+  for( var i = 0; i < nodes.length; ++i )
   {
-	window.console.log( tpath.nodes[i].getText() );
+	window.console.log( nodes[i] );
   };
   window.console.log("----------------------");
 }
 
-var rootInstance;
+// var rootInstance;
 
 function buildTmpl()
 {
-  if ( rootInstance )
-  {
-	rootInstance.evaluate();
-  }
-  else
-  {
+//  if ( rootInstance )
+//  {
+//	rootInstance.evaluate();
+//  }
+//  else
+//  {
 	var t1 = new JSOT.Template.StaticTemplate( templ1 );
 	var t2 = new JSOT.Template.StaticTemplate( templ2 );
-	var foreach = new JSOT.Template.ForeachTemplate( tpath, t2 );
+	var foreach = new JSOT.Template.ForeachTemplate( templatePath2, t2 );
 	t1.addTemplate( "t1", foreach );
-	var root = new JSOT.Template.RootTemplate( document.getElementById("tmpl"), t1 );
-	rootInstance = root.createInstance( mainDoc );
-  }
+	var root = new JSOT.Template.RootTemplate( t1 );
+	rootInstance = root.createInstance( mainDoc, document.getElementById("tmpl") );
+//  }
 /*  window.console.log("FUCK 3");
   var nodes = instance.evaluate();
   window.console.log("Returned node count: " + nodes.length);
@@ -174,11 +190,16 @@ function templ2(templateInstance)
 {
   window.console.log("FUCK 5");
   var h1 = document.createElement("h3")
-  h1.appendChild( document.createTextNode("Eine Nachricht: " + templateInstance.context.getText() ) );
+  h1.appendChild( document.createTextNode("Eine Nachricht: " + templateInstance.context ) );
   var input = document.createElement("input");
   input.type = "checkbox";
   h1.appendChild( input );
   templateInstance.domNodes.push( h1 );
+}
+
+function dump()
+{
+  window.console.log(mainDoc.toString() );
 }
 
 /*
@@ -204,9 +225,9 @@ msg2.nextSibling = msg3;
 root.lastChild = msg3;
 
 var path = new JSOT.Path.Axis.Child();
-path.nodeTest = new JSOT.Path.Filter.NodeName( "root" );
+path.filter = new JSOT.Path.Filter.NodeName( "root" );
 var path2 = new JSOT.Path.Axis.Child();
-path2.nodeTest = new JSOT.Path.Filter.NodeName( "msg" );
+path2.filter = new JSOT.Path.Filter.NodeName( "msg" );
 path.nextPath = path2;
 path2.parentPath = path;
 

@@ -1,37 +1,50 @@
-if (!Array.prototype.indexOf)
-{
-  Array.prototype.indexOf = function(elt /*, from*/)
-  {
-    var len = this.length;
-
-    var from = Number(arguments[1]) || 0;
-    from = (from < 0)
-         ? Math.ceil(from)
-         : Math.floor(from);
-    if (from < 0)
-      from += len;
-
-    for (; from < len; from++)
-    {
-      if (from in this &&
-          this[from] === elt)
-        return from;
-    }
-    return -1;
-  };
-}
-
 JSOT.Path = { };
 JSOT.Path.Axis = { };
 JSOT.Path.Filter = { };
+JSOT.Path.Mapping = { };
 JSOT.Template = { };
 
-JSOT.Path.Axis.Child = function()
+/*******************************************************
+ *
+ * Path.Root
+ *
+ *******************************************************/
+
+JSOT.Path.PathTemplate = function( axis )
 {
-  this.nodes = [ ];
+  this.axis = axis;
 };
 
-JSOT.Path.Axis.Child.prototype.getEvent = function( event_type )
+JSOT.Path.PathTemplate.prototype.setMapping = function( mapping )
+{
+  this.mapping = mapping;
+};
+
+JSOT.Path.PathTemplate.prototype.createInstance = function( context )
+{
+  var obj = new JSOT.Path.Root( this.axis, context );
+  if ( this.mapping )
+	obj.mapping = this.mapping;
+  return obj;
+};
+
+/*******************************************************
+ *
+ * Path.Root
+ *
+ *******************************************************/
+
+JSOT.Path.Root = function( axis, context )
+{
+  this.nodes = [ ];
+  this.dirty = true;
+  this.valuesDirty = true;
+  this.isInitialized = false;
+  this.axis = axis;
+  this.context = context;
+};
+
+JSOT.Path.Root.prototype.getEvent = function( event_type )
 {
   if ( event_type == "change" )
   {
@@ -42,103 +55,51 @@ JSOT.Path.Axis.Child.prototype.getEvent = function( event_type )
   return null;
 };
 
-JSOT.Path.Axis.Child.prototype.evaluate = function( context, init )
+JSOT.Path.Root.prototype.getNodes = function()
 {
-  this.context = context;
-
-  if ( init )
-	context.getEvent("newChild").addListener( this.onNewChild, this );
-  
-  // Find the first child
-  var child = context.firstChild;
-  this.nodes = [ ];
-    
-  while( child )
+  if ( !this.dirty )
+	return this.nodes;
+  this.dirty = false;
+  if ( this.isInitialized )
   {
-	// if ( !this.nodeTest || this.nodeTest.evaluate( child ) )
-	this.nodes.push(child);
-	child = child.nextSibling;
-  }  
-  
-  var t = this.nodeTest;
-  while( t )
+	window.console.log("getNodes 1");
+	this.nodes = this.axis.evaluate( this, this.context, false );
+  }
+  else
   {
-	this.nodes = t.evaluate( this.nodes );
-	t = t.nextTest;
+	window.console.log("getNodes 2");
+	this.nodes = this.axis.evaluate( this, this.context, true );
+	this.isInitialized = true;
   }
-  
-  if ( this.nextPath )
-  {	
-	var result = this.nodes;
-	this.nodes = [ ];
-	for( var i = 0; i < result.length; ++i )
-	{
-	  this.nextPath.evaluate( result[i], init );
-	  this.nodes = this.nodes.concat( this.nextPath.nodes );
-	}
-  }
-  else if ( init )
-  {
-	// Find the root of this path
-	var a = this;
-	while( a.parentPath )
-	  a = a.parentPath;
-	
-	for( var i = 0; i < this.nodes.length; ++i )
-	{
-	  var n = this.nodes[i];
-	  if ( n.element_start )
-		n.getEvent("remove").addListener( a.onRemove, a );
-	  else
-	  {
-		if ( n.parentNode )
-		  n.parentNode.getEvent("textChange").addListener( a.onRemove, a );
-		else
-		  n.doc.getEvent("textChange").addListener( a.onRemove, a );
-	  }
-	}
-  }
+  return this.nodes;
 };
 
-JSOT.Path.Axis.Child.prototype.onNewChild = function( eventArgs, sender )
+JSOT.Path.Root.prototype.getValues = function()
 {
-  window.console.log("onNewChild in path. Node is " + eventArgs.element.type + " sender is " + sender.owner.type );
-  
-  var element = eventArgs.element;
-  // Is it a direct child?
-  if ( (element.parentNode || sender.owner != element.doc) && sender.owner != element.parentNode )
+  if ( !this.mapping )
+	return this.getNodes();
+  if ( !this.valuesDirty )
+	return this.values;
+  var nodes = this.getNodes();
+  this.values = [ ];  
+  for( var i = 0; i < nodes.length; ++i )
+	this.values.push( this.mapping.map( this, nodes[i] ) );
+  this.valuesDirty = false;
+  return this.values;
+};
+
+JSOT.Path.Root.prototype.setDirty = function()
+{
+  if ( this.dirty )
 	return;
-
-  this.nodes = [ element ];
-  var t = this.nodeTest;
-  while( t )
-  {
-	this.nodes = t.evaluate( this.nodes );
-	t = t.nextTest;
-  }
-
-  if ( this.nodes.length > 0 )
-  {
-	// Evaluate the remaining path tail (if there is any)
-	if ( this.nextPath )
-	{
-	  window.console.log("...recursion");
-	  for( var i = 0; i < this.nodes.length; ++i )
-		this.nextPath.evaluate( this.nodes[i], true );
-	}
-	
-	// Find the root of this path
-	var a = this;
-	while( a.parentPath )
-	  a = a.parentPath;
-
-	a.evaluate( a.context );
-	if ( a.change_event )
-	  a.change_event.emit();
-  }
+  window.console.log("Root is set dirty");
+  this.dirty = true;
+  this.valuesDirty = true;
+  if ( this.change_event )
+	this.change_event.emit();
 };
 
-JSOT.Path.Axis.Child.prototype.onRemove = function( eventArgs, sender )
+JSOT.Path.Root.prototype.onRemove = function( eventArgs, sender )
 {
   window.console.log("REMOVE");
   var index = this.nodes.indexOf( eventArgs.element );
@@ -146,10 +107,135 @@ JSOT.Path.Axis.Child.prototype.onRemove = function( eventArgs, sender )
 	return;
   window.console.log("REMOVE 2");
   this.nodes.splice( index, 1 );
+  if ( this.values )
+	this.values.splice( index, 1 );
   
   if ( this.change_event )
 	this.change_event.emit();  
 };
+
+JSOT.Path.Root.prototype.onMappingChange = function( eventArgs, sender )
+{
+  var index = this.nodes.indexOf( eventArgs.element );
+  if ( index == -1 )
+	return;
+  if ( this.mapping )
+	this.values[i] = this.mapping.map( this, this.nodes[i] );
+  
+  if ( this.change_event )
+	this.change_event.emit();  
+};
+
+/*******************************************************
+ *
+ * Mapping.Text
+ *
+ *******************************************************/
+
+JSOT.Path.Mapping.Text = function()
+{
+};
+
+JSOT.Path.Mapping.Text.prototype.map = function( root, node )
+{
+  var event = node.getEvent("textChange");
+  if ( !event.hasListener( root.onMappingChange, root ) )
+	event.addListener( root.onMappingChange, root );
+  
+  var result = node.getText();
+
+  if ( this.nextMapping )
+	return this.nextMapping( result );  
+  return result;
+};
+
+/*******************************************************
+ *
+ * Axis.Child
+ *
+ *******************************************************/
+
+JSOT.Path.Axis.Child = function()
+{
+};
+
+JSOT.Path.Axis.Child.prototype.evaluate = function( root, context, init )
+{
+  if ( init )
+	context.getEvent("newChild").addListener( this.onNewChild, this, root );
+  
+  // Find the first child
+  var child = context.firstChild;
+  var nodes = [ ];
+    
+  while( child )
+  {
+	nodes.push(child);
+	child = child.nextSibling;
+  }  
+  
+  if( this.filter )
+	nodes = this.filter.evaluate( nodes );
+  
+  if ( this.nextPath )
+  {	
+	var result = [ ];
+	for( var i = 0; i < nodes.length; ++i )
+	  result = result.concat( this.nextPath.evaluate( root, nodes[i], init ) );
+	return result;
+  }
+  
+  if ( init )
+  {
+	for( var i = 0; i < nodes.length; ++i )
+	{
+	  nodes[i].getEvent("remove").addListener( root.onRemove, root );
+	}
+  }
+  
+  return nodes;
+};
+
+JSOT.Path.Axis.Child.prototype.onNewChild = function( eventArgs, sender, root )
+{  
+  var element = eventArgs.element;
+  // Is it a direct child? If not -> not interested
+  if ( (element.parentNode || sender.owner != element.doc) && sender.owner != element.parentNode )
+	return;
+
+  window.console.log("onNewChild in path. Node is " + eventArgs.element.type + " sender is " + sender.owner.type );
+
+  // Filter the node
+  var nodes = [ element ];  
+  if( this.filter )
+	nodes = this.filter.evaluate( nodes );
+
+  // Did not pass the filter?
+  if ( nodes.length == 0 )
+	return;
+  
+  // Evaluate the remaining path tail (if there is any)
+  if ( this.nextPath )
+  {
+	window.console.log("...recursion");
+	for( var i = 0; i < nodes.length; ++i )
+	  nodes = this.nextPath.evaluate( root, nodes[i], true );
+  }
+	
+  // There is no new result node? Nothing changed -> good bye
+  if ( nodes.length == 0 )
+	return;
+  
+  nodes[0].getEvent("remove").addListener( root.onRemove, root );
+  
+  root.setDirty();
+};
+
+/*******************************************************
+ *
+ * Filter.NodeName
+ *
+ *******************************************************/
 
 JSOT.Path.Filter.NodeName = function( nodeName )
 {
@@ -166,8 +252,17 @@ JSOT.Path.Filter.NodeName.prototype.evaluate = function( nodes )
 	else
 	  ++i;
   }
+  
+  if ( this.nextFilter )
+	return this.nextFilter.evaluate( nodes );
   return nodes;
 };
+
+/*******************************************************
+ *
+ * Filter.Index
+ *
+ *******************************************************/
 
 JSOT.Path.Filter.Index = function( index )
 {
@@ -178,57 +273,74 @@ JSOT.Path.Filter.Index.prototype.evaluate = function( nodes )
 {
   if ( nodes.length <= this.index )
 	return [ ];
+  
+  if ( this.nextFilter )
+	return this.nextFilter( nodes[index] );
   return [ nodes[index] ];
 };
 
-JSOT.Path.Filter.Text = function()
+/*******************************************************
+ *
+ * Filter.HasText
+ *
+ *******************************************************/
+
+JSOT.Path.Filter.HasText = function()
 {
 };
 
-JSOT.Path.Filter.Text.prototype.evaluate = function( nodes )
+JSOT.Path.Filter.HasText.prototype.evaluate = function( nodes )
 {
   var i = 0;
   while( i < nodes.length )  
   {
 	var t = nodes[i].getText();
-  window.console.log("Text is " + t );
 	if ( !t || t == "" )
 	  nodes.splice( i, 1 );
 	else
 	  i++;
   }
+  
+  if ( this.nextFilter )
+	return this.nextFilter( nodes );  
   return nodes;
 };
 
-JSOT.Template.RootTemplate = function( dom, subTemplate )
+/*******************************************************
+ *
+ * RootTemplate
+ *
+ *******************************************************/
+
+JSOT.Template.RootTemplate = function( subTemplate )
 {
-  this.dom = dom;
   this.subTemplate = subTemplate;
 };
 
-JSOT.Template.RootTemplate.prototype.createInstance = function( context )
+JSOT.Template.RootTemplate.prototype.createInstance = function( context, dom )
 {
-  var obj = new JSOT.Template.RootTemplateInstance( context, this );
-  obj.evaluate();
-  return obj;
+  return new JSOT.Template.RootTemplateInstance( context, this, dom );
 };
 
-JSOT.Template.RootTemplateInstance = function( context, template )
+JSOT.Template.RootTemplateInstance = function( context, template, dom )
 {
-  this.dirty = true;
+  this.dom = dom;  
   this.context = context;
   this.template = template;
   this.subTemplateInstance = this.template.subTemplate.createInstance( context, this );
   this.domNodes = [ ];
+  this.setDirty( true );
 };
 
-JSOT.Template.RootTemplateInstance.prototype.evaluate = function()
+JSOT.Template.RootTemplateInstance.prototype.evaluate_ = function()
 {
   if ( !this.dirty )
-	return this.domNodes;
+	return;
 
+  window.console.log("evaluate_");
+  
   var nodes = this.subTemplateInstance.evaluate();
-  var old = this.template.dom.firstChild;
+  var old = this.dom.firstChild;
   for( var i = 0; i < nodes.length; ++i )
   {
 	if ( old == nodes[i] )
@@ -241,22 +353,37 @@ JSOT.Template.RootTemplateInstance.prototype.evaluate = function()
 	{
 	  var tmp = old;
 	  old = old.nextSibling;
-	  this.template.dom.replaceChild( nodes[i], tmp );
+	  this.dom.replaceChild( nodes[i], tmp );
 	}
 	else
-	  this.template.dom.appendChild( nodes[i] );
+	  this.dom.appendChild( nodes[i] );
   }
 
   while( old )
   {
 	var tmp = old;
 	old = old.nextSibling;
-	this.template.dom.removeChild( tmp );
+	this.dom.removeChild( tmp );
   }
   
   this.domNodes = nodes;
   this.dirty = false;
 };
+
+JSOT.Template.RootTemplateInstance.prototype.setDirty = function()
+{
+  if ( this.dirty )
+	return;
+  this.dirty = true;
+  var self = this;
+  window.setTimeout( function() { self.evaluate_(); }, 1 );
+};
+
+/*******************************************************
+ *
+ * StaticTemplate
+ *
+ *******************************************************/
 
 JSOT.Template.StaticTemplate = function( initFunc )
 {
@@ -271,6 +398,7 @@ JSOT.Template.StaticTemplate.prototype.addTemplate = function( name, subTemplate
 
 JSOT.Template.StaticTemplate.prototype.createInstance = function( context, parentInstance )
 {
+//  window.console.log("Instantiate with " + context );
   var obj = new JSOT.Template.StaticTemplateInstance( context, this, parentInstance );
   this.initFunc( obj );
   return obj;
@@ -296,10 +424,10 @@ JSOT.Template.StaticTemplateInstance.prototype.evaluate = function()
   if ( !this.dirty )
 	return this.domNodes;
   
-  window.console.log("Static Eval");
+//  window.console.log("Static Eval");
   for( var key in this.subTemplateInstances )
   {
-	window.console.log("Static Eval Loop");
+//	window.console.log("Static Eval Loop");
 	var descriptor = this.subTemplateInstances[key];
 	var nodes = descriptor.templateInstance.evaluate();
 	var parentDomNode = descriptor.parentDomNode;
@@ -329,6 +457,12 @@ JSOT.Template.StaticTemplateInstance.prototype.evaluate = function()
   return this.domNodes;
 };
 
+/*******************************************************
+ *
+ * ForeachTemplate
+ *
+ *******************************************************/
+
 JSOT.Template.ForeachTemplate = function( path, subTemplate )
 {
   this.path = path;
@@ -347,51 +481,57 @@ JSOT.Template.ForeachTemplateInstance = function( context, template, parentInsta
   this.dirty = true;
   this.context = context;
   this.template = template;
-  // TODO: clone the path
-  this.path = template.path;
+  this.path = template.path.createInstance( this.context );
   this.domNodes = [ ];
   this.otNodes = [ ];
+  this.otValues = [ ];
   this.subTemplateInstances = [ ];
   
   this.path.getEvent("change").addListener( this.onPathChange, this );
-  this.path.evaluate( this.context );  
 };
 
 JSOT.Template.ForeachTemplateInstance.prototype.evaluate = function()
 {
   if ( !this.dirty )
 	return this.domNodes;
-  
-  window.console.log("FOREACH");
-    
+      
   var dom_result = [ ];
   var dom_list = [ ];
   var instances = [ ];
   
-  for( var i = 0; i < this.path.nodes.length; ++i )
-  {
-	window.console.log("FOREACH loop");
-	var node = this.path.nodes[i];
+  var nodes = this.path.getNodes();  
+  var values = this.path.getValues();
+  
+  window.console.log("FOREACH " + nodes.length);
+
+  for( var i = 0; i < nodes.length; ++i )
+  {	
+	var node = nodes[i];
+	var value = values[i];
 	// Did we instantiate a template for this node before?
 	var index = this.otNodes.indexOf( node );
-	if ( index == -1 )
+	// No -> instantiate it
+	if ( index == -1 || value != this.otValues[index] )
 	{
-	  var tinstance = this.template.subTemplate.createInstance( node, this );
+	  // window.console.log("FOREACH loop x1: index = " + index + ", value=" + value + ", otValue is " + this.otValues[i] );
+	  var tinstance = this.template.subTemplate.createInstance( value, this );
 	  var doms = tinstance.evaluate();
 	  dom_result = dom_result.concat( doms );
 	  instances[i] = tinstance;
 	}
+	// Yes -> update it
 	else
 	{
+	  window.console.log("FOREACH loop x2");
 	  var tinstance = this.subTemplateInstances[index];
-	  var nodes = tinstance.evaluate();
-	  dom_result = dom_result.concat( nodes );
+	  dom_result = dom_result.concat( tinstance.evaluate() );
 	  instances[i] = tinstance;
 	}
   }
   
   this.subTemplateInstances = instances;
-  this.otNodes = this.path.nodes;
+  this.otNodes = nodes.slice( 0, nodes.length );
+  this.otValues = values.slice( 0, values.length );
   this.dirty = false;
   this.domNodes = dom_result;
   return this.domNodes;
@@ -403,10 +543,24 @@ JSOT.Template.ForeachTemplateInstance.prototype.onPathChange = function()
   var p = this.parentInstance;
   while( p )
   {
-	p.dirty = true;
-	p = p.parentInstance;
+	if ( !p.parentInstance )
+	{
+	  p.setDirty();
+	  break;
+	}
+	else
+	{
+	  p.dirty = true;
+	  p = p.parentInstance;
+	}
   }
 };
+
+/*******************************************************
+ *
+ * SwitchTemplate
+ *
+ *******************************************************/
 
 JSOT.Template.SwitchTemplate = function()
 {
@@ -444,8 +598,7 @@ JSOT.Template.SwitchTemplateInstance = function( context, template, parentInstan
 	var c = this.template.cases[i];
 	if ( c.path )
 	{
-	  // TODO: Copy the path
-	  this.paths[i] = c.path;
+	  this.paths[i] = c.path.createInstance( this.context );
 	  this.paths[i].getEvent("change").addListener( this.onPathChange, this );
 	}
   }
@@ -460,7 +613,10 @@ JSOT.Template.SwitchTemplateInstance.prototype.onPathChange = function()
   while( p )
   {
 	p.dirty = true;
-	p = p.parentInstance;
+	if ( !p.parentInstance )
+	  p.setDirty();
+	else
+	  p = p.parentInstance;
   }
 };
 
@@ -474,10 +630,9 @@ JSOT.Template.SwitchTemplateInstance.prototype.evaluate = function()
   // Default case
   var index = 0;
   // Determine which case applies
-  for( var i = 1; i < this.template.cases.length; ++i )
+  for( var i = 1; i < this.paths.length; ++i )
   {
-	var c = this.template.cases[i];
-	var result = c.evaluate( [this.context] );
+	var result = this.paths[i].getNodes();
 	if ( result.length == 1 )
 	{
 	  index = i;
