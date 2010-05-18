@@ -25,6 +25,14 @@ JSOT.Event = function(owner)
   this.counter = 0;
 };
 
+JSOT.Event.prototype.addListenerOnce = function( func, obj, extraArgs )
+{
+  var key = this.hasListener( func, obj, extraArgs );
+  if ( key )
+	return key;
+  return this.addListener( func, obj, extraArgs );
+};
+
 /**
  * Registers an event listener.
  *
@@ -55,10 +63,10 @@ JSOT.Event.prototype.hasListener = function( func, obj, extraArgs )
     {
       var val = this[key];
 	  if ( val[0] == func && val[1] == obj && val[2] == extraArgs )
-		return true;
+		return key;
 	}
   }
-  return false;
+  return null;
 };
 
 JSOT.Event.prototype.removeListener = function( id )
@@ -927,6 +935,39 @@ JSOT.Doc.ElementStart.prototype.removeChild = function( node )
   }
 };
 
+JSOT.Doc.ElementStart.prototype.setText = function( text )
+{
+  if ( this.doc )
+  {
+	var m = new protocol.ProtocolWaveletOperation_MutateDocument();
+	m.document_id = this.doc.docId;
+	m.document_operation = new protocol.ProtocolDocumentOperation();
+	var docop = m.document_operation;
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.start_index + 1 ) );
+
+	var child = this.firstChild;
+	while( child )
+	{
+	  child.createRemoveDocOps_( docop );
+	  child = child.nextSibling;
+	}
+	
+	docop.component.push( protocol.ProtocolDocumentOperation.newCharacters( text ) );
+	docop.component.push( protocol.ProtocolDocumentOperation.newRetainItemCount( this.doc.content.length - this.end_index ) );
+
+	// Apply locally and send to the server
+	this.doc.wavelet.submitMutation( m );
+  }
+  else
+  {
+	var t = new JSOT.Doc.TextNode( text );
+	t.text = text;
+	t.parentNode = this;
+	this.firstChild = t;
+	this.lastChild = t;
+  }
+};
+
 /**
  * Internal helper function.
  * @private
@@ -979,7 +1020,7 @@ JSOT.Doc.ElementStart.prototype.setLocalAttribute = function( key, value )
   {
 	if ( p.attribute_change_event )
 	  p.attribute_change_event.emit( new JSOT.Doc.EventArgs( this.doc, "attributeChange", this ) );
-	p = parentNode;
+	p = p.parentNode;
   }
 };
 

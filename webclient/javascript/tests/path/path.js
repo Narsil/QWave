@@ -6,7 +6,7 @@ JSOT.Template = { };
 
 /*******************************************************
  *
- * Path.Root
+ * Path.PathTemplate
  *
  *******************************************************/
 
@@ -99,19 +99,28 @@ JSOT.Path.Root.prototype.setDirty = function()
 	this.change_event.emit();
 };
 
-JSOT.Path.Root.prototype.onRemove = function( eventArgs, sender )
+JSOT.Path.Root.prototype.containsNode = function( node )
 {
-  window.console.log("REMOVE");
-  var index = this.nodes.indexOf( eventArgs.element );
+  return this.nodes.indexOf( node ) != -1;
+};
+
+JSOT.Path.Root.prototype.removeNode = function( node )
+{
+  var index = this.nodes.indexOf( node );
   if ( index == -1 )
 	return;
-  window.console.log("REMOVE 2");
   this.nodes.splice( index, 1 );
   if ( this.values )
 	this.values.splice( index, 1 );
   
   if ( this.change_event )
 	this.change_event.emit();  
+};
+
+JSOT.Path.Root.prototype.onRemove = function( eventArgs, sender )
+{
+  window.console.log("REMOVE");
+  this.removeNode( eventArgs.element );
 };
 
 JSOT.Path.Root.prototype.onMappingChange = function( eventArgs, sender )
@@ -138,10 +147,6 @@ JSOT.Path.Mapping.Text = function()
 
 JSOT.Path.Mapping.Text.prototype.map = function( root, node )
 {
-  var event = node.getEvent("textChange");
-  if ( !event.hasListener( root.onMappingChange, root ) )
-	event.addListener( root.onMappingChange, root );
-  
   var result = node.getText();
 
   if ( this.nextMapping )
@@ -162,7 +167,7 @@ JSOT.Path.Axis.Child = function()
 JSOT.Path.Axis.Child.prototype.evaluate = function( root, context, init )
 {
   if ( init )
-	context.getEvent("newChild").addListener( this.onNewChild, this, root );
+	context.getEvent("newChild").addListenerOnce( this.onNewChild, this, root );
   
   // Find the first child
   var child = context.firstChild;
@@ -175,7 +180,7 @@ JSOT.Path.Axis.Child.prototype.evaluate = function( root, context, init )
   }  
   
   if( this.filter )
-	nodes = this.filter.evaluate( nodes );
+	nodes = this.filter.evaluate( root, this, nodes );
   
   if ( this.nextPath )
   {	
@@ -189,7 +194,7 @@ JSOT.Path.Axis.Child.prototype.evaluate = function( root, context, init )
   {
 	for( var i = 0; i < nodes.length; ++i )
 	{
-	  nodes[i].getEvent("remove").addListener( root.onRemove, root );
+	  nodes[i].getEvent("remove").addListenerOnce( root.onRemove, root );
 	}
   }
   
@@ -203,32 +208,122 @@ JSOT.Path.Axis.Child.prototype.onNewChild = function( eventArgs, sender, root )
   if ( (element.parentNode || sender.owner != element.doc) && sender.owner != element.parentNode )
 	return;
 
-  window.console.log("onNewChild in path. Node is " + eventArgs.element.type + " sender is " + sender.owner.type );
+  if ( !this.testNode_( root, eventArgs.element ) )
+	return;
+    
+  element.getEvent("remove").addListenerOnce( root.onRemove, root );
+  
+  root.setDirty();
+};
 
+JSOT.Path.Axis.Child.prototype.onFilterChange = function( eventArgs, sender, root )
+{
+  if ( !this.testNode_( root, eventArgs.element ) )
+  {
+	root.removeNode( eventArgs.element );
+  }
+  else
+  {
+	if ( !root.containsNode( eventArgs.element ) )
+	  root.setDirty();
+  }
+};
+
+JSOT.Path.Axis.Child.prototype.testNode_ = function( root, node )
+{  
   // Filter the node
-  var nodes = [ element ];  
+  var nodes = [ node ];  
   if( this.filter )
-	nodes = this.filter.evaluate( nodes );
+	nodes = this.filter.evaluate( root, this, nodes );
 
   // Did not pass the filter?
   if ( nodes.length == 0 )
-	return;
+	return false;
   
   // Evaluate the remaining path tail (if there is any)
   if ( this.nextPath )
   {
 	window.console.log("...recursion");
 	for( var i = 0; i < nodes.length; ++i )
-	  nodes = this.nextPath.evaluate( root, nodes[i], true );
+	  nodes = this.nextPath.evaluate( root, node, true );
+
+	// There is no new result node? Nothing changed -> good bye
+	if ( nodes.length == 0 )
+	  return false;
   }
 	
-  // There is no new result node? Nothing changed -> good bye
+  return true;
+};
+
+/*******************************************************
+ *
+ * Axis.Self
+ *
+ *******************************************************/
+
+JSOT.Path.Axis.Self = function()
+{
+};
+
+JSOT.Path.Axis.Self.prototype.evaluate = function( root, context, init )
+{
+  var nodes = [ context ];
+  
+  if( this.filter )
+	nodes = this.filter.evaluate( root, this, nodes );
+  
+  if ( this.nextPath )
+  {	
+	var result = [ ];
+	for( var i = 0; i < nodes.length; ++i )
+	  result = result.concat( this.nextPath.evaluate( root, nodes[i], init ) );
+	return result;
+  }  
+  else if ( init )
+  {
+	context.getEvent("remove").addListenerOnce( root.onRemove, root );
+  }
+  
+  return nodes;
+};
+
+JSOT.Path.Axis.Self.prototype.onFilterChange = function( eventArgs, sender, root )
+{
+  if ( !this.testNode_( root, eventArgs.element ) )
+  {
+	root.removeNode( eventArgs.element );
+  }
+  else
+  {
+	if ( !root.containsNode( eventArgs.element ) )
+	  root.setDirty();
+  }
+};
+
+JSOT.Path.Axis.Self.prototype.testNode_ = function( root, node )
+{  
+  // Filter the node
+  var nodes = [ node ];  
+  if( this.filter )
+	nodes = this.filter.evaluate( root, this, nodes );
+
+  // Did not pass the filter?
   if ( nodes.length == 0 )
-	return;
+	return false;
   
-  nodes[0].getEvent("remove").addListener( root.onRemove, root );
-  
-  root.setDirty();
+  // Evaluate the remaining path tail (if there is any)
+  if ( this.nextPath )
+  {
+	window.console.log("...recursion");
+	for( var i = 0; i < nodes.length; ++i )
+	  nodes = this.nextPath.evaluate( root, node, true );
+
+	// There is no new result node? Nothing changed -> good bye
+	if ( nodes.length == 0 )
+	  return false;
+  }
+	
+  return true;
 };
 
 /*******************************************************
@@ -242,7 +337,7 @@ JSOT.Path.Filter.NodeName = function( nodeName )
   this.nodeName = nodeName;
 };
 
-JSOT.Path.Filter.NodeName.prototype.evaluate = function( nodes )
+JSOT.Path.Filter.NodeName.prototype.evaluate = function( root, axis, nodes )
 {
   var i = 0;
   while( i < nodes.length )
@@ -254,7 +349,7 @@ JSOT.Path.Filter.NodeName.prototype.evaluate = function( nodes )
   }
   
   if ( this.nextFilter )
-	return this.nextFilter.evaluate( nodes );
+	return this.nextFilter.evaluate( root, axis, nodes );
   return nodes;
 };
 
@@ -269,13 +364,13 @@ JSOT.Path.Filter.Index = function( index )
   this.index = index;
 };
 
-JSOT.Path.Filter.Index.prototype.evaluate = function( nodes )
+JSOT.Path.Filter.Index.prototype.evaluate = function( root, axis, nodes )
 {
   if ( nodes.length <= this.index )
 	return [ ];
   
   if ( this.nextFilter )
-	return this.nextFilter( nodes[index] );
+	return this.nextFilter.evaluate( root, axis, nodes[index] );
   return [ nodes[index] ];
 };
 
@@ -289,11 +384,14 @@ JSOT.Path.Filter.HasText = function()
 {
 };
 
-JSOT.Path.Filter.HasText.prototype.evaluate = function( nodes )
+JSOT.Path.Filter.HasText.prototype.evaluate = function( root, axis, nodes )
 {
   var i = 0;
   while( i < nodes.length )  
   {
+	var node = nodes[i];
+	node.getEvent("textChange").addListenerOnce( axis.onFilterChange, axis, root );
+	
 	var t = nodes[i].getText();
 	if ( !t || t == "" )
 	  nodes.splice( i, 1 );
@@ -302,7 +400,44 @@ JSOT.Path.Filter.HasText.prototype.evaluate = function( nodes )
   }
   
   if ( this.nextFilter )
-	return this.nextFilter( nodes );  
+	return this.nextFilter.evaluate( root, axis, nodes );  
+  return nodes;
+};
+
+/*******************************************************
+ *
+ * Filter.LocalAttribute
+ *
+ *******************************************************/
+
+JSOT.Path.Filter.LocalAttribute = function(attributeName, value)
+{
+  this.attributeName = attributeName;
+  this.value = value;
+};
+
+JSOT.Path.Filter.LocalAttribute.prototype.evaluate = function( root, axis, nodes )
+{
+  var i = 0;
+  while( i < nodes.length )  
+  {
+	var node = nodes[i];
+	node.getEvent("attributeChange").addListenerOnce( axis.onFilterChange, axis, root );
+	
+	if ( node.getLocalAttribute( this.attributeName ) == this.value )
+	{
+	  window.console.log("ATTRIB match");
+	  i++;
+	}
+	else
+	{
+	  window.console.log("ATTRIB no match");
+	  nodes.splice( i, 1 );
+	}
+  }
+  
+  if ( this.nextFilter )
+	return this.nextFilter.evaluate( root, axis, nodes );  
   return nodes;
 };
 
@@ -567,12 +702,18 @@ JSOT.Template.SwitchTemplate = function()
   this.cases = [ null ];
 };
 
-JSOT.Template.SwitchTemplate.prototype.addDefaultCase = function( subTemplate )
+/**
+ * @param {JSOT.Path.PathTemplate} path is optional.
+ */
+JSOT.Template.SwitchTemplate.prototype.addDefaultCase = function( subTemplate, path )
 {
   this.cases[0] = { template : subTemplate };
 };
 
-JSOT.Template.SwitchTemplate.prototype.addCase = function( path, subTemplate )
+/**
+ * @param {JSOT.Path.PathTemplate} path is mandatory.
+ */
+JSOT.Template.SwitchTemplate.prototype.addCase = function( subTemplate, path )
 {
   this.cases.push( { path : path, template : subTemplate } );
 };
@@ -612,11 +753,16 @@ JSOT.Template.SwitchTemplateInstance.prototype.onPathChange = function()
   var p = this.parentInstance;
   while( p )
   {
-	p.dirty = true;
 	if ( !p.parentInstance )
+	{
 	  p.setDirty();
+	  break;
+	}
 	else
+	{
+	  p.dirty = true;
 	  p = p.parentInstance;
+	}
   }
 };
 

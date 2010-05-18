@@ -85,9 +85,9 @@ function onLogin()
 	path2.nextPath = path3;
 	path3.parentPath = path2;
 	path3.filter.nextFilter = new JSOT.Path.Filter.HasText();
-	tpath.evaluate( mainDoc, true );
+	// tpath.evaluate( mainDoc, true );
 	templatePath2 = new JSOT.Path.PathTemplate( tpath, mainDoc );
-	templatePath2.setMapping( new JSOT.Path.Mapping.Text() );
+	// templatePath2.setMapping( new JSOT.Path.Mapping.Text() );
 	axis2 = tpath;
 	root2 = templatePath2.createInstance( mainDoc );
 	
@@ -142,7 +142,7 @@ function printPath()
   window.console.log( "TPath " + nodes.length );
   for( var i = 0; i < nodes.length; ++i )
   {
-	window.console.log( nodes[i] );
+	window.console.log( nodes[i].getText() );
   };
   window.console.log("----------------------");
 }
@@ -157,9 +157,23 @@ function buildTmpl()
 //  }
 //  else
 //  {
+
+	var editpath = new JSOT.Path.Axis.Self();
+	editpath.filter = new JSOT.Path.Filter.LocalAttribute( "edit", true );
+	var templatePath3 = new JSOT.Path.PathTemplate( editpath, mainDoc );
+
+	var showpath = new JSOT.Path.Axis.Self();
+	// showpath.filter = new JSOT.Path.Filter.HasText();
+	var templatePath4 = new JSOT.Path.PathTemplate( editpath, mainDoc );
+	// templatePath4.setMapping( new JSOT.Path.Mapping.Text() );
+	
 	var t1 = new JSOT.Template.StaticTemplate( templ1 );
 	var t2 = new JSOT.Template.StaticTemplate( templ2 );
-	var foreach = new JSOT.Template.ForeachTemplate( templatePath2, t2 );
+	var t3 = new JSOT.Template.StaticTemplate( templ3 );
+	var s = new JSOT.Template.SwitchTemplate();
+	s.addCase( t2, templatePath3 );
+	s.addDefaultCase( t3, templatePath4 );
+	var foreach = new JSOT.Template.ForeachTemplate( templatePath2, s );
 	t1.addTemplate( "t1", foreach );
 	var root = new JSOT.Template.RootTemplate( t1 );
 	rootInstance = root.createInstance( mainDoc, document.getElementById("tmpl") );
@@ -190,9 +204,27 @@ function templ2(templateInstance)
 {
   window.console.log("FUCK 5");
   var h1 = document.createElement("h3")
-  h1.appendChild( document.createTextNode("Eine Nachricht: " + templateInstance.context ) );
   var input = document.createElement("input");
-  input.type = "checkbox";
+  input.type = "text";
+  input.value = templateInstance.context.getText();
+  h1.appendChild( input );
+  var input2 = document.createElement("input");
+  input2.type = "button";
+  input2.value = "Submit";
+  input2.onclick = function() { templateInstance.context.setLocalAttribute( "edit", false ); templateInstance.context.setText( input.value ); };
+  h1.appendChild( input2 );
+  templateInstance.domNodes.push( h1 );
+}
+
+function templ3(templateInstance)
+{
+  window.console.log("FUCK 6");
+  var h1 = document.createElement("h3")
+  h1.appendChild( document.createTextNode("Eine Nachricht: " + templateInstance.context.getText() ) );
+  var input = document.createElement("input");
+  input.type = "button";
+  input.value = "Edit";
+  input.onclick = function() { templateInstance.context.setLocalAttribute( "edit", true ); };
   h1.appendChild( input );
   templateInstance.domNodes.push( h1 );
 }
